@@ -13,7 +13,7 @@ set(gammaray_common_srcs
   paths.cpp
 )
 
-add_library(gammaray_common SHARED ${gammaray_common_srcs})
+add_library(gammaray_common ${GAMMARAY_LIBRARY_TYPE} ${gammaray_common_srcs})
 set_target_properties(gammaray_common PROPERTIES
   ${GAMMARAY_DEFAULT_LIBRARY_PROPERTIES}
   DEFINE_SYMBOL MAKE_GAMMARAY_COMMON_LIB
