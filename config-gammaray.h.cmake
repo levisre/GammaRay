@@ -41,4 +41,5 @@
 #define HAVE_SHM
 #endif
 
+#cmakedefine GAMMARAY_STATIC_PROBE
 #cmakedefine GAMMARAY_UNKNOWN_CXX_MANGLED_NAMES
