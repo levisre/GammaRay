@@ -137,3 +137,7 @@ gammaray_install_headers(
   util.h
   varianthandler.h
 )
+
+if(GAMMARAY_STATIC_PROBE)
+  gammaray_install_headers(staticprobe.h)
+endif()
