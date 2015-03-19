@@ -129,6 +129,7 @@ gammaray_install_headers(
   propertywidget.h
   propertywidgettab.h
   tooluifactory.h
+  clienttoolmodel.h
 )
 
 ecm_generate_pri_file(BASE_NAME GammaRayUi

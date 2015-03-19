@@ -56,6 +56,12 @@ class GAMMARAY_CLIENT_EXPORT ClientConnectionManager : public QObject
     /** One-time initialization of stream operators and factory callbacks. */
     static void init();
 
+  signals:
+    void ready();
+
+  public slots:
+    void createMainWindow();
+
   private slots:
     void connectToHost();
     void connectionEstablished();

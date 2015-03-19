@@ -80,8 +80,6 @@ ClientConnectionManager::ClientConnectionManager(QObject* parent) :
   m_mainWindow(0),
   m_toolModel(0)
 {
-  showSplashScreen();
-
   connect(m_client, SIGNAL(disconnected()), QApplication::instance(), SLOT(quit()));
   connect(m_client, SIGNAL(connectionEstablished()), SLOT(connectionEstablished()));
   connect(m_client, SIGNAL(transientConnectionError()), SLOT(transientConnectionError()));
@@ -124,7 +122,11 @@ void ClientConnectionManager::toolModelPopulated()
     return;
 
   disconnect(m_toolModel, 0, this, 0);
+  emit ready();
+}
 
+void ClientConnectionManager::createMainWindow()
+{
   m_mainWindow = new MainWindow;
   m_mainWindow->show();
   hideSplashScreen();
