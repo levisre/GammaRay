@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -31,14 +31,16 @@
 #include "statemachinewatcher.h"
 #include "transitionmodel.h"
 
-
 #include <core/objecttypefilterproxymodel.h>
 #include <core/probeinterface.h>
+#include <core/singlecolumnobjectproxymodel.h>
+#include <core/remote/serverproxymodel.h>
 #include <common/objectbroker.h>
 
 #include <QAbstractTransition>
 #include <QFinalState>
 #include <QHistoryState>
+#include <QMetaEnum>
 #include <QSignalTransition>
 #include <QStateMachine>
 #include <QItemSelectionModel>
@@ -47,50 +49,74 @@
 
 #include <iostream>
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 5, 0)
+Q_DECLARE_METATYPE(Qt::KeyboardModifiers)
+#endif
+
 using namespace GammaRay;
 using namespace std;
 
-namespace {
-
-QString labelForTransition(QAbstractTransition *transition)
+QString StateMachineViewerServer::labelForTransition(QAbstractTransition* transition)
 {
   const QString objectName = transition->objectName();
   if (!objectName.isEmpty()) {
     return objectName;
   }
 
-  // Try to get a label for the transition if it is a QSignalTransition.
-  QSignalTransition *signalTransition = qobject_cast<QSignalTransition*>(transition);
-  if (signalTransition) {
-      return QString::fromLatin1("%1::%2").
-                  arg(Util::displayString(signalTransition->senderObject())).
-                  arg(QString::fromLatin1(signalTransition->signal().mid(1)));
+  // try to find descriptive labels for built-in transitions
+  if (auto signalTransition = qobject_cast<QSignalTransition*>(transition)) {
+    QString str;
+    if (signalTransition->senderObject() != transition->sourceState()) {
+      str += Util::displayString(signalTransition->senderObject()) + "\n / ";
+    }
+    auto signal = signalTransition->signal();
+    if (signal.startsWith('0' + QSIGNAL_CODE)) // from QStateMachinePrivate::registerSignalTransition
+      signal.remove(0, 1);
+    str += signal;
+    return str;
+  }
+  // QKeyEventTransition is in QtWidgets, so this is a bit dirty to avoid a hard dependency
+  else if (transition->inherits("QKeyEventTransition")) {
+    QString s;
+    const auto modifiers = transition->property("modifierMask").value<Qt::KeyboardModifiers>();
+    if (modifiers != Qt::NoModifier) {
+      const auto modIdx = staticQtMetaObject.indexOfEnumerator("KeyboardModifiers");
+      if (modIdx < 0)
+        return Util::displayString(transition);
+      const auto modEnum = staticQtMetaObject.enumerator(modIdx);
+      s += modEnum.valueToKey(modifiers) + QStringLiteral(" + ");
+    }
+
+    const auto key = transition->property("key").toInt();
+    const auto keyIdx = staticQtMetaObject.indexOfEnumerator("Key");
+    if (keyIdx < 0)
+      return Util::displayString(transition);
+    const auto keyEnum = staticQtMetaObject.enumerator(keyIdx);
+    s += keyEnum.valueToKey(key);
+    return s;
   }
 
   return Util::displayString(transition);
-}
-
 }
 
 StateMachineViewerServer::StateMachineViewerServer(ProbeInterface *probe, QObject *parent)
   : StateMachineViewerInterface(parent),
     m_stateModel(new StateModel(this)),
     m_transitionModel(new TransitionModel(this)),
-    m_maximumDepth(0),
     m_stateMachineWatcher(new StateMachineWatcher(this))
 {
-  probe->registerModel("com.kdab.GammaRay.StateModel", m_stateModel);
+  registerTypes();
+
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.StateModel"), m_stateModel);
   QItemSelectionModel *stateSelectionModel = ObjectBroker::selectionModel(m_stateModel);
   connect(stateSelectionModel, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           SLOT(stateSelectionChanged()));
 
-  ObjectTypeFilterProxyModel<QStateMachine> *stateMachineFilter =
-    new ObjectTypeFilterProxyModel<QStateMachine>(this);
+  auto stateMachineFilter = new ObjectTypeFilterProxyModel<QStateMachine>(this);
   stateMachineFilter->setSourceModel(probe->objectListModel());
-  probe->registerModel("com.kdab.GammaRay.StateMachineModel", stateMachineFilter);
-  QItemSelectionModel *stateMachineSelectionModel = ObjectBroker::selectionModel(stateMachineFilter);
-  connect(stateMachineSelectionModel, SIGNAL(currentChanged(QModelIndex,QModelIndex)),
-          SLOT(handleMachineClicked(QModelIndex)));
+  m_stateMachinesModel = new ServerProxyModel<SingleColumnObjectProxyModel>(this);
+  m_stateMachinesModel->setSourceModel(stateMachineFilter);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.StateMachineModel"), m_stateMachinesModel);
 
   connect(m_stateMachineWatcher, SIGNAL(stateEntered(QAbstractState*)),
           SLOT(stateEntered(QAbstractState*)));
@@ -99,9 +125,6 @@ StateMachineViewerServer::StateMachineViewerServer(ProbeInterface *probe, QObjec
   connect(m_stateMachineWatcher, SIGNAL(transitionTriggered(QAbstractTransition*)),
           SLOT(handleTransitionTriggered(QAbstractTransition*)));
 
-
-
-  setMaximumDepth(3);
   updateStartStop();
 }
 
@@ -110,7 +133,6 @@ void StateMachineViewerServer::repopulateGraph()
   emit aboutToRepopulateGraph();
 
   // just to be sure the client has the same setting than we do
-  emit maximumDepthChanged(m_maximumDepth);
   updateStartStop();
 
   if (m_filteredStates.isEmpty()) {
@@ -128,21 +150,6 @@ void StateMachineViewerServer::repopulateGraph()
 QStateMachine *StateMachineViewerServer::selectedStateMachine() const
 {
   return m_stateModel->stateMachine();
-}
-
-static int treeDepth(QAbstractState *ascendant, QAbstractState *obj)
-{
-  if (!Util::descendantOf(ascendant, obj)) {
-    return -1;
-  }
-
-  int depth = 0;
-  QAbstractState *parent = obj->parentState();
-  while (parent) {
-    ++depth;
-    parent = parent->parentState();
-  }
-  return depth;
 }
 
 bool StateMachineViewerServer::mayAddState(QAbstractState *state)
@@ -168,23 +175,6 @@ bool StateMachineViewerServer::mayAddState(QAbstractState *state)
     }
   }
 
-  if (m_maximumDepth > 0) {
-    int depth = -1;
-    if (!m_filteredStates.isEmpty()) {
-      foreach(QAbstractState* filter, m_filteredStates) {
-        depth = ::treeDepth(filter, state);
-        if (depth != -1) {
-          break;
-        }
-      }
-    } else {
-      depth = ::treeDepth(m_stateModel->stateMachine(), state);
-    }
-    if (depth > m_maximumDepth) {
-      return false;
-    }
-  }
-
   return true;
 }
 
@@ -202,28 +192,18 @@ void StateMachineViewerServer::setFilteredStates(const QVector<QAbstractState*>&
     foreach(QAbstractState* state, states) {
       stateNames << Util::displayString(state);
     }
-    emit message(tr("Setting filter on: %1").arg(stateNames.join(", ")));
+    emit message(tr("Setting filter on: %1").arg(stateNames.join(QStringLiteral(", "))));
   }
 
   m_filteredStates = states;
 }
 
-void StateMachineViewerServer::setMaximumDepth(int depth)
-{
-  if (m_maximumDepth == depth) {
-    return;
-  }
-
-  emit message(tr("Showing states until a depth of %1").arg(depth));
-  m_maximumDepth = depth;
-  repopulateGraph();
-
-  emit maximumDepthChanged(depth);
-}
-
 void StateMachineViewerServer::setSelectedStateMachine(QStateMachine* machine)
 {
   QStateMachine* oldMachine = selectedStateMachine();
+  if (oldMachine == machine)
+    return;
+
   if (oldMachine) {
     disconnect(oldMachine, SIGNAL(started()), this, SLOT(updateStartStop()));
     disconnect(oldMachine, SIGNAL(stopped()), this, SLOT(updateStartStop()));
@@ -231,11 +211,12 @@ void StateMachineViewerServer::setSelectedStateMachine(QStateMachine* machine)
   }
 
   m_stateModel->setStateMachine(machine);
-  stateConfigurationChanged();
 
   setFilteredStates(QVector<QAbstractState*>());
   m_stateMachineWatcher->setWatchedStateMachine(machine);
+
   repopulateGraph();
+  stateConfigurationChanged();
 
   if (machine) {
     connect(machine, SIGNAL(started()), this, SLOT(updateStartStop()));
@@ -245,8 +226,10 @@ void StateMachineViewerServer::setSelectedStateMachine(QStateMachine* machine)
   updateStartStop();
 }
 
-void StateMachineViewerServer::handleMachineClicked(const QModelIndex &index)
+void StateMachineViewerServer::selectStateMachine(int row)
 {
+  Q_ASSERT(m_stateMachinesModel);
+  const auto index = m_stateMachinesModel->index(row, 0);
   if (!index.isValid()) {
     setSelectedStateMachine(0);
     return;
@@ -325,6 +308,9 @@ void StateMachineViewerServer::stateConfigurationChanged()
 
 void StateMachineViewerServer::addState(QAbstractState *state)
 {
+  if (!state)
+    return;
+
   if (!mayAddState(state)) {
     return;
   }
@@ -354,14 +340,18 @@ void StateMachineViewerServer::addState(QAbstractState *state)
   emit stateAdded(StateId(state), StateId(parentState),
                   hasChildren, label, type, connectToInitial);
 
-  // add transitions
-  Q_FOREACH (QAbstractTransition *transition, state->findChildren<QAbstractTransition*>()) {
-    addTransition(transition);
+  // add outgoing transitions
+  Q_FOREACH (auto object, state->children()) {
+    if (auto transition = qobject_cast<QAbstractTransition *>(object)) {
+      addTransition(transition);
+    }
   }
 
-  // recursive call to add children
-  Q_FOREACH (QAbstractState* child, state->findChildren<QAbstractState*>()) {
-    addState(child);
+  // add sub-states
+  Q_FOREACH (auto object, state->children()) {
+    if (auto state = qobject_cast<QAbstractState *>(object)) {
+      addState(state);
+    }
   }
 }
 
@@ -392,6 +382,22 @@ void StateMachineViewerServer::toggleRunning()
   } else {
     selectedStateMachine()->start();
   }
+}
+
+void StateMachineViewerServer::registerTypes()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+  // moc auto-registration fails as this is only forward-declared and thus not seen by moc
+  qRegisterMetaType<QAbstractState*>();
+  qRegisterMetaType<QState*>();
+  qRegisterMetaType<QList<QAbstractState*> >();
+#endif
+}
+
+
+QString StateMachineViewerFactory::name() const
+{
+  return tr("State Machine Viewer");
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

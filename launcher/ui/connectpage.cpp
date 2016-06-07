@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -51,8 +51,8 @@ ConnectPage::ConnectPage(QWidget* parent): QWidget(parent), ui(new Ui::ConnectPa
   connect(ui->instanceView, SIGNAL(activated(QModelIndex)), SIGNAL(activate()));
 
   QSettings settings;
-  ui->host->setText(settings.value("Connect/Host", QString()).toString());
-  ui->port->setValue(settings.value("Connect/Port", Endpoint::defaultPort()).toInt());
+  ui->host->setText(settings.value(QStringLiteral("Connect/Host"), QString()).toString());
+  ui->port->setValue(settings.value(QStringLiteral("Connect/Port"), Endpoint::defaultPort()).toInt());
 }
 
 ConnectPage::~ConnectPage()
@@ -67,7 +67,7 @@ bool ConnectPage::isValid() const
 void ConnectPage::launchClient()
 {
   QUrl url;
-  url.setScheme("tcp");
+  url.setScheme(QStringLiteral("tcp"));
   url.setHost(ui->host->text());
   url.setPort(ui->port->value());
   ClientLauncher::launchDetached(url);
@@ -76,8 +76,8 @@ void ConnectPage::launchClient()
 void ConnectPage::writeSettings()
 {
   QSettings settings;
-  settings.setValue("Connect/Host", ui->host->text());
-  settings.setValue("Connect/Port", ui->port->value());
+  settings.setValue(QStringLiteral("Connect/Host"), ui->host->text());
+  settings.setValue(QStringLiteral("Connect/Port"), ui->port->value());
 }
 
 void ConnectPage::instanceSelected()

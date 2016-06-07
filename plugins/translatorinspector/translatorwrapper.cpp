@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Jan Dalheimer <jan.dalheimer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -195,16 +195,16 @@ QModelIndex TranslationsModel::findNode(const char *context,
   return QModelIndex();
 }
 
-TranslatorWrapper::TranslatorWrapper(QObject *parent)
-    : QTranslator(parent), m_wrapped(0), m_model(new TranslationsModel(this))
-{
-}
 TranslatorWrapper::TranslatorWrapper(QTranslator *wrapped, QObject *parent)
     : QTranslator(parent), m_wrapped(wrapped),
       m_model(new TranslationsModel(this))
 {
-	connect(wrapped, SIGNAL(destroyed()), SLOT(deleteLater()));
+    Q_ASSERT(wrapped);
+
+    // not deleteLater(), otherwise we end up with a dangling pointer in here!
+    connect(wrapped, &QObject::destroyed, this, [this]() { delete this; });
 }
+
 bool TranslatorWrapper::isEmpty() const
 {
   return translator()->isEmpty();
@@ -233,15 +233,18 @@ QString TranslatorWrapper::translateInternal(const char *context,
 {
   return translator()->translate(context, sourceText, disambiguation, n);
 }
+
 const QTranslator *TranslatorWrapper::translator() const
 {
-  return m_wrapped == 0 ? this : m_wrapped;
+    Q_ASSERT(m_wrapped);
+    return m_wrapped;
 }
+
 
 FallbackTranslator::FallbackTranslator(QObject *parent)
   : QTranslator(parent)
 {
-  setObjectName("Fallback Translator");
+  setObjectName(QStringLiteral("Fallback Translator"));
 }
 QString FallbackTranslator::translate(const char *context, const char *sourceText, const char *disambiguation, int n) const
 {

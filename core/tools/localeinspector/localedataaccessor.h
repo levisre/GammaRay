@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation toolocale.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -50,7 +50,8 @@ class LocaleDataAccessorRegistry : public QObject
     QVector<LocaleDataAccessor*> enabledAccessors();
 
   Q_SIGNALS:
-    void accessorsChanged();
+    void accessorAdded();
+    void accessorRemoved(int idx);
 
   private:
     void init();
@@ -84,13 +85,15 @@ struct LocaleDataAccessor
   {
     return QString();
   }
+
+  Q_DISABLE_COPY(LocaleDataAccessor)
 };
 
 #define LOCALE_DISPLAY_ACCESSOR(NAME) \
 struct Locale##NAME##Accessor : LocaleDataAccessor \
 { \
   Locale##NAME##Accessor(LocaleDataAccessorRegistry *registry) : LocaleDataAccessor(registry) {} \
-  QString accessorName() { return #NAME; } \
+  QString accessorName() { return QStringLiteral(#NAME); } \
   QString display(const QLocale &locale) \
   { \
 
@@ -101,7 +104,7 @@ struct Locale##NAME##Accessor : LocaleDataAccessor \
   \
   QString accessorName()                 \
   {                                      \
-    return #NAME;                        \
+    return QStringLiteral(#NAME);        \
   }                                      \
   QString display(const QLocale &locale) \
   { \

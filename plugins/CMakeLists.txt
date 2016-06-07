@@ -1,7 +1,7 @@
 add_subdirectory(codecbrowser)
 add_subdirectory(fontbrowser)
+add_subdirectory(guisupport)
 add_subdirectory(kjobtracker)
-add_subdirectory(objectvisualizer)
 add_subdirectory(quickinspector)
 add_subdirectory(selectionmodelinspector)
 add_subdirectory(signalmonitor)
@@ -10,7 +10,10 @@ add_subdirectory(timertop)
 add_subdirectory(webinspector)
 
 if(Qt5Core_FOUND)
+  add_subdirectory(network)
   add_subdirectory(translatorinspector)
+else()
+  add_subdirectory(objectvisualizer)
 endif()
 
 if(Qt5Widgets_FOUND OR QT_QTGUI_FOUND)
@@ -28,6 +31,18 @@ if(Qt5Qml_FOUND)
   add_subdirectory(qmlsupport)
 endif()
 
+if(Qt5QuickWidgets_FOUND)
+  add_subdirectory(quickwidgetsupport)
+endif()
+
 if(Qt5Bluetooth_FOUND)
   add_subdirectory(bluetooth)
+endif()
+
+if(Qt5Positioning_FOUND)
+  add_subdirectory(positioning)
+endif()
+
+if(Qt53DRender_FOUND AND Qt53DExtras_FOUND)
+  add_subdirectory(qt3dinspector)
 endif()

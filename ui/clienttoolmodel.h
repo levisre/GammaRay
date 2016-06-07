@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,7 +36,9 @@
 #include <QSortFilterProxyModel>
 #include <QSet>
 
+QT_BEGIN_NAMESPACE
 class QWidget;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -56,6 +58,11 @@ public:
   QVariant data(const QModelIndex& index, int role) const Q_DECL_OVERRIDE;
   bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) Q_DECL_OVERRIDE;
   Qt::ItemFlags flags(const QModelIndex &index) const Q_DECL_OVERRIDE;
+
+  void setSourceModel(QAbstractItemModel * sourceModel) Q_DECL_OVERRIDE;
+
+protected:
+  bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const Q_DECL_OVERRIDE;
 
 private slots:
   void updateToolInitialization(const QModelIndex & topLeft, const QModelIndex & bottomRight);

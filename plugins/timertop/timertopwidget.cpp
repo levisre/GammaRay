@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Thomas McGuire <thomas.mcguire@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,6 @@
 #include "timermodel.h"
 
 #include <common/objectbroker.h>
-#include <ui/deferredresizemodesetter.h>
 
 #include <QSortFilterProxyModel>
 #include <QTimer>
@@ -39,20 +38,29 @@
 using namespace GammaRay;
 
 TimerTopWidget::TimerTopWidget(QWidget *parent)
-  : QWidget(parent),
-    ui(new Ui::TimerTopWidget),
-    m_updateTimer(new QTimer(this))
+  : QWidget(parent)
+  , ui(new Ui::TimerTopWidget)
+  , m_stateManager(this)
+  , m_updateTimer(new QTimer(this))
 {
   ui->setupUi(this);
+
+  ui->timerView->header()->setObjectName("timerViewHeader");
+  ui->timerView->setDeferredResizeMode(0, QHeaderView::Stretch);
+  ui->timerView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->timerView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+  ui->timerView->setDeferredResizeMode(3, QHeaderView::ResizeToContents);
+  ui->timerView->setDeferredResizeMode(4, QHeaderView::ResizeToContents);
+  ui->timerView->setDeferredResizeMode(5, QHeaderView::ResizeToContents);
+
   QSortFilterProxyModel * const sortModel = new QSortFilterProxyModel(this);
-  sortModel->setSourceModel(ObjectBroker::model("com.kdab.GammaRay.TimerModel"));
+  sortModel->setSourceModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.TimerModel")));
   sortModel->setDynamicSortFilter(true);
   ui->timerView->setModel(sortModel);
+
   ui->timerView->sortByColumn(TimerModel::WakeupsPerSecRole - TimerModel::FirstRole - 1,
                               Qt::DescendingOrder);
 
-  new DeferredResizeModeSetter(ui->timerView->header(), 0, QHeaderView::ResizeToContents);
-  new DeferredResizeModeSetter(ui->timerView->header(), 1, QHeaderView::ResizeToContents);
 }
 
 TimerTopWidget::~TimerTopWidget()

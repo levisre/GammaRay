@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,7 +28,7 @@
 
 #include "signalmonitortest.h"
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QTimer>
 
 SignalMonitorTest::SignalMonitorTest(QObject *parent)
@@ -47,7 +47,7 @@ SignalMonitorTest::SignalMonitorTest(QObject *parent)
 
 QString SignalMonitorTest::nextTimerName()
 {
-  return QString::fromLatin1("SignalMonitorTest_t%1").arg(++m_timerCount);
+  return QStringLiteral("SignalMonitorTest_t%1").arg(++m_timerCount);
 }
 
 void SignalMonitorTest::onTimeout()
@@ -60,7 +60,7 @@ void SignalMonitorTest::onTimeout()
 
 int main(int argc, char **argv)
 {
-  QApplication app(argc, argv);
+  QCoreApplication app(argc, argv);
   new SignalMonitorTest(&app);
   return app.exec();
 }

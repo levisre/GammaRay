@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,43 +29,33 @@
 #include <config-gammaray.h>
 #include "gdbinjector.h"
 
-#include <QDebug>
 #include <QProcess>
 #include <QStringList>
-#include <QCoreApplication>
 
 using namespace GammaRay;
 
-static QTextStream cout(stdout);
-static QTextStream cerr(stderr);
-
-GdbInjector::GdbInjector()
+GdbInjector::GdbInjector(const QString &executableOverride)
+  : DebuggerInjector()
 {
+  setFilePath(executableOverride.isEmpty() ? QStringLiteral("gdb") : executableOverride);
 }
 
 QString GdbInjector::name() const
 {
-  return QString("gdb");
+  return QStringLiteral("gdb");
 }
 
-QString GdbInjector::debuggerExecutable() const
-{
-  return QLatin1String("gdb");
-}
-
-bool GdbInjector::launch(const QStringList &programAndArgs,
-                         const QString &probeDll, const QString &probeFunc,
-                         const QProcessEnvironment &env)
+bool GdbInjector::launch(const QStringList &programAndArgs, const QString &probeDll, const QString &probeFunc, const QProcessEnvironment &env)
 {
   QStringList gdbArgs;
-  gdbArgs.push_back(QLatin1String("--args"));
+  gdbArgs.push_back(QStringLiteral("--args"));
   gdbArgs.append(programAndArgs);
 
   if (!startDebugger(gdbArgs, env)) {
     return -1;
   }
 
-  execCmd("set confirm off");
+  disableConfirmations();
   waitForMain();
   return injectAndDetach(probeDll, probeFunc);
 }
@@ -73,25 +63,23 @@ bool GdbInjector::launch(const QStringList &programAndArgs,
 bool GdbInjector::attach(int pid, const QString &probeDll, const QString &probeFunc)
 {
   Q_ASSERT(pid > 0);
-  if (!startDebugger(QStringList() << QLatin1String("-pid") << QString::number(pid))) {
+  if (!startDebugger(QStringList() << QStringLiteral("-pid") << QString::number(pid))) {
     return false;
   }
+  disableConfirmations();
   return injectAndDetach(probeDll, probeFunc);
 }
 
-void GdbInjector::execCmd(const QByteArray &cmd, bool waitForWritten)
+void GdbInjector::disableConfirmations()
 {
-  m_process->write(cmd + '\n');
-
-  if (waitForWritten) {
-    m_process->waitForBytesWritten(-1);
-  }
+  execCmd("set confirm off");
 }
 
 void GdbInjector::readyReadStandardError()
 {
-  const QString error = m_process->readAllStandardError();
-  cerr << error << flush;
+  const QString error = QString::fromLocal8Bit(m_process->readAllStandardError());
+  processLog(DebuggerInjector::In, true, error);
+  emit stderrMessage(error);
 
   if (error.startsWith(QLatin1String("Function \"main\" not defined."))) {
     mManualError = true;
@@ -116,17 +104,17 @@ void GdbInjector::readyReadStandardError()
 
 void GdbInjector::readyReadStandardOutput()
 {
-  if (qgetenv("GAMMARAY_UNITTEST") == "1") {
-    cout << m_process->readAllStandardOutput() << flush;
-  }
+  QString message = QString::fromLocal8Bit(m_process->readAllStandardOutput());
+  processLog(DebuggerInjector::In, false, message);
+  emit stderrMessage(message); // Is this signal emit correct ?? stderr vs stdout
 }
 
-void GdbInjector::addFunctionBreakpoint(const QByteArray& function)
+void GdbInjector::addFunctionBreakpoint(const QByteArray &function)
 {
   execCmd("break " + function);
 }
 
-void GdbInjector::addMethodBreakpoint(const QByteArray& method)
+void GdbInjector::addMethodBreakpoint(const QByteArray &method)
 {
 #ifdef Q_OS_MAC
   execCmd("break " + method + "()");
@@ -135,7 +123,17 @@ void GdbInjector::addMethodBreakpoint(const QByteArray& method)
 #endif
 }
 
-void GdbInjector::loadSymbols(const QByteArray& library)
+void GdbInjector::clearBreakpoints()
+{
+  execCmd("delete");
+}
+
+void GdbInjector::printBacktrace()
+{
+  execCmd("backtrace", false);
+}
+
+void GdbInjector::loadSymbols(const QByteArray &library)
 {
 #ifndef Q_OS_MAC
   execCmd("sha " + library);

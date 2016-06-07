@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,19 +39,19 @@ MessageGenerator::MessageGenerator()
 {
   QVBoxLayout *layout  = new QVBoxLayout;
 
-  QPushButton *button = new QPushButton("debug");
+  QPushButton *button = new QPushButton(QStringLiteral("debug"));
   connect(button, SIGNAL(clicked(bool)), SLOT(generateDebug()));
   layout->addWidget(button);
 
-  button = new QPushButton("warning");
+  button = new QPushButton(QStringLiteral("warning"));
   connect(button, SIGNAL(clicked(bool)), SLOT(generateWarning()));
   layout->addWidget(button);
 
-  button = new QPushButton("critical");
+  button = new QPushButton(QStringLiteral("critical"));
   connect(button, SIGNAL(clicked(bool)), SLOT(generateCritical()));
   layout->addWidget(button);
 
-  button = new QPushButton("fatal");
+  button = new QPushButton(QStringLiteral("fatal"));
   connect(button, SIGNAL(clicked(bool)), SLOT(generateFatal()));
   layout->addWidget(button);
 

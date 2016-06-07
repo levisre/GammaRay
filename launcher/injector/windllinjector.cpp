@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Patrick Spendrin <ps_ml@gmx.de>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,8 +32,6 @@
 #include <QDebug>
 #include <QThread>
 
-#ifdef Q_OS_WIN
-#include <windows.h>
 #include <cstdlib>
 
 namespace GammaRay {
@@ -121,7 +119,7 @@ bool WinDllInjector::launch(const QStringList &programAndArgs,
   const QString applicationName = programAndArgs.join(" ");
   BOOL success = CreateProcess(0, (wchar_t *)applicationName.utf16(),
                                0, 0, TRUE, dwCreationFlags,
-                               buffer.isEmpty() ? 0 : buffer.data(), 0,
+                               buffer.isEmpty() ? 0 : buffer.data(), (wchar_t*)workingDirectory().utf16(),
                                &startupInfo, &pid);
   if (!success) {
     return false;
@@ -153,7 +151,7 @@ bool WinDllInjector::attach(int pid, const QString &probeDll, const QString &/*p
   inject();
   m_injectThread->stop();
   emit started();
-  m_injectThread->start();
+  m_destProcess = 0;
   return m_injectThread->isRunning();
 }
 
@@ -199,8 +197,9 @@ QString WinDllInjector::errorString()
 
 void WinDllInjector::stop()
 {
-    TerminateProcess(m_destProcess, 0xff);
+    if (m_destProcess) {
+        TerminateProcess(m_destProcess, 0xff);
+    }
 }
 
 }// namespace GammaRay
-#endif

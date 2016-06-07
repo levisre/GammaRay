@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,6 +40,12 @@ ProbeGuard::ProbeGuard() :
     setInsideProbe(true);
 }
 
+ProbeGuard::ProbeGuard(bool newState) :
+    m_previousState(insideProbe())
+{
+    setInsideProbe(newState);
+}
+
 ProbeGuard::~ProbeGuard()
 {
     setInsideProbe(m_previousState);
@@ -56,3 +62,6 @@ void ProbeGuard::setInsideProbe(bool inside)
 {
     s_probeGuards.localData() = inside;
 }
+
+ProbeGuardSuspender::ProbeGuardSuspender() : ProbeGuard(false) {}
+ProbeGuardSuspender::~ProbeGuardSuspender() {}

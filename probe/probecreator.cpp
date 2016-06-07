@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,6 +26,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config-gammaray.h>
 #include "probecreator.h"
 
 #include <common/endpoint.h>
@@ -43,8 +44,8 @@
 using namespace GammaRay;
 using namespace std;
 
-ProbeCreator::ProbeCreator(Type type)
-  : m_type(type)
+ProbeCreator::ProbeCreator(CreateFlags flags) :
+    m_flags(flags)
 {
   //push object into the main thread, as windows creates a
   //different thread where this runs in
@@ -63,21 +64,31 @@ ProbeCreator::ProbeCreator(Type type)
 
   // HACK the webinspector plugin does this as well, but if the web view is created
   // too early the env var from there isn't going to reach the web process
-  qputenv("QTWEBKIT_INSPECTOR_SERVER", "0.0.0.0:" + QByteArray::number(Endpoint::defaultPort() + 1));
+  qputenv("QTWEBKIT_INSPECTOR_SERVER",
+	  QByteArray(GAMMARAY_DEFAULT_ANY_ADDRESS) + ':' + QByteArray::number(Endpoint::defaultPort() + 1));
 }
 
 void ProbeCreator::createProbe()
 {
+  if (!qApp) {
+      deleteLater();
+      return;
+  }
+
   // make sure we are in the ui thread
   Q_ASSERT(QThread::currentThread() == qApp->thread());
 
-  if (!qApp || Probe::isInitialized()) {
-    // never create it twice
+  if (Probe::isInitialized()) {
+    // already exists, so we are trying to re-attach to an already injected process
+    if (m_flags & ResendServerAddress) {
+        printf("Resending server address...\n");
+        Probe::instance()->resendServerAddress();
+    }
     deleteLater();
     return;
   }
 
-  Probe::createProbe(m_type == GammaRay::ProbeCreator::CreateAndFindExisting);
+  Probe::createProbe(m_flags & FindExistingObjects);
   Q_ASSERT(Probe::isInitialized());
 
   deleteLater();

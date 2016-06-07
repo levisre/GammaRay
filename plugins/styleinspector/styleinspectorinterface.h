@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,9 @@
 
 #include <QObject>
 
+QT_BEGIN_NAMESPACE
 class QSize;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -63,6 +65,8 @@ class StyleInspectorInterface : public QObject
 
 }
 
+QT_BEGIN_NAMESPACE
 Q_DECLARE_INTERFACE(GammaRay::StyleInspectorInterface, "com.kdab.GammaRay.StyleInspectorInterface")
+QT_END_NAMESPACE
 
 #endif // GAMMARAY_STYLEINSPECTORINTERFACE_H

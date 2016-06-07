@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,10 @@
 
 #include "toolfactory.h"
 
+QT_BEGIN_NAMESPACE
+class QAbstractProxyModel;
 class QItemSelection;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -46,9 +49,14 @@ class MetaObjectBrowser : public QObject
 
   private Q_SLOTS:
     void objectSelected(const QItemSelection &selection);
+    void objectSelected(QObject *obj);
+    void objectSelected(void *obj, const QString &typeName);
 
   private:
+    void metaObjectSelected(const QMetaObject* mo);
+
      PropertyController *m_propertyController;
+     QAbstractProxyModel *m_model;
 };
 
 class MetaObjectBrowserFactory : public QObject,
@@ -62,10 +70,8 @@ class MetaObjectBrowserFactory : public QObject,
     {
     }
 
-    inline QString name() const
-    {
-      return tr("Meta Objects");
-    }
+    QString name() const Q_DECL_OVERRIDE;
+    QVector<QByteArray> selectableTypes() const Q_DECL_OVERRIDE;
 };
 
 }

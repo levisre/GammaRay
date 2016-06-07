@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -60,8 +60,8 @@ static QString bluetoothAddressToString(const QBluetoothAddress &addr)
 static QString bluetoothInquiryTypeToString(QBluetoothDeviceDiscoveryAgent::InquiryType type)
 {
     switch (type) {
-        case QBluetoothDeviceDiscoveryAgent::GeneralUnlimitedInquiry: return "Unlimited";
-        case QBluetoothDeviceDiscoveryAgent::LimitedInquiry: return "Limited";
+        case QBluetoothDeviceDiscoveryAgent::GeneralUnlimitedInquiry: return QStringLiteral("Unlimited");
+        case QBluetoothDeviceDiscoveryAgent::LimitedInquiry: return QStringLiteral("Limited");
     }
     Q_UNREACHABLE();
     return QString();

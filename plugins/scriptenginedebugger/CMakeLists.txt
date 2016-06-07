@@ -4,8 +4,9 @@ set(gammaray_scriptenginedebugger_plugin_srcs
 )
 
 gammaray_add_plugin(gammaray_scriptenginedebugger_plugin
-  gammaray_scriptenginedebugger.desktop
-  ${gammaray_scriptenginedebugger_plugin_srcs}
+  DESKTOP gammaray_scriptenginedebugger.desktop.in
+  JSON gammaray_scriptenginedebugger.json
+  SOURCES ${gammaray_scriptenginedebugger_plugin_srcs}
 )
 
 target_link_libraries(gammaray_scriptenginedebugger_plugin
@@ -23,14 +24,15 @@ if(GAMMARAY_BUILD_UI)
   qt4_wrap_ui(gammaray_scriptenginedebugger_ui_plugin_srcs scriptenginedebuggerwidget.ui)
 
   gammaray_add_plugin(gammaray_scriptenginedebugger_ui_plugin
-    gammaray_scriptenginedebugger_ui.desktop
-    ${gammaray_scriptenginedebugger_ui_plugin_srcs}
+    DESKTOP gammaray_scriptenginedebugger_ui.desktop.in
+    JSON gammaray_scriptenginedebugger.json
+    SOURCES ${gammaray_scriptenginedebugger_ui_plugin_srcs}
   )
 
   target_link_libraries(gammaray_scriptenginedebugger_ui_plugin
     ${QT_QTGUI_LIBRARIES}
     ${QT_QTSCRIPT_LIBRARIES}
     ${QT_QTSCRIPTTOOLS_LIBRARIES}
-    gammaray_core
+    gammaray_ui
   )
 endif()

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -58,19 +58,59 @@ bool TcpServerDevice::listen()
 
 QUrl TcpServerDevice::externalAddress() const
 {
+    const QHostAddress address(m_server->serverAddress());
     QString myHost;
-    foreach (const QHostAddress &addr, QNetworkInterface::allAddresses()) {
-        if (addr == QHostAddress::LocalHost || addr == QHostAddress::LocalHostIPv6 || !addr.scopeId().isEmpty())
-            continue;
-        myHost = addr.toString();
-        break;
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+    if (address == QHostAddress::LocalHost || address == QHostAddress::LocalHostIPv6) {
+#else
+    if (address.isLoopback()) {
+#endif
+        myHost = address.toString();
+    } else {
+        foreach (const QNetworkInterface &inter, QNetworkInterface::allInterfaces()) {
+            if (!(inter.flags() & QNetworkInterface::IsUp) || !(inter.flags() & QNetworkInterface::IsRunning) || (inter.flags() & QNetworkInterface::IsLoopBack))
+                continue;
+
+            foreach (const QNetworkAddressEntry &addrEntry, inter.addressEntries()) {
+                const QHostAddress addr = addrEntry.ip();
+
+                // Return the ip according to the listening server protocol.
+                if (addr.protocol() != m_server->serverAddress().protocol() || !addr.scopeId().isEmpty()) {
+                    continue;
+                }
+
+                myHost = addr.toString();
+                break;
+            }
+            if (!myHost.isEmpty()) {
+                break;
+            }
+        }
+    }
+
+    // if localhost is all we got, use that rather than nothing
+    if (myHost.isEmpty()) {
+        switch (m_server->serverAddress().protocol()) {
+            case QAbstractSocket::IPv4Protocol:
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+            case QAbstractSocket::AnyIPProtocol:
+#endif
+                myHost = QHostAddress(QHostAddress::LocalHost).toString();
+                break;
+            case QAbstractSocket::IPv6Protocol:
+                myHost = QHostAddress(QHostAddress::LocalHostIPv6).toString();
+                break;
+            case QAbstractSocket::UnknownNetworkLayerProtocol:
+                Q_ASSERT_X(false, "TcpServerDevice::externalAddress", "unknown TCP protocol");
+                break;
+        }
     }
 
     QUrl url;
-    url.setScheme(QLatin1String("tcp"));
+    url.setScheme(QStringLiteral("tcp"));
     url.setHost(myHost);
     url.setPort(m_server->serverPort());
-
     return url;
 }
 
@@ -80,7 +120,7 @@ void TcpServerDevice::broadcast(const QByteArray &data)
 
     // broadcast announcement only if we are actually listinging to remote connections
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-    if (address.toString() == "127.0.0.1" || address.toString() == "::1")
+    if (address == QHostAddress::LocalHost || address == QHostAddress::LocalHostIPv6)
 #else
     if (address.isLoopback())
 #endif

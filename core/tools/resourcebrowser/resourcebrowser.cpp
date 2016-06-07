@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,9 +32,11 @@
 #include "qt/resourcemodel.h"
 #include "common/objectbroker.h"
 
+#include <core/remote/serverproxymodel.h>
+
 #include <QDebug>
 #include <QItemSelectionModel>
-#include <QPixmap>
+#include <QUrl>
 
 using namespace GammaRay;
 
@@ -42,9 +44,9 @@ ResourceBrowser::ResourceBrowser(ProbeInterface *probe, QObject *parent)
   : ResourceBrowserInterface(parent)
 {
   ResourceModel *resourceModel = new ResourceModel(this);
-  ResourceFilterModel *proxy = new ResourceFilterModel(this);
+  auto proxy = new ServerProxyModel<ResourceFilterModel>(this);
   proxy->setSourceModel(resourceModel);
-  probe->registerModel("com.kdab.GammaRay.ResourceModel", proxy);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.ResourceModel"), proxy);
   QItemSelectionModel *selectionModel = ObjectBroker::selectionModel(proxy);
   connect(selectionModel, SIGNAL(currentChanged(QModelIndex,QModelIndex)),
           this, SLOT(currentChanged(QModelIndex)));
@@ -52,42 +54,52 @@ ResourceBrowser::ResourceBrowser(ProbeInterface *probe, QObject *parent)
 
 void ResourceBrowser::downloadResource(const QString &sourceFilePath, const QString &targetFilePath)
 {
-  const QFileInfo fi(sourceFilePath);
+    const QFileInfo fi(sourceFilePath);
 
-  if (fi.isFile()) {
-    static const QStringList l = QStringList() << "jpg" << "png" << "jpeg";
-    if (l.contains(fi.suffix())) {
-      emit resourceDownloaded(targetFilePath, QPixmap(fi.absoluteFilePath()));
-    } else {
-      QFile f(fi.absoluteFilePath());
-      if (f.open(QFile::ReadOnly | QFile::Text)) {
-        emit resourceDownloaded(targetFilePath, f.readAll());
-      } else {
-        qWarning() << "Failed to open" << fi.absoluteFilePath();
-      }
+    if (fi.isFile()) {
+        QFile f(fi.absoluteFilePath());
+        if (f.open(QFile::ReadOnly)) {
+            emit resourceDownloaded(targetFilePath, f.readAll());
+        } else {
+            qWarning() << "Failed to open" << fi.absoluteFilePath();
+        }
     }
-  }
 }
 
-void ResourceBrowser::currentChanged(const QModelIndex &current)
+void ResourceBrowser::selectResource(const QString &sourceFilePath, int line, int column)
 {
-  const QFileInfo fi(current.data(ResourceModel::FilePathRole).toString());
+  const bool locked = blockSignals(true);
+  const QItemSelectionModel::SelectionFlags selectionFlags = QItemSelectionModel::ClearAndSelect |
+      QItemSelectionModel::Rows | QItemSelectionModel::Current;
+  const Qt::MatchFlags matchFlags = Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap;
+  auto model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ResourceModel"));
+  auto selectionModel = ObjectBroker::selectionModel(model);
+  const QString filePath = QLatin1Char(':') + QUrl(sourceFilePath).path();
+  const QModelIndex index = model->match(model->index(0,0), ResourceModel::FilePathRole, filePath, 1,
+                                         matchFlags).value(0);
+  selectionModel->setCurrentIndex(index, selectionFlags);
+  blockSignals(locked);
+  currentChanged(index, line, column);
+}
 
-  if (fi.isFile()) {
-    static const QStringList l = QStringList() << "jpg" << "png" << "jpeg";
-    if (l.contains(fi.suffix())) {
-      emit resourceSelected(QPixmap(fi.absoluteFilePath()));
+void ResourceBrowser::currentChanged(const QModelIndex &current, int line, int column)
+{
+    const QFileInfo fi(current.data(ResourceModel::FilePathRole).toString());
+    if (!fi.isFile()) {
+        emit resourceDeselected();
+        return;
+    }
+
+    QFile f(fi.absoluteFilePath());
+    if (f.open(QFile::ReadOnly)) {
+        emit resourceSelected(f.readAll(), line, column);
     } else {
-      QFile f(fi.absoluteFilePath());
-      if (f.open(QFile::ReadOnly | QFile::Text)) {
-        emit resourceSelected(f.readAll());
-      } else {
         qWarning() << "Failed to open" << fi.absoluteFilePath();
         emit resourceDeselected();
-      }
     }
-  } else {
-    emit resourceDeselected();
-  }
 }
 
+QString ResourceBrowserFactory::name() const
+{
+  return tr("Resources");
+}

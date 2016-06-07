@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -59,7 +59,7 @@ void ModelCellModel::setModelIndex(const QModelIndex &index)
     // add built-in roles
     const auto hasDefaultRoles = !sourceIsQQmlListModel(index.model());
     if (hasDefaultRoles) {
-      #define R(x) qMakePair<int, QString>(x, QLatin1String(#x))
+      #define R(x) qMakePair<int, QString>(x, QStringLiteral(#x))
       m_roles << R(Qt::DisplayRole)
               << R(Qt::DecorationRole)
               << R(Qt::EditRole)
@@ -91,7 +91,8 @@ void ModelCellModel::setModelIndex(const QModelIndex &index)
         }
       }
       if (!roleFound) {
-        m_roles.push_back(qMakePair(it.key(), QString::fromLatin1(it.value())));
+        const QString name = it.value().isEmpty() ? tr("Role #%1").arg(it.key()) : QString::fromLatin1(it.value());
+        m_roles.push_back(qMakePair(it.key(), name));
       }
     }
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,10 +29,13 @@
 #include "preloadinjector.h"
 #include "preloadcheck.h"
 
-#ifndef Q_OS_WIN
+#include <probeabidetector.h>
 
 #include <QProcess>
 #include <QDebug>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#include <QStandardPaths>
+#endif
 
 #include <cstdlib>
 
@@ -44,7 +47,7 @@ PreloadInjector::PreloadInjector() : ProcessInjector()
 
 QString PreloadInjector::name() const
 {
-  return QString("preload");
+  return QStringLiteral("preload");
 }
 
 bool PreloadInjector::launch(const QStringList &programAndArgs,
@@ -56,17 +59,29 @@ bool PreloadInjector::launch(const QStringList &programAndArgs,
 
   QProcessEnvironment env(e);
 #ifdef Q_OS_MAC
-  env.insert("DYLD_FORCE_FLAT_NAMESPACE", QLatin1String("1"));
-  env.insert("DYLD_INSERT_LIBRARIES", probeDll);
-  env.insert("GAMMARAY_UNSET_DYLD", "1");
-#else
-  env.insert("LD_PRELOAD", probeDll);
-  env.insert("GAMMARAY_UNSET_PRELOAD", "1");
+  env.insert(QStringLiteral("DYLD_FORCE_FLAT_NAMESPACE"), QStringLiteral("1"));
+  env.insert(QStringLiteral("DYLD_INSERT_LIBRARIES"), probeDll);
+  env.insert(QStringLiteral("GAMMARAY_UNSET_DYLD"), QStringLiteral("1"));
 
+  // Make sure Qt do load it's correct libs/plugins.
+  if (probeDll.contains(QStringLiteral("_debug"), Qt::CaseInsensitive)) {
+    env.insert(QStringLiteral("DYLD_IMAGE_SUFFIX"), QStringLiteral("_debug"));
+  }
+#else
+  env.insert(QStringLiteral("LD_PRELOAD"), probeDll);
+  env.insert(QStringLiteral("GAMMARAY_UNSET_PRELOAD"), QStringLiteral("1"));
+
+  auto exePath = programAndArgs.first();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+  exePath = QStandardPaths::findExecutable(exePath);
+#endif
+
+  ProbeABIDetector abiDetector;
+  const auto qtCorePath = abiDetector.qtCoreForExecutable(exePath);
   PreloadCheck check;
-  const bool success = check.test("qt_startup_hook");
+  const bool success = check.test(qtCorePath, QStringLiteral("qt_startup_hook"));
 #if QT_VERSION < QT_VERSION_CHECK(5, 4, 0) // before 5.4 this is fatal, after that we have the built-in hooks and DLL initialization as an even better way
-  if (!success) {
+  if (!success  && !qtCorePath.isEmpty()) {
     mExitCode = 1;
     mErrorString = check.errorString();
     return false;
@@ -79,5 +94,3 @@ bool PreloadInjector::launch(const QStringList &programAndArgs,
 
   return launchProcess(programAndArgs, env);
 }
-
-#endif

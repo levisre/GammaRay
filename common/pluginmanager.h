@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -69,7 +69,7 @@ class PluginManagerBase
      * @param parent This is the parent object for all objects created by the plugins
      */
     explicit PluginManagerBase(QObject *parent = 0);
-    ~PluginManagerBase();
+    virtual ~PluginManagerBase();
 
     QList<PluginLoadError> errors() const
     {
@@ -85,6 +85,8 @@ class PluginManagerBase
 
     QList<PluginLoadError> m_errors;
     QObject *m_parent;
+  private:
+    Q_DISABLE_COPY(PluginManagerBase)
 };
 
 template <typename IFace, typename Proxy>
@@ -95,7 +97,7 @@ public:
     {
       const QString iid = QString::fromLatin1(qobject_interface_iid<IFace*>());
       Q_ASSERT(!iid.isEmpty());
-      const QString serviceType = iid.split('/').first();
+      const QString serviceType = iid.split(QLatin1Char('/')).first();
       scan(serviceType);
     }
 
@@ -107,7 +109,7 @@ public:
     }
 
 protected:
-    bool createProxyFactory(const PluginInfo& pluginInfo, QObject* parent)
+    bool createProxyFactory(const PluginInfo& pluginInfo, QObject* parent) Q_DECL_OVERRIDE
     {
       Proxy *proxy = new Proxy(pluginInfo, parent);
       if (!proxy->isValid()) {

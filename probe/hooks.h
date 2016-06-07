@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,9 @@
 
 #include <qglobal.h>
 
+QT_BEGIN_NAMESPACE
 class QObject;
+QT_END_NAMESPACE
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
 #define GAMMARAY_USE_QHOOKS
@@ -47,12 +49,17 @@ extern Q_DECL_EXPORT void gammaray_startup_hook();
 extern Q_DECL_EXPORT void gammaray_addObject(QObject* obj);
 extern Q_DECL_EXPORT void gammaray_removeObject(QObject* obj);
 
-/** Entry point for runtime attaching. */
+/** Entry point for startup injection. */
 extern Q_DECL_EXPORT void gammaray_probe_inject();
 
+/** Entry point for runtime attaching.
+ *  This differs from the above by also attempting to re-send
+ *  the server address to the launcher. So only use this if you
+ *  are sure there is a launcher ready to receive this information
+ *  on the other side.
+ */
+extern Q_DECL_EXPORT void gammaray_probe_attach();
 }
-
-extern Q_DECL_EXPORT const char *gammaray_flagLocation(const char *method);
 
 namespace GammaRay {
 

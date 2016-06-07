@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,7 +28,6 @@
 
 #include "clienttoolmodel.h"
 
-#include <ui/tools/connectioninspector/connectioninspectorwidget.h>
 #include <ui/tools/localeinspector/localeinspectorwidget.h>
 #include <ui/tools/messagehandler/messagehandlerwidget.h>
 #include <ui/tools/metaobjectbrowser/metaobjectbrowserwidget.h>
@@ -59,7 +58,6 @@ public: \
   virtual inline bool remotingSupported() const { return remote; } \
 }
 
-MAKE_FACTORY(ConnectionInspector, true);
 MAKE_FACTORY(LocaleInspector, true);
 MAKE_FACTORY(MessageHandler, true);
 MAKE_FACTORY(MetaObjectBrowser, true);
@@ -71,8 +69,10 @@ MAKE_FACTORY(StandardPaths, true);
 MAKE_FACTORY(TextDocumentInspector, true);
 
 struct PluginRepository {
+    PluginRepository() {}
+    Q_DISABLE_COPY(PluginRepository)
     ~PluginRepository() {
-        qDeleteAll(factories.values());
+        qDeleteAll(factories);
     }
 
     // ToolId -> ToolUiFactory
@@ -94,7 +94,6 @@ static void initPluginRepository()
     if (!s_pluginRepository()->factories.isEmpty())
         return;
 
-    insertFactory(new ConnectionInspectorFactory);
     insertFactory(new LocaleInspectorFactory);
     insertFactory(new MessageHandlerFactory);
     insertFactory(new MetaObjectBrowserFactory);
@@ -114,12 +113,14 @@ static void initPluginRepository()
 
 ClientToolModel::ClientToolModel(QObject* parent) : QSortFilterProxyModel(parent)
 {
+  setDynamicSortFilter(true);
   initPluginRepository();
-  connect(this, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(updateToolInitialization(QModelIndex,QModelIndex)));
 }
 
 ClientToolModel::~ClientToolModel()
 {
+  for(auto it = m_widgets.constBegin(); it != m_widgets.constEnd(); ++it)
+    delete it.value().data();
 }
 
 QVariant ClientToolModel::data(const QModelIndex& index, int role) const
@@ -183,13 +184,28 @@ Qt::ItemFlags ClientToolModel::flags(const QModelIndex &index) const
   return ret;
 }
 
+void ClientToolModel::setSourceModel(QAbstractItemModel *sourceModel)
+{
+    QSortFilterProxyModel::setSourceModel(sourceModel);
+    connect(sourceModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(updateToolInitialization(QModelIndex,QModelIndex)));
+}
+
+bool ClientToolModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
+{
+    if (!sourceModel() || source_parent.isValid())
+        return false;
+
+    const auto srcIdx = sourceModel()->index(source_row, 0);
+    return srcIdx.data(ToolModelRole::ToolHasUi).toBool();
+}
+
 void ClientToolModel::updateToolInitialization(const QModelIndex& topLeft, const QModelIndex& bottomRight)
 {
   for (int i = topLeft.row(); i <= bottomRight.row(); i++) {
-    QModelIndex index = QSortFilterProxyModel::index(i, 0);
+    const auto index = sourceModel()->index(i, 0);
 
-    if (QSortFilterProxyModel::data(index, ToolModelRole::ToolEnabled).toBool()) {
-      const QString toolId = QSortFilterProxyModel::data(index, ToolModelRole::ToolId).toString();
+    if (sourceModel()->data(index, ToolModelRole::ToolEnabled).toBool()) {
+      const QString toolId = sourceModel()->data(index, ToolModelRole::ToolId).toString();
       ToolUiFactory *factory = s_pluginRepository()->factories.value(toolId);
 
       if (factory && (factory->remotingSupported() || !Endpoint::instance()->isRemoteClient()) && s_pluginRepository()->inactiveTools.contains(factory)) {

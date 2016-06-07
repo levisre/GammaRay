@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -42,8 +42,7 @@ namespace PropertyModel {
       // Qt4 uses 32, Qt5 256, for Qt::UserRole - use the latter globally to allow combining Qt4/5 client/servers.
       ActionRole = 256 + 1, /**< the property action role */
       UserRole ,             /**< the UserRole, as defined by Qt */
-      ValueRole,
-      AppropriateToolRole,
+      ObjectIdRole,
       ResetActionRole
     };
 
@@ -53,6 +52,14 @@ namespace PropertyModel {
       Delete = 1,
       Reset = 2,
       NavigateTo = 4
+    };
+
+    /** Available columns. */
+    enum Column {
+        PropertyColumn = 0,
+        ValueColumn,
+        TypeColumn,
+        ClassColumn
     };
 }
 

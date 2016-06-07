@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,6 +34,7 @@
 #include "launcherfinder.h"
 #include "launcher.h"
 #include "probefinder.h"
+#include "selftest.h"
 
 #include <common/paths.h>
 #include <launcher/probeabi.h>
@@ -101,19 +102,21 @@ static void usage(const char *argv0)
   out << "  state machines, meta types, fonts, codecs, text documents" << endl;
   out << "" << endl;
   out << "Options:" << endl;
-  out << " -i, --injector <injector>  \tset injection type, possible values:" << endl;
-  out << "                            \t" << InjectorFactory::availableInjectors().join(", ")
+  out << " -i, --injector <injector>           \tset injection type, possible values:" << endl;
+  out << "                                     \t" << InjectorFactory::availableInjectors().join(QStringLiteral(", "))
       << endl;
-  out << " -p, --pid <pid>            \tattach to running Qt application" << endl;
-  out << "     --inprocess            \tuse in-process UI" << endl;
-  out << "     --inject-only          \tonly inject the probe, don't show the UI" << endl;
-  out << "     --listen <address>     \tspecify the address the server should listen on [default: 0.0.0.0]" << endl;
-  out << "     --no-listen            \tdisables remote access entirely (implies --inprocess)" << endl;
-  out << "     --list-probes          \tlist all installed probes" << endl;
-  out << "     --probe <abi>          \tspecify which probe to use" << endl;
-  out << "     --connect <host>[:port]\tconnect to an already injected target" << endl;
-  out << " -h, --help                 \tprint program help and exit" << endl;
-  out << " -v, --version              \tprint program version and exit" << endl;
+  out << " -o, --injector-override <executable>\tOverride the injector executable if handled (requires -i/--injector)" << endl;
+  out << " -p, --pid <pid>                     \tattach to running Qt application" << endl;
+  out << "     --inprocess                     \tuse in-process UI" << endl;
+  out << "     --inject-only                   \tonly inject the probe, don't show the UI" << endl;
+  out << "     --listen <address>              \tspecify the address the server should listen on [default: " << GAMMARAY_DEFAULT_ANY_TCP_URL << "]" << endl;
+  out << "     --no-listen                     \tdisables remote access entirely (implies --inprocess)" << endl;
+  out << "     --list-probes                   \tlist all installed probes" << endl;
+  out << "     --probe <abi>                   \tspecify which probe to use" << endl;
+  out << "     --connect <host>[:port]         \tconnect to an already injected target" << endl;
+  out << "     --self-test [injector]          \trun self tests, of everything or the specified injector" << endl;
+  out << " -h, --help                          \tprint program help and exit" << endl;
+  out << " -v, --version                       \tprint program version and exit" << endl;
 #ifdef HAVE_QT_WIDGETS
   out << endl
       << "When run without any options, " << argv0 << " will present a list of running\n"
@@ -139,10 +142,10 @@ static QUrl urlFromUserInput(const QString &s)
 {
   QUrl url(s);
   if (url.scheme().isEmpty()) { // backward compat: map input without a scheme to tcp + hostname
-    url.setScheme("tcp");
+    url.setScheme(QStringLiteral("tcp"));
     QString host = url.path();
     int port = -1;
-    const int pos = host.lastIndexOf(":");
+    const int pos = host.lastIndexOf(':');
     if (pos > 0) {
       port = host.mid(pos + 1).toUShort();
       host = host.left(pos);
@@ -157,9 +160,9 @@ static QUrl urlFromUserInput(const QString &s)
 
 int main(int argc, char **argv)
 {
-  QCoreApplication::setOrganizationName("KDAB");
-  QCoreApplication::setOrganizationDomain("kdab.com");
-  QCoreApplication::setApplicationName("GammaRay");
+  QCoreApplication::setOrganizationName(QStringLiteral("KDAB"));
+  QCoreApplication::setOrganizationDomain(QStringLiteral("kdab.com"));
+  QCoreApplication::setApplicationName(QStringLiteral("GammaRay"));
 
   installSignalHandler();
 
@@ -175,9 +178,9 @@ int main(int argc, char **argv)
 #endif
   Paths::setRelativeRootPath(GAMMARAY_INVERSE_BIN_DIR);
 
-  QStringList builtInArgs = QStringList() << QLatin1String("-style")
-                                          << QLatin1String("-stylesheet")
-                                          << QLatin1String("-graphicssystem");
+  QStringList builtInArgs = QStringList() << QStringLiteral("-style")
+                                          << QStringLiteral("-stylesheet")
+                                          << QStringLiteral("-graphicssystem");
 
   LaunchOptions options;
   while (!args.isEmpty() && args.first().startsWith('-')) {
@@ -185,6 +188,10 @@ int main(int argc, char **argv)
     if ((arg == QLatin1String("-i") || arg == QLatin1String("--injector")) && !args.isEmpty()) {
       options.setInjectorType(args.takeFirst());
       continue;
+    }
+    if ((arg == QLatin1String("-o") || arg == QLatin1String("--injector-override")) && !args.isEmpty()) {
+        options.setInjectorTypeExecutableOverride(args.takeFirst());
+        continue;
     }
     if ((arg == QLatin1String("-p") || arg == QLatin1String("--pid")) && !args.isEmpty()) {
       options.setPid( args.takeFirst().toInt() );
@@ -196,7 +203,7 @@ int main(int argc, char **argv)
     }
     if (arg == QLatin1String("-v") || arg == QLatin1String("--version")) {
       out << "GammaRay version " << GAMMARAY_VERSION_STRING << endl;
-      out << "Copyright (C) 2010-2015 Klaralvdalens Datakonsult AB, "
+      out << "Copyright (C) 2010-2016 Klaralvdalens Datakonsult AB, "
           << "a KDAB Group company, info@kdab.com" << endl;
       return 0;
     }
@@ -207,10 +214,10 @@ int main(int argc, char **argv)
       options.setUiMode(LaunchOptions::NoUi);
     }
     if (arg == QLatin1String("--listen") && !args.isEmpty()) {
-      options.setProbeSetting("ServerAddress", urlFromUserInput(args.takeFirst()).toString());
+      options.setProbeSetting(QStringLiteral("ServerAddress"), urlFromUserInput(args.takeFirst()).toString());
     }
     if ( arg == QLatin1String("--no-listen")) {
-      options.setProbeSetting("RemoteAccessEnabled", false);
+      options.setProbeSetting(QStringLiteral("RemoteAccessEnabled"), false);
       options.setUiMode(LaunchOptions::InProcessUi);
     }
     if ( arg == QLatin1String("--list-probes")) {
@@ -224,7 +231,7 @@ int main(int argc, char **argv)
         out << "Invalid probe ABI specified, see --list-probes for valid ones." << endl;
         return 1;
       }
-      if (ProbeFinder::findProbe(GAMMARAY_PROBE_NAME, abi).isEmpty()) {
+      if (ProbeFinder::findProbe(abi).isEmpty()) {
         out << abi.id() << "is not a known probe, see --list-probes." << endl;
         return 1;
       }
@@ -236,6 +243,21 @@ int main(int argc, char **argv)
       client.launch(url);
       client.waitForFinished();
       return 0;
+    }
+    if (arg == QLatin1String("--self-test")) {
+        SelfTest selfTest;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+        QObject::connect(&selfTest, &SelfTest::information, [](const QString &msg) {
+            out << msg << endl;
+        });
+        QObject::connect(&selfTest, &SelfTest::error, [](const QString &msg) {
+            err << "Error: " << msg << endl;
+        });
+#endif
+        if (args.isEmpty() || args.first().startsWith('-'))
+            return selfTest.checkEverything() ? 0 : 1;
+        const auto injectorType = args.takeFirst();
+        return selfTest.checkInjector(injectorType) ? 0 : 1;
     }
 
     // debug/test options

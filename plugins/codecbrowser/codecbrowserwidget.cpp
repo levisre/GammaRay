@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,29 +29,30 @@
 #include "codecbrowserwidget.h"
 #include "ui_codecbrowserwidget.h"
 
-#include <ui/deferredresizemodesetter.h>
 #include <common/objectbroker.h>
 #include <common/endpoint.h>
 
 using namespace GammaRay;
 
 CodecBrowserWidget::CodecBrowserWidget(QWidget *parent)
-  : QWidget(parent),
-    ui(new Ui::CodecBrowserWidget)
+  : QWidget(parent)
+  , ui(new Ui::CodecBrowserWidget)
+  , m_stateManager(this)
 {
   ui->setupUi(this);
 
-  ui->codecList->setRootIsDecorated(false);
-  ui->codecList->setModel(ObjectBroker::model("com.kdab.GammaRay.AllCodecsModel"));
+  ui->codecList->header()->setObjectName("codecListHeader");
+  ui->codecList->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->codecList->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.AllCodecsModel")));
   ui->codecList->setSelectionModel(ObjectBroker::selectionModel(ui->codecList->model()));
-  ui->codecList->setSelectionMode(QAbstractItemView::ExtendedSelection);
-  ui->selectedCodecs->setRootIsDecorated(false);
-  ui->selectedCodecs->setModel(ObjectBroker::model("com.kdab.GammaRay.SelectedCodecsModel"));
 
-  new DeferredResizeModeSetter(ui->codecList->header(), 0, QHeaderView::ResizeToContents);
-  new DeferredResizeModeSetter(ui->selectedCodecs->header(), 0, QHeaderView::ResizeToContents);
+  ui->selectedCodecs->header()->setObjectName("selectedCodecsHeader");
+  ui->selectedCodecs->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->selectedCodecs->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SelectedCodecsModel")));
 
   connect(ui->codecText, SIGNAL(textChanged(QString)), SLOT(textChanged(QString)));
+
+  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "50%" << "50%");
 }
 
 CodecBrowserWidget::~CodecBrowserWidget()
@@ -60,7 +61,7 @@ CodecBrowserWidget::~CodecBrowserWidget()
 
 void CodecBrowserWidget::textChanged(const QString& text)
 {
-  Endpoint::instance()->invokeObject("com.kdab.GammaRay.CodecBrowser", "textChanged", QVariantList() << text);
+  Endpoint::instance()->invokeObject(QStringLiteral("com.kdab.GammaRay.CodecBrowser"), "textChanged", QVariantList() << text);
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

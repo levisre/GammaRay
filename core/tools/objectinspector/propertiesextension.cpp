@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -42,7 +42,7 @@ PropertiesExtension::PropertiesExtension(PropertyController *controller) :
   PropertyControllerExtension(controller->objectBaseName() + ".properties"),
   m_aggregatedPropertyModel(new AggregatedPropertyModel(this))
 {
-  controller->registerModel(m_aggregatedPropertyModel, "properties");
+  controller->registerModel(m_aggregatedPropertyModel, QStringLiteral("properties"));
 }
 
 PropertiesExtension::~PropertiesExtension()
@@ -76,18 +76,6 @@ bool PropertiesExtension::setMetaObject(const QMetaObject* metaObject)
   setCanAddProperty(false);
   setHasPropertyValues(false);
   return true;
-}
-
-void PropertiesExtension::navigateToValue(int modelRow)
-{
-  QModelIndex index = m_aggregatedPropertyModel->index(modelRow, 2);
-  QVariant propertyValue = index.data(PropertyModel::ValueRole);
-  if (propertyValue.canConvert<QObject*>()) {
-    Probe::instance()->selectObject(propertyValue.value<QObject*>());
-  } else {
-    Probe::instance()->selectObject(*reinterpret_cast<void**>(propertyValue.data()),
-                                    index.data(Qt::DisplayRole).toString());
-  }
 }
 
 void PropertiesExtension::setProperty(const QString &name, const QVariant &value)

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,6 +32,7 @@
 #include <common/modelevent.h>
 
 #include <QCoreApplication>
+#include <QPointer>
 #include <QSortFilterProxyModel>
 #include <QVector>
 
@@ -44,11 +45,25 @@ namespace GammaRay {
 template <typename BaseProxy> class ServerProxyModel : public BaseProxy
 {
 public:
-    explicit ServerProxyModel(QObject *parent = 0) : BaseProxy(parent) {}
+    explicit ServerProxyModel(QObject *parent = 0) :
+        BaseProxy(parent),
+        m_sourceModel(Q_NULLPTR),
+        m_active(false)
+    {
+    }
 
+    /** Additional roles used from the source model for transfer to the client. */
     void addRole(int role)
     {
         m_extraRoles.push_back(role);
+    }
+
+    /** Additional roles used from the proxy model itself for transfer to the client.
+     *  This is useful if @tparam BaseProxy overrides data().
+     */
+    void addProxyRole(int role)
+    {
+        m_extraProxyRoles.push_back(role);
     }
 
     QMap<int, QVariant> itemData(const QModelIndex &index) const Q_DECL_OVERRIDE
@@ -58,12 +73,25 @@ public:
         foreach (int role, m_extraRoles) {
             d.insert(role, sourceIndex.data(role));
         }
+        foreach (int role, m_extraProxyRoles) {
+            d.insert(role, index.data(role));
+        }
         return d;
     }
 
     void setSourceModel(QAbstractItemModel *sourceModel) Q_DECL_OVERRIDE
     {
         m_sourceModel = sourceModel;
+        if (m_active && sourceModel) {
+            Model::used(sourceModel);
+            BaseProxy::setSourceModel(sourceModel);
+        }
+    }
+
+    QModelIndex index(int row, int column, const QModelIndex & parent = QModelIndex()) const Q_DECL_OVERRIDE
+    {
+        Model::used(this);
+        return BaseProxy::index(row, column, parent);
     }
 
 protected:
@@ -71,11 +99,14 @@ protected:
     {
         if (event->type() == ModelEvent::eventType()) {
             auto mev = static_cast<ModelEvent*>(event);
-            QCoreApplication::sendEvent(m_sourceModel, event);
-            if (mev->used() && m_sourceModel && BaseProxy::sourceModel() != m_sourceModel) {
-                BaseProxy::setSourceModel(m_sourceModel);
-            } else if (!mev->used()) {
-                BaseProxy::setSourceModel(0);
+            m_active = mev->used();
+            if (m_sourceModel) {
+                QCoreApplication::sendEvent(m_sourceModel, event);
+                if (mev->used() && BaseProxy::sourceModel() != m_sourceModel) {
+                    BaseProxy::setSourceModel(m_sourceModel);
+                } else if (!mev->used()) {
+                    BaseProxy::setSourceModel(0);
+                }
             }
         }
         BaseProxy::customEvent(event);
@@ -83,7 +114,9 @@ protected:
 
 private:
     QVector<int> m_extraRoles;
-    QAbstractItemModel *m_sourceModel;
+    QVector<int> m_extraProxyRoles;
+    QPointer<QAbstractItemModel> m_sourceModel;
+    bool m_active;
 };
 
 }

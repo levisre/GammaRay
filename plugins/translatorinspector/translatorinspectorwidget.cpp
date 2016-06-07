@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Jan Dalheimer <jan.dalheimer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,6 +31,7 @@
 
 #include <QSortFilterProxyModel>
 
+#include <ui/searchlinecontroller.h>
 #include <common/objectbroker.h>
 #include <common/endpoint.h>
 
@@ -49,27 +50,36 @@ void TranslatorInspectorClient::resetTranslations()
   Endpoint::instance()->invokeObject(name(), "resetTranslations");
 }
 
-TranslatorInspectorWidget::TranslatorInspectorWidget(QWidget *parent) :
-  QWidget(parent), ui(new Ui::TranslatorInspectorWidget)
+TranslatorInspectorWidget::TranslatorInspectorWidget(QWidget *parent)
+  : QWidget(parent)
+  , ui(new Ui::TranslatorInspectorWidget)
+  , m_stateManager(this)
 {
   ui->setupUi(this);
-  QAbstractItemModel *translators = ObjectBroker::model("com.kdab.GammaRay.TranslatorsModel");
-  ui->translatorList->setModel(translators);
-  ui->translatorList->setSelectionModel(ObjectBroker::selectionModel(translators));
 
-  m_inspector = ObjectBroker::object<TranslatorInspectorInterface *>("com.kdab.GammaRay.TranslatorInspector");
+  m_inspector = ObjectBroker::object<TranslatorInspectorInterface *>(QStringLiteral("com.kdab.GammaRay.TranslatorInspector"));
+
+  ui->translatorList->header()->setObjectName("translatorListHeader");
+  ui->translatorList->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->translatorList->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->translatorList->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+  ui->translatorList->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.TranslatorsModel")));
+  ui->translatorList->setSelectionModel(ObjectBroker::selectionModel(ui->translatorList->model()));
 
   connect(ui->languageChangeButton, SIGNAL(clicked()), m_inspector, SLOT(sendLanguageChangeEvent()));
   connect(ui->resetTranslationsButton, SIGNAL(clicked()), m_inspector, SLOT(resetTranslations()));
 
   // searching for translations
   {
-    QSortFilterProxyModel *translationsFilter = new QSortFilterProxyModel(this);
-    translationsFilter->setSourceModel(ObjectBroker::model("com.kdab.GammaRay.TranslationsModel"));
-    ui->translationsView->setModel(translationsFilter);
-    ui->translationsSearchLine->setProxy(translationsFilter);
-    ui->translationsView->setSelectionModel(ObjectBroker::selectionModel(translationsFilter));
+    ui->translationsView->header()->setObjectName("translationsViewHeader");
+    ui->translationsView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+    ui->translationsView->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.TranslationsModel")));
+    ui->translationsView->setSelectionModel(ObjectBroker::selectionModel(ui->translationsView->model()));
+
+    new SearchLineController(ui->translationsSearchLine, ui->translationsView->model());
   }
+
+  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "50%" << "50%");
 }
 TranslatorInspectorWidget::~TranslatorInspectorWidget()
 {

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -46,7 +46,7 @@ SignalMonitor::SignalMonitor(ProbeInterface *probe, QObject *parent)
   auto proxy = new ServerProxyModel<QSortFilterProxyModel>(this);
   proxy->setDynamicSortFilter(true);
   proxy->setSourceModel(model);
-  probe->registerModel("com.kdab.GammaRay.SignalHistoryModel", proxy);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.SignalHistoryModel"), proxy);
 
   m_clock = new QTimer(this);
   m_clock->setInterval(1000/25); // update frequency of the delegate, we could slow this down a lot, and let the client interpolate, if necessary
@@ -69,6 +69,11 @@ void SignalMonitor::sendClockUpdates(bool enabled)
     m_clock->start();
   else
     m_clock->stop();
+}
+
+QString SignalMonitorFactory::name() const
+{
+  return tr("Signals");
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

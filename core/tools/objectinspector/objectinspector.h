@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,9 +33,11 @@
 
 #include <QObject>
 
+QT_BEGIN_NAMESPACE
 class QItemSelection;
 class QItemSelectionModel;
 class QModelIndex;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -48,7 +50,6 @@ class ObjectInspector : public QObject
     explicit ObjectInspector(ProbeInterface *probe, QObject *parent = 0);
 
   private slots:
-    void selectDefaultItem();
     void objectSelected(const QModelIndex &index);
     void objectSelectionChanged(const QItemSelection &selection);
     void objectSelected(QObject *object);
@@ -69,10 +70,8 @@ class ObjectInspectorFactory : public QObject, public StandardToolFactory<QObjec
     {
     }
 
-    inline QString name() const
-    {
-      return tr("Objects");
-    }
+    QString name() const Q_DECL_OVERRIDE;
+    QVector<QByteArray> selectableTypes() const Q_DECL_OVERRIDE;
 };
 
 }

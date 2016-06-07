@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,6 +32,8 @@
 #include "propertyintpaireditor.h"
 #include "propertydoublepaireditor.h"
 #include "propertypaletteeditor.h"
+#include "propertymatrixeditor.h"
+#include "propertytexteditor.h"
 
 #include <QItemEditorFactory>
 
@@ -48,6 +50,16 @@ PropertyEditorFactory::PropertyEditorFactory()
   addEditor(QVariant::PointF, new QStandardItemEditorCreator<PropertyPointFEditor>());
   addEditor(QVariant::Size, new QStandardItemEditorCreator<PropertySizeEditor>());
   addEditor(QVariant::SizeF, new QStandardItemEditorCreator<PropertySizeFEditor>());
+  addEditor(QVariant::String, new QStandardItemEditorCreator<PropertyTextEditor>());
+  addEditor(QVariant::Transform, new QStandardItemEditorCreator<PropertyMatrixEditor>());
+  addEditor(QVariant::Matrix, new QStandardItemEditorCreator<PropertyMatrixEditor>());
+  addEditor(QVariant::Matrix4x4, new QStandardItemEditorCreator<PropertyMatrixEditor>());
+  addEditor(QVariant::Vector2D, new QStandardItemEditorCreator<PropertyMatrixEditor>());
+  addEditor(QVariant::Vector3D, new QStandardItemEditorCreator<PropertyMatrixEditor>());
+  addEditor(QVariant::Vector4D, new QStandardItemEditorCreator<PropertyMatrixEditor>());
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+  addEditor(QVariant::Quaternion, new QStandardItemEditorCreator<PropertyMatrixEditor>());
+#endif
 }
 
 PropertyEditorFactory* PropertyEditorFactory::instance()
@@ -88,7 +100,6 @@ void PropertyEditorFactory::initBuiltInTypes()
     << QVariant::UInt
     << QVariant::Date
     << QVariant::DateTime
-    << QVariant::String
     << QVariant::Time;
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)

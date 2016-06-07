@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,7 +40,6 @@ class VariantWrapper
 public:
   inline VariantWrapper() {}
   explicit inline VariantWrapper(const QVariant &variant) : m_variant(variant) {}
-  inline ~VariantWrapper() {}
 
   inline QVariant variant() const { return m_variant; }
   inline void setVariant(const QVariant &v) { m_variant = v; }

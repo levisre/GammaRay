@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,6 +30,10 @@
 #include "localeaccessormodel.h"
 #include "localedataaccessor.h"
 
+#include <core/remote/serverproxymodel.h>
+
+#include <QSortFilterProxyModel>
+
 using namespace GammaRay;
 
 LocaleInspector::LocaleInspector(ProbeInterface *probe, QObject *parent)
@@ -38,8 +42,16 @@ LocaleInspector::LocaleInspector(ProbeInterface *probe, QObject *parent)
   LocaleDataAccessorRegistry *registry = new LocaleDataAccessorRegistry(this);
 
   LocaleModel *model = new LocaleModel(registry, this);
-  probe->registerModel("com.kdab.GammaRay.LocaleModel", model);
+  auto proxy = new ServerProxyModel<QSortFilterProxyModel>(this);
+  proxy->setSourceModel(model);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.LocaleModel"), proxy);
+
+
   LocaleAccessorModel *accessorModel = new LocaleAccessorModel(registry, this);
-  probe->registerModel("com.kdab.GammaRay.LocaleAccessorModel", accessorModel);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.LocaleAccessorModel"), accessorModel);
 }
 
+QString LocaleInspectorFactory::name() const
+{
+  return tr("Locales");
+}

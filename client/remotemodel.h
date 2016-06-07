@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -95,18 +95,24 @@ class GAMMARAY_CLIENT_EXPORT RemoteModel : public QAbstractItemModel
     struct Node { // represents one row
       Node() : parent(0), rowCount(-1), columnCount(-1) {}
       ~Node();
+      Q_DISABLE_COPY(Node)
       // delete all cached children data, but assume row/column count on this level is still accurate
       void clearChildrenData();
       // forget everything we know about our children, including row/column counts
       void clearChildrenStructure();
 
+      // resize the initialize the column vectors
+      void allocateColumns();
+      // returns whether columns are allocated
+      bool hasColumnData() const;
+
       Node* parent;
       QVector<Node*> children;
       qint32 rowCount;
       qint32 columnCount;
-      QHash<int, QHash<int, QVariant> > data; // column -> role -> data
-      QHash<int, Qt::ItemFlags> flags;        // column -> flags
-      QHash<int, NodeStates> state;           // column -> state (cache outdated, waiting for data, etc)
+      QVector<QHash<int, QVariant> > data; // column -> role -> data
+      QVector<Qt::ItemFlags> flags;        // column -> flags
+      QVector<NodeStates> state;           // column -> state (cache outdated, waiting for data, etc)
     };
 
     void clear();
@@ -138,6 +144,11 @@ class GAMMARAY_CLIENT_EXPORT RemoteModel : public QAbstractItemModel
     /// execute a rowsMoved() operation
     void doMoveRows(Node *sourceParentNode, int sourceStart, int sourceEnd, Node* destParentNode, int destStart);
 
+    /// execute a insertColumns() operation
+    void doInsertColumns(Node *parentNode, int first, int last);
+    /// execute a removeColumns() operation
+    void doRemoveColumns(Node *parentNode, int first, int last);
+
     // sort/filter proxy model settings
     bool proxyDynamicSortFilter() const;
     void setProxyDynamicSortFilter(bool dynamicSortFilter);
@@ -154,7 +165,8 @@ private slots:
 private:
     Node* m_root;
 
-    mutable QHash<Qt::Orientation, QHash<int, QHash<int, QVariant> > > m_headers; // orientation -> section -> role -> data
+    mutable QVector<QHash<int, QVariant> > m_horizontalHeaders; // section -> role -> data
+    mutable QVector<QHash<int, QVariant> > m_verticalHeaders; // section -> role -> data
 
     mutable QVector<Protocol::ModelIndex> m_pendingDataRequests;
     QTimer* m_pendingDataRequestsTimer;
@@ -163,6 +175,10 @@ private:
     Protocol::ObjectAddress m_myAddress;
 
     qint32 m_currentSyncBarrier, m_targetSyncBarrier;
+
+    // default data() values for empty cells
+    static QVariant s_emptyDisplayValue;
+    static QVariant s_emptySizeHintValue;
 
     // proxy model properties
     bool m_proxyDynamicSortFilter;

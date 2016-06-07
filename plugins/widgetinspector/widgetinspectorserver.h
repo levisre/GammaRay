@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -32,20 +32,23 @@
 
 #include <widgetinspectorinterface.h>
 
-#include <QLibrary>
 #include <QPointer>
 
+QT_BEGIN_NAMESPACE
 class QModelIndex;
 class QItemSelection;
 class QItemSelectionModel;
-class QTimer;
+class QLibrary;
+class QPoint;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
 class ProbeInterface;
 class PropertyController;
 class OverlayWidget;
-class PaintBufferModel;
+class PaintAnalyzer;
+class RemoteViewServer;
 
 class WidgetInspectorServer : public WidgetInspectorInterface
 {
@@ -55,21 +58,21 @@ class WidgetInspectorServer : public WidgetInspectorInterface
     explicit WidgetInspectorServer(ProbeInterface *probe, QObject *parent = 0);
     ~WidgetInspectorServer();
 
-    void selectDefaultItem();
-
   protected:
     bool eventFilter(QObject *object, QEvent *event) Q_DECL_OVERRIDE;
 
   private:
     void callExternalExportAction(const char *name, QWidget *widget, const QString &fileName);
-    QPixmap pixmapForWidget(QWidget *widget);
+    QImage imageForWidget(QWidget *widget);
     void registerWidgetMetaTypes();
     void registerVariantHandlers();
     void discoverObjects();
+    void checkFeatures();
 
   private slots:
     void widgetSelected(const QItemSelection &selection);
     void widgetSelected(QWidget *widget);
+    void objectSelected(QObject *obj);
     void objectCreated(QObject *object);
 
     void recreateOverlayWidget();
@@ -80,22 +83,18 @@ class WidgetInspectorServer : public WidgetInspectorInterface
     void saveAsUiFile(const QString &fileName) Q_DECL_OVERRIDE;
 
     void analyzePainting() Q_DECL_OVERRIDE;
-    void eventuallyUpdatePaintAnalyzer();
-    void updatePaintAnalyzer();
 
     void updateWidgetPreview();
-
-    void checkFeatures() Q_DECL_OVERRIDE;
+    void pickElement(const QPoint &pos);
 
   private:
     QPointer<OverlayWidget> m_overlayWidget;
-    QLibrary m_externalExportActions;
+    QLibrary *m_externalExportActions;
     PropertyController *m_propertyController;
     QItemSelectionModel *m_widgetSelectionModel;
     QPointer<QWidget> m_selectedWidget;
-    QTimer *m_updatePreviewTimer;
-    PaintBufferModel *m_paintBufferModel;
-    QTimer *m_paintAnalyzerTimer;
+    PaintAnalyzer *m_paintAnalyzer;
+    RemoteViewServer *m_remoteView;
     ProbeInterface *m_probe;
 };
 

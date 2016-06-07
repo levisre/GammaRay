@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,14 +27,69 @@
 */
 
 #include "probecontroller.h"
+
+#include "toolmodel.h"
 #include "probe.h"
 
+#include <QDebug>
 #include <QCoreApplication>
+#include <QMutexLocker>
 
 using namespace GammaRay;
 
-ProbeController::ProbeController(QObject* parent): QObject(parent)
+ProbeController::ProbeController(QObject* parent)
+  : ProbeControllerInterface(parent)
 {
+}
+
+void ProbeController::selectObject(ObjectId id, const QString &toolId)
+{
+  switch (id.type()) {
+  case ObjectId::Invalid:
+    return;
+  case ObjectId::QObjectType: {
+    QMutexLocker lock(Probe::objectLock());
+    if (!Probe::instance()->isValidObject(id.asQObject()))
+      return;
+
+    Probe::instance()->selectObject(id.asQObject(), toolId);
+    break;
+  }
+  case ObjectId::VoidStarType:
+    Probe::instance()->selectObject(id.asVoidStar(), id.typeName());
+    break;
+  }
+}
+
+void ProbeController::requestSupportedTools(ObjectId id)
+{
+  QModelIndexList indexes;
+  switch (id.type()) {
+  case ObjectId::Invalid:
+    return;
+  case ObjectId::QObjectType: {
+    QMutexLocker lock(Probe::objectLock());
+    if (!Probe::instance()->isValidObject(id.asQObject()))
+      return;
+
+    indexes = Probe::instance()->toolModel()->toolsForObject(id.asQObject());
+    break;
+  }
+  case ObjectId::VoidStarType:
+    const auto asVoidStar = reinterpret_cast<void *>(id.id());
+    indexes = Probe::instance()->toolModel()->toolsForObject(asVoidStar, id.typeName());
+    break;
+  }
+
+  ToolInfos toolInfos;
+  toolInfos.reserve(indexes.size());
+  foreach (const auto &index, indexes) {
+    ToolInfo info;
+    info.id = index.data(ToolModelRole::ToolId).toString();
+    info.name =  index.data(Qt::DisplayRole).toString();
+    toolInfos.push_back(info);
+  }
+  emit supportedToolsResponse(id, toolInfos);
 }
 
 void ProbeController::detachProbe()

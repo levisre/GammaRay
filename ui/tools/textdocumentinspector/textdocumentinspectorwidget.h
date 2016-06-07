@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,11 +29,15 @@
 #ifndef GAMMARAY_TEXTDOCUMENTINSPECTOR_TEXTDOCUMENTINSPECTORWIDGET_H
 #define GAMMARAY_TEXTDOCUMENTINSPECTOR_TEXTDOCUMENTINSPECTORWIDGET_H
 
+#include <ui/uistatemanager.h>
+
 #include <QPointer>
 #include <QTextDocument>
 #include <QWidget>
 
+QT_BEGIN_NAMESPACE
 class QItemSelection;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -58,6 +62,7 @@ class TextDocumentInspectorWidget : public QWidget
 
   private:
     QScopedPointer<Ui::TextDocumentInspectorWidget> ui;
+    UIStateManager m_stateManager;
     QPointer<QTextDocument> m_currentDocument;
 };
 

@@ -153,6 +153,7 @@ public:
 
 void KRecursiveFilterProxyModelPrivate::sourceDataChanged(const QModelIndex &source_top_left, const QModelIndex &source_bottom_right, const QVector<int> &roles)
 {
+    Q_Q(KRecursiveFilterProxyModel);
     QModelIndex source_parent = source_top_left.parent();
     Q_ASSERT(source_bottom_right.parent() == source_parent); // don't know how to handle different parents in this code...
 
@@ -161,6 +162,13 @@ void KRecursiveFilterProxyModelPrivate::sourceDataChanged(const QModelIndex &sou
 
     // We can't find out if the change really matters to us or not, for a lack of a dataAboutToBeChanged signal (or a cache).
     // TODO: add a set of roles that we care for, so we can at least ignore the rest.
+
+    // If we are not actually filtering, we don't need to propagate this upwards,
+    // which avoids QSFPM emitting layoutChanged unnecessarily.
+    // However, this only works if filterAcceptsRow isn't overridden, otherwise
+    // we don't know if we are filtering or not.
+    if (q->filterRegExp().isEmpty() && q->metaObject() == &KRecursiveFilterProxyModel::staticMetaObject)
+        return;
 
     // Even if we knew the visibility was just toggled, we also can't find out what
     // was the last filtered out ascendant (on show, like sourceRowsAboutToBeInserted does)
@@ -318,6 +326,9 @@ QModelIndexList KRecursiveFilterProxyModel::match(const QModelIndex &start, int 
     }
 
     QModelIndexList list;
+    if (!sourceModel())
+      return list;
+
     QModelIndex proxyIndex;
     Q_FOREACH (const QModelIndex &idx, sourceModel()->match(mapToSource(start), role, value, hits, flags)) {
         proxyIndex = mapFromSource(idx);
@@ -336,26 +347,28 @@ bool KRecursiveFilterProxyModel::acceptRow(int sourceRow, const QModelIndex &sou
 
 void KRecursiveFilterProxyModel::setSourceModel(QAbstractItemModel *model)
 {
-    // Standard disconnect.
-    if (passRolesToDataChanged()) {
-        disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
-                   this, SLOT(sourceDataChanged(QModelIndex,QModelIndex,QVector<int>)));
-    } else {
-        disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
-                   this, SLOT(sourceDataChanged(QModelIndex,QModelIndex)));
+    // Standard disconnect of the previous source model, if present
+    if (sourceModel()) {
+        if (passRolesToDataChanged()) {
+            disconnect(sourceModel(), SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
+                    this, SLOT(sourceDataChanged(QModelIndex,QModelIndex,QVector<int>)));
+        } else {
+            disconnect(sourceModel(), SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+                    this, SLOT(sourceDataChanged(QModelIndex,QModelIndex)));
+        }
+
+        disconnect(sourceModel(), SIGNAL(rowsAboutToBeInserted(QModelIndex,int,int)),
+                this, SLOT(sourceRowsAboutToBeInserted(QModelIndex,int,int)));
+
+        disconnect(sourceModel(), SIGNAL(rowsInserted(QModelIndex,int,int)),
+                this, SLOT(sourceRowsInserted(QModelIndex,int,int)));
+
+        disconnect(sourceModel(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+                this, SLOT(sourceRowsAboutToBeRemoved(QModelIndex,int,int)));
+
+        disconnect(sourceModel(), SIGNAL(rowsRemoved(QModelIndex,int,int)),
+                this, SLOT(sourceRowsRemoved(QModelIndex,int,int)));
     }
-
-    disconnect(model, SIGNAL(rowsAboutToBeInserted(QModelIndex,int,int)),
-               this, SLOT(sourceRowsAboutToBeInserted(QModelIndex,int,int)));
-
-    disconnect(model, SIGNAL(rowsInserted(QModelIndex,int,int)),
-               this, SLOT(sourceRowsInserted(QModelIndex,int,int)));
-
-    disconnect(model, SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
-               this, SLOT(sourceRowsAboutToBeRemoved(QModelIndex,int,int)));
-
-    disconnect(model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
-               this, SLOT(sourceRowsRemoved(QModelIndex,int,int)));
 
     QSortFilterProxyModel::setSourceModel(model);
 
@@ -422,6 +435,10 @@ void KRecursiveFilterProxyModel::setSourceModel(QAbstractItemModel *model)
     // achieved by telling the QSFPM that the data changed for H, which causes it to requery this class
     // to see if H matches the filter (which it now does as L now exists).
     // That is done in sourceRowsInserted.
+
+    if (!model) {
+        return;
+    }
 
     if (passRolesToDataChanged()) {
         disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),

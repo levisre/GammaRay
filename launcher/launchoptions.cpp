@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -49,11 +49,13 @@ public:
 
     QStringList launchArguments;
     QString injectorType;
+    QString injectorTypeExecutableOverride;
     ProbeABI probeABI;
     int pid;
     LaunchOptions::UiMode uiMode;
     QHash<QByteArray, QByteArray> probeSettings;
     QProcessEnvironment env;
+    QString workingDir;
 };
 
 }
@@ -143,7 +145,7 @@ LaunchOptions::UiMode LaunchOptions::uiMode() const
 void LaunchOptions::setUiMode(LaunchOptions::UiMode mode)
 {
   d->uiMode = mode;
-  setProbeSetting("InProcessUi", mode == InProcessUi);
+  setProbeSetting(QStringLiteral("InProcessUi"), mode == InProcessUi);
 }
 
 QString LaunchOptions::injectorType() const
@@ -156,6 +158,16 @@ void LaunchOptions::setInjectorType(const QString& injectorType)
   d->injectorType = injectorType;
 }
 
+QString LaunchOptions::injectorTypeExecutableOverride() const
+{
+  return d->injectorTypeExecutableOverride;
+}
+
+void LaunchOptions::setInjectorTypeExecutableOverride(const QString &filePath)
+{
+  d->injectorTypeExecutableOverride = filePath;
+}
+
 ProbeABI LaunchOptions::probeABI() const
 {
   return d->probeABI;
@@ -164,16 +176,6 @@ ProbeABI LaunchOptions::probeABI() const
 void LaunchOptions::setProbeABI(const ProbeABI& abi)
 {
   d->probeABI = abi;
-}
-
-void LaunchOptions::setRootPath(const QString &path)
-{
-    setProbeSetting("RootPath", path);
-}
-
-QString LaunchOptions::rootPath() const
-{
-    return d->probeSettings.value("RootPath");
 }
 
 void LaunchOptions::setProcessEnvironment(const QProcessEnvironment &env)
@@ -191,12 +193,22 @@ QProcessEnvironment LaunchOptions::processEnvironment() const
 
 void LaunchOptions::setProbePath(const QString& path)
 {
-  setProbeSetting("ProbePath", path);
+  setProbeSetting(QStringLiteral("ProbePath"), path);
 }
 
 QString LaunchOptions::probePath() const
 {
     return d->probeSettings.value("ProbePath");
+}
+
+void LaunchOptions::setWorkingDirectory(const QString &path)
+{
+    d->workingDir = path;
+}
+
+QString LaunchOptions::workingDirectory() const
+{
+    return d->workingDir;
 }
 
 void LaunchOptions::setProbeSetting(const QString& key, const QVariant& value)
@@ -235,30 +247,30 @@ bool LaunchOptions::execute(const QString& launcherPath) const
   QStringList args;
   switch (uiMode()) {
     case InProcessUi:
-      args.push_back("--inprocess");
+      args.push_back(QStringLiteral("--inprocess"));
       break;
     case OutOfProcessUi:
-      args.push_back("--no-inprocess");
+      args.push_back(QStringLiteral("--no-inprocess"));
       break;
     case NoUi:
-      args.push_back("--inject-only");
+      args.push_back(QStringLiteral("--inject-only"));
       break;
   }
 
   if (d->probeABI.isValid()) {
-    args.push_back("--probe");
+    args.push_back(QStringLiteral("--probe"));
     args.push_back(d->probeABI.id());
   }
 
   if (d->probeSettings.contains("ServerAddress")) {
-    args.push_back("--listen");
+    args.push_back(QStringLiteral("--listen"));
     args.push_back(d->probeSettings.value("ServerAddress"));
   }
-  if (d->probeSettings.value("RemoteAccessEnabled") == "false")
-    args.push_back("--no-listen");
+  if (d->probeSettings.value("RemoteAccessEnabled", "true") == "false")
+    args.push_back(QStringLiteral("--no-listen"));
 
   if (isAttach()) {
-    args.push_back("--pid");
+    args.push_back(QStringLiteral("--pid"));
     args.push_back(QString::number(pid()));
   } else {
     args += launchArguments();

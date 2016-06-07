@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -147,26 +147,17 @@ static QString resolveRPath(const QString &path, const QStringList &rpaths)
   return path;
 }
 
-ProbeABI ProbeABIDetector::abiForExecutable(const QString& path) const
+QString ProbeABIDetector::qtCoreForExecutable(const QString& path) const
 {
   auto qtCorePath = qtCoreFromOtool(resolveBundlePath(path));
   qtCorePath = resolveRPath(qtCorePath, readRPaths(path));
-  if (qtCorePath.isEmpty())
-    return ProbeABI();
-
-  return abiForQtCore(qtCorePath);
+  return qtCorePath;
 }
 
-
-ProbeABI ProbeABIDetector::abiForProcess(qint64 pid) const
+QString ProbeABIDetector::qtCoreForProcess(quint64 pid) const
 {
-  const QString qtCorePath = qtCoreFromLsof(pid);
-  if (qtCorePath.isEmpty())
-    return ProbeABI();
-
-  return abiForQtCore(qtCorePath);
+  return qtCoreFromLsof(pid);
 }
-
 
 template <typename T>
 static QString readMachOHeader(const uchar* data, quint64 size, quint32 &offset, qint32 &ncmds, qint32 &cmdsize)
@@ -187,7 +178,7 @@ static QString readMachOHeader(const uchar* data, quint64 size, quint32 &offset,
   return QString();
 }
 
-static ProbeABI abiFromMachO(const uchar* data, qint64 size)
+static ProbeABI abiFromMachO(const QString &path, const uchar* data, qint64 size)
 {
   ProbeABI abi;
   const quint32 magic = *reinterpret_cast<const quint32*>(data);
@@ -220,11 +211,20 @@ static ProbeABI abiFromMachO(const uchar* data, qint64 size)
     offset += cmd->cmdsize;
   }
 
+  if (QFileInfo(path).baseName().endsWith(QStringLiteral("_debug"), Qt::CaseInsensitive)) {
+      // We can probably also look for a S_ATTR_DEBUG segment, in the data, but that might not proove it's a debug
+      // build as we can add debug symbols to release builds.
+      abi.setIsDebug(true);
+  }
+
   return abi;
 }
 
 ProbeABI ProbeABIDetector::detectAbiForQtCore(const QString& path) const
 {
+  if (path.isEmpty())
+    return ProbeABI();
+
   QFile f(path);
   if (!f.open(QFile::ReadOnly))
     return ProbeABI();
@@ -232,5 +232,5 @@ ProbeABI ProbeABIDetector::detectAbiForQtCore(const QString& path) const
   const uchar* data = f.map(0, f.size());
   if (!data || (uint)f.size() <= sizeof(quint32))
     return ProbeABI();
-  return abiFromMachO(data, f.size());
+  return abiFromMachO(path, data, f.size());
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,12 +26,15 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config-gammaray.h>
 #include "attachdialog.h"
 
 #include "launchoptions.h"
 #include "processfiltermodel.h"
 #include "processmodel.h"
 #include "probeabimodel.h"
+
+#include <ui/searchlinecontroller.h>
 
 #include <QPushButton>
 #include <QStandardItemModel>
@@ -80,15 +83,15 @@ AttachDialog::AttachDialog(QWidget *parent, Qt::WindowFlags f)
 
   connect(ui.view, SIGNAL(activated(QModelIndex)), SIGNAL(activate()));
 
-  ui.filter->setProxy(m_proxyModel);
+  new SearchLineController(ui.filter, m_proxyModel);
 
   ui.probeBox->setModel(m_abiModel);
 
   QSettings settings;
-  ui.accessMode->setCurrentIndex(settings.value(QLatin1String("Launcher/AttachAccessMode")).toInt());
+  ui.accessMode->setCurrentIndex(settings.value(QStringLiteral("Launcher/AttachAccessMode")).toInt());
 
   setWindowTitle(tr("GammaRay - Attach to Process"));
-  setWindowIcon(QIcon(":gammaray/GammaRay-128x128.png"));
+  setWindowIcon(QIcon(QStringLiteral(":gammaray/GammaRay-128x128.png")));
 
   ui.stackedWidget->setCurrentWidget(ui.loadingLabel);
   emit updateButtonState();
@@ -103,7 +106,7 @@ bool AttachDialog::isValid() const
 void AttachDialog::writeSettings()
 {
   QSettings settings;
-  settings.setValue(QLatin1String("Launcher/AttachAccessMode"), ui.accessMode->currentIndex());
+  settings.setValue(QStringLiteral("Launcher/AttachAccessMode"), ui.accessMode->currentIndex());
 }
 
 LaunchOptions AttachDialog::launchOptions() const
@@ -114,15 +117,17 @@ LaunchOptions AttachDialog::launchOptions() const
 
   switch (ui.accessMode->currentIndex()) {
     case 0: // local, out-of-process
-      opt.setProbeSetting("ServerAddress", "tcp://127.0.0.1/");
+      opt.setProbeSetting(QStringLiteral("RemoteAccessEnabled"), true);
+      opt.setProbeSetting(QStringLiteral("ServerAddress"), GAMMARAY_DEFAULT_LOCAL_TCP_URL);
       opt.setUiMode(LaunchOptions::OutOfProcessUi);
       break;
     case 1: // remote, out-of-process
-      opt.setProbeSetting("ServerAddress", "tcp://0.0.0.0/");
+      opt.setProbeSetting(QStringLiteral("RemoteAccessEnabled"), true);
+      opt.setProbeSetting(QStringLiteral("ServerAddress"), GAMMARAY_DEFAULT_ANY_TCP_URL);
       opt.setUiMode(LaunchOptions::OutOfProcessUi);
       break;
     case 2: // in-process
-      opt.setProbeSetting("RemoteAccessEnabled", false);
+      opt.setProbeSetting(QStringLiteral("RemoteAccessEnabled"), false);
       opt.setUiMode(LaunchOptions::InProcessUi);
       break;
   }

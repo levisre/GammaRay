@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Thomas McGuire <thomas.mcguire@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -68,7 +68,7 @@ class TimerFilterModel : public ObjectTypeFilterProxyModel<QTimer>
   public:
     explicit TimerFilterModel(QObject *parent) : ObjectTypeFilterProxyModel<QTimer>(parent) {}
 
-    bool filterAcceptsObject(QObject *object) const
+    bool filterAcceptsObject(QObject *object) const Q_DECL_OVERRIDE
     {
       if (object && object->inherits("QQmlTimer"))
         return true;
@@ -90,17 +90,17 @@ TimerTop::TimerTop(ProbeInterface *probe, QObject *parent)
   TimerModel::instance()->setProbe(probe);
   TimerModel::instance()->setSourceModel(filterModel);
 
-  probe->registerModel("com.kdab.GammaRay.TimerModel", TimerModel::instance());
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.TimerModel"), TimerModel::instance());
+}
+
+TimerTopFactory::TimerTopFactory(QObject *parent) : QObject(parent)
+{
+  setSupportedTypes(QVector<QByteArray>() << QByteArrayLiteral("QObject") << QByteArrayLiteral("QTimer"));
 }
 
 QString TimerTopFactory::name() const
 {
   return tr("Timers");
-}
-
-QStringList TimerTopFactory::supportedTypes() const
-{
-  return QStringList() << "QObject" << "QTimer";
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

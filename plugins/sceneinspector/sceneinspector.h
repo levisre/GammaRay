@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -35,9 +35,11 @@
 
 #include <QGraphicsScene>
 
+QT_BEGIN_NAMESPACE
 class QItemSelectionModel;
 class QItemSelection;
 class QModelIndex;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -59,6 +61,7 @@ class SceneInspector : public SceneInspectorInterface
     void sceneItemSelected(const QItemSelection &selection);
     void sceneItemSelected(QGraphicsItem *item);
     void objectSelected(QObject *object, const QPoint &pos);
+    void objectSelected(void *obj, const QString &typeName);
     void sceneClicked(const QPointF &pos) Q_DECL_OVERRIDE;
 
     void clientConnectedChanged(bool clientConnected);
@@ -87,10 +90,7 @@ class SceneInspectorFactory : public QObject,
     {
     }
 
-    inline QString name() const
-    {
-      return tr("Graphics Scenes");
-    }
+    QString name() const Q_DECL_OVERRIDE;
 };
 
 }

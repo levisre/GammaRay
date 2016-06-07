@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -34,15 +34,17 @@
 #include "graphicsview.h"
 #include "ui_sceneinspectorwidget.h"
 
+#include <ui/contextmenuextension.h>
+#include <ui/searchlinecontroller.h>
+
+#include <common/objectmodel.h>
 #include <common/objectbroker.h>
 #include <common/endpoint.h>
-#include <common/objectmodel.h>
-
-#include <kde/krecursivefilterproxymodel.h>
 
 #include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QScrollBar>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QDebug>
 #include <QTimer>
@@ -60,6 +62,7 @@ static QObject* createClientSceneInspector(const QString &/*name*/, QObject *par
 SceneInspectorWidget::SceneInspectorWidget(QWidget *parent)
   : QWidget(parent)
   , ui(new Ui::SceneInspectorWidget)
+  , m_stateManager(this)
   , m_interface(0)
   , m_scene(new QGraphicsScene(this))
   , m_pixmap(new QGraphicsPixmapItem)
@@ -69,20 +72,23 @@ SceneInspectorWidget::SceneInspectorWidget(QWidget *parent)
   m_interface = ObjectBroker::object<SceneInspectorInterface*>();
 
   ui->setupUi(this);
-  ui->scenePropertyWidget->setObjectBaseName("com.kdab.GammaRay.SceneInspector");
+  ui->sceneTreeView->header()->setObjectName("sceneTreeViewHeader");
+  ui->scenePropertyWidget->setObjectBaseName(QStringLiteral("com.kdab.GammaRay.SceneInspector"));
 
-  ui->sceneComboBox->setModel(ObjectBroker::model("com.kdab.GammaRay.SceneList"));
+  ui->sceneComboBox->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SceneList")));
   connect(ui->sceneComboBox, SIGNAL(currentIndexChanged(int)), SLOT(sceneSelected(int)));
 
-  QSortFilterProxyModel *sceneFilter = new KRecursiveFilterProxyModel(this);
-  sceneFilter->setSourceModel(ObjectBroker::model("com.kdab.GammaRay.SceneGraphModel"));
-  ui->sceneTreeView->setModel(sceneFilter);
-  ui->screneTreeSearchLine->setProxy(sceneFilter);
+  auto sceneModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SceneGraphModel"));
+  ui->sceneTreeView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->sceneTreeView->setModel(sceneModel);
+  new SearchLineController(ui->sceneTreeSearchLine, sceneModel);
 
-  QItemSelectionModel *itemSelection = ObjectBroker::selectionModel(sceneFilter);
+  QItemSelectionModel *itemSelection = ObjectBroker::selectionModel(sceneModel);
   ui->sceneTreeView->setSelectionModel(itemSelection);
   connect(itemSelection, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           this, SLOT(sceneItemSelected(QItemSelection)));
+
+  connect(ui->sceneTreeView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(sceneContextMenu(QPoint)));
 
   ui->graphicsSceneView->setGraphicsScene(m_scene);
   connect(m_interface, SIGNAL(sceneRectChanged(QRectF)),
@@ -115,6 +121,11 @@ SceneInspectorWidget::SceneInspectorWidget(QWidget *parent)
   } else if (ui->sceneComboBox->currentIndex() >= 0) { // no server-side selection yet, but there's data available
     sceneSelected(ui->sceneComboBox->currentIndex());
   }
+
+  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "50%" << "50%");
+  m_stateManager.setDefaultSizes(ui->previewSplitter, UISizeVector() << "50%" << "50%");
+
+  connect(ui->scenePropertyWidget, SIGNAL(tabsUpdated()), &m_stateManager, SLOT(reset()));
 
   // limit fps to prevent bad performance, and to group update requests which is esp. required
   // for scrolling and similar high-frequency update requests
@@ -209,19 +220,36 @@ void SceneInspectorWidget::sceneSelected(int index)
 
 void SceneInspectorWidget::sceneItemSelected(const QItemSelection &selection)
 {
-  if (Endpoint::instance()->isRemoteClient()) {
-    return;
-  }
+    if (selection.isEmpty())
+        return;
+    const auto index = selection.first().topLeft();
+    if (!index.isValid())
+        return;
 
-  QModelIndex index;
-  if (!selection.isEmpty())
-    index = selection.first().topLeft();
-
-  if (index.isValid()) {
-    QGraphicsItem *item = index.data(SceneModel::SceneItemRole).value<QGraphicsItem*>();
-    ui->graphicsSceneView->showGraphicsItem(item);
     ui->sceneTreeView->scrollTo(index); // in case selection does not come from us
-  }
+
+    if (!Endpoint::instance()->isRemoteClient()) {
+        QGraphicsItem *item = index.data(SceneModel::SceneItemRole).value<QGraphicsItem*>();
+        ui->graphicsSceneView->showGraphicsItem(item);
+    }
+}
+
+void SceneInspectorWidget::sceneContextMenu(QPoint pos)
+{
+    const auto index = ui->sceneTreeView->indexAt(pos);
+    if (!index.isValid())
+        return;
+
+    const auto objectId = index.data(ObjectModel::ObjectIdRole).value<ObjectId>();
+    QMenu menu(tr("QGraphicsItem @ %1").arg(QLatin1String("0x") + QString::number(objectId.id(), 16)));
+    ContextMenuExtension ext(objectId);
+    ext.populateMenu(&menu);
+
+    menu.exec(ui->sceneTreeView->viewport()->mapToGlobal(pos));
+}
+
+void SceneInspectorUiFactory::initUi()
+{
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

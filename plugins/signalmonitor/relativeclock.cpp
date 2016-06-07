@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -42,7 +42,7 @@ static qint64 appStartTime()
 #ifdef Q_OS_LINUX
 
   // On Linux the application start time can be read by procfs.
-  const QString &self = QString::fromLatin1("/proc/%1").arg(qApp->applicationPid());
+  const QString &self = QStringLiteral("/proc/%1").arg(qApp->applicationPid());
   return QFileInfo(self).lastModified().toMSecsSinceEpoch();
 
 #else // !Q_OS_LINUX

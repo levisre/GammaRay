@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -44,8 +44,8 @@ TestObject::TestObject(QObject *parent)
 // test object creation in ctor
 , child(new QObject(this))
 {
-  setObjectName("TestObject");
-  child->setObjectName("TestObjectChild");
+  setObjectName(QStringLiteral("TestObject"));
+  child->setObjectName(QStringLiteral("TestObjectChild"));
   // test connect/disconnect in ctor
   connect(child, SIGNAL(destroyed(QObject*)), this, SLOT(dummySlot()));
   disconnect(child, SIGNAL(destroyed(QObject*)), this, SLOT(dummySlot()));
@@ -236,7 +236,7 @@ void TestMain::run()
 {
   QFETCH(int, type);
 
-  bool manual = QProcessEnvironment::systemEnvironment().value("GAMMARAY_TEST_MANUAL").toInt();
+  bool manual = QProcessEnvironment::systemEnvironment().value(QStringLiteral("GAMMARAY_TEST_MANUAL")).toInt();
   TestConnections tester(static_cast<TestConnections::Type>(type),
                          manual ? -1 : TIMEOUTS);
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,11 +35,14 @@
 
 using namespace GammaRay;
 
-MaterialTab::MaterialTab(PropertyWidget *parent) : QWidget(parent),
-  m_ui(new Ui_MaterialTab),
-  m_interface(0)
+MaterialTab::MaterialTab(PropertyWidget *parent)
+  : QWidget(parent)
+  , m_ui(new Ui_MaterialTab)
+  , m_interface(0)
 {
   m_ui->setupUi(this);
+  m_ui->materialPropertyView->header()->setObjectName("materialPropertyViewHeader");
+  m_ui->shaderList->header()->setObjectName("shaderListHeader");
   setObjectBaseName(parent->objectBaseName());
   connect(m_ui->shaderList->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           this, SLOT(shaderSelectionChanged(QItemSelection)));

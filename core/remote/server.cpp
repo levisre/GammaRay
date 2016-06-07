@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,6 +26,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config-gammaray.h>
 #include "server.h"
 #include "serverdevice.h"
 #include "probe.h"
@@ -56,7 +57,7 @@ Server::Server(QObject *parent) :
   m_broadcastTimer(new QTimer(this)),
   m_signalMapper(new MultiSignalMapper(this))
 {
-  if (!ProbeSettings::value("RemoteAccessEnabled", true).toBool())
+  if (!ProbeSettings::value(QStringLiteral("RemoteAccessEnabled"), true).toBool())
     return;
 
   m_serverDevice = ServerDevice::create(serverAddress(), this);
@@ -80,9 +81,9 @@ Server::Server(QObject *parent) :
   connect(m_signalMapper, SIGNAL(signalEmitted(QObject*,int,QVector<QVariant>)),
           this, SLOT(forwardSignal(QObject*,int,QVector<QVariant>)));
 
-  Endpoint::addObjectNameAddressMapping("com.kdab.GammaRay.PropertySyncer", ++m_nextAddress);
+  Endpoint::addObjectNameAddressMapping(QStringLiteral("com.kdab.GammaRay.PropertySyncer"), ++m_nextAddress);
   m_propertySyncer->setAddress(m_nextAddress);
-  Endpoint::registerObject("com.kdab.GammaRay.PropertySyncer", m_propertySyncer);
+  Endpoint::registerObject(QStringLiteral("com.kdab.GammaRay.PropertySyncer"), m_propertySyncer);
   registerMessageHandler(m_nextAddress, m_propertySyncer, "handleMessage");
 }
 
@@ -106,9 +107,9 @@ QUrl Server::serverAddress() const
 #ifdef Q_OS_ANDROID
     QUrl url(QString(QLatin1String("local://%1/+gammaray_socket")).arg(QDir::homePath()));
 #else
-    QUrl url(ProbeSettings::value("ServerAddress", QLatin1String("tcp://0.0.0.0/")).toString().toUtf8().constData());
+    QUrl url(ProbeSettings::value(QStringLiteral("ServerAddress"), GAMMARAY_DEFAULT_ANY_TCP_URL).toString());
     if (url.scheme().isEmpty())
-        url.setScheme("tcp");
+        url.setScheme(QStringLiteral("tcp"));
     if (url.port() <= 0)
         url.setPort(defaultPort());
 #endif
@@ -190,6 +191,18 @@ Protocol::ObjectAddress Server::registerObject(const QString &name, QObject *obj
   return registerObject(name, object, ExportEverything);
 }
 
+static bool isNotifySignal(const QMetaObject *mo, const QMetaMethod &method)
+{
+    for (int i = 0; i < mo->propertyCount(); ++i) {
+        const auto prop = mo->property(i);
+        if (!prop.hasNotifySignal())
+            continue;
+        if (prop.notifySignal().methodIndex() == method.methodIndex())
+            return true;
+    }
+    return false;
+}
+
 Protocol::ObjectAddress Server::registerObject(const QString& name, QObject* object, Server::ObjectExportOptions exportOptions)
 {
   addObjectNameAddressMapping(name, ++m_nextAddress);
@@ -207,9 +220,11 @@ Protocol::ObjectAddress Server::registerObject(const QString& name, QObject* obj
     const QMetaObject *meta = object->metaObject();
     for(int i = 0; i < meta->methodCount(); ++i) {
       const QMetaMethod method = meta->method(i);
-      if (method.methodType() == QMetaMethod::Signal) {
-        m_signalMapper->connectToSignal(object, method);
-      }
+      if (method.methodType() != QMetaMethod::Signal)
+        continue;
+      if ((exportOptions & ExportProperties) && isNotifySignal(meta, method))
+        continue; // no need to forward property change signals if we forward the property already
+      m_signalMapper->connectToSignal(object, method);
     }
   }
 

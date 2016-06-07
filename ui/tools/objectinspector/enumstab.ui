@@ -10,24 +10,20 @@
     <height>300</height>
    </rect>
   </property>
-      <layout class="QVBoxLayout" name="verticalLayout_8">
-       <item>
-        <widget class="KFilterProxySearchLine" name="enumSearchLine"/>
-       </item>
-       <item>
-        <widget class="QTreeView" name="enumView">
-         <property name="sortingEnabled">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
+  <layout class="QVBoxLayout" name="verticalLayout_8">
+   <item>
+    <widget class="QLineEdit" name="enumSearchLine"/>
+   </item>
+   <item>
+    <widget class="GammaRay::DeferredTreeView" name="enumView"/>
+   </item>
+  </layout>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>KFilterProxySearchLine</class>
-   <extends>QWidget</extends>
-   <header>kde/kfilterproxysearchline.h</header>
+   <class>GammaRay::DeferredTreeView</class>
+   <extends>QTreeView</extends>
+   <header location="global">ui/deferredtreeview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

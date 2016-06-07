@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,12 +31,16 @@
 
 #include <common/streamoperators.h>
 
+#include "quickitemgeometry.h"
+
 #include <QObject>
 #include <QRectF>
 #include <QVariantMap>
 #include <QEvent>
 
+QT_BEGIN_NAMESPACE
 class QImage;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -45,7 +49,12 @@ class QuickInspectorInterface : public QObject
   Q_OBJECT
   public:
     enum Feature {
-      CustomRenderModes = 1
+      NoFeatures = 0,
+      CustomRenderModeClipping = 1,
+      CustomRenderModeOverdraw = 2,
+      CustomRenderModeBatches = 4,
+      CustomRenderModeChanges = 8,
+      AllCustomRenderModes = CustomRenderModeClipping | CustomRenderModeOverdraw | CustomRenderModeBatches | CustomRenderModeChanges
     };
 
     enum RenderMode {
@@ -65,39 +74,22 @@ class QuickInspectorInterface : public QObject
   public slots:
     virtual void selectWindow(int index) = 0;
 
-    /// Ask for a new screenshot of the scene.
-    virtual void renderScene() = 0;
-
-    virtual void sendKeyEvent(int type, int key, int modifiers,
-                              const QString &text = QString(),
-                              bool autorep = false, ushort count = 1) = 0;
-
-    virtual void sendMouseEvent(int type, const QPointF &localPos,
-                                int button, int buttons, int modifiers) = 0;
-
-    virtual void sendWheelEvent(const QPointF &localPos, QPoint pixelDelta,
-                                QPoint angleDelta, int buttons, int modifiers) = 0;
-
     virtual void setCustomRenderMode(
       GammaRay::QuickInspectorInterface::RenderMode customRenderMode) = 0;
 
     virtual void checkFeatures() = 0;
 
-    virtual void setSceneViewActive(bool active) = 0;
-
   signals:
-    /// Emitted when the view has been newly rendered, for the client to request an update.
-    void sceneChanged();
-    void sceneRendered(const QVariantMap &previewData);
     void features(GammaRay::QuickInspectorInterface::Features features);
-
 };
 
 }
 
 Q_DECLARE_METATYPE(GammaRay::QuickInspectorInterface::Features)
 Q_DECLARE_METATYPE(GammaRay::QuickInspectorInterface::RenderMode)
+QT_BEGIN_NAMESPACE
 Q_DECLARE_INTERFACE(GammaRay::QuickInspectorInterface,
                     "com.kdab.GammaRay.QuickInspectorInterface/1.0")
+QT_END_NAMESPACE
 
 #endif // GAMMARAY_QUICKINSPECTORINTERFACE_H

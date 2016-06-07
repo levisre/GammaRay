@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,21 +39,30 @@ StyleInspectorWidget::StyleInspectorWidget(QWidget *parent)
 {
   ui->setupUi(this);
 
-  ui->styleSelector->setModel(ObjectBroker::model("com.kdab.GammaRay.StyleList"));
+  ui->styleSelector->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.StyleList")));
   connect(ui->styleSelector, SIGNAL(currentIndexChanged(int)), SLOT(styleSelected(int)));
 
-  ui->primitivePage->setModel(ObjectBroker::model("com.kdab.GammaRay.StyleInspector.PrimitiveModel"));
-  ui->controlPage->setModel(ObjectBroker::model("com.kdab.GammaRay.StyleInspector.ControlModel"));
-  ui->complexControlPage->setModel(ObjectBroker::model("com.kdab.GammaRay.StyleInspector.ComplexControlModel"));
+  ui->primitivePage->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.StyleInspector.PrimitiveModel")));
+  ui->controlPage->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.StyleInspector.ControlModel")));
+  ui->complexControlPage->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.StyleInspector.ComplexControlModel")));
 
-  ui->pixelMetricView->setModel(ObjectBroker::model("com.kdab.GammaRay.StyleInspector.PixelMetricModel"));
-  ui->pixelMetricView->header()->setResizeMode(QHeaderView::ResizeToContents);
+  ui->pixelMetricView->header()->setObjectName("pixelMetricViewHeader");
+  ui->pixelMetricView->setDeferredResizeMode(0, QHeaderView::Stretch);
+  ui->pixelMetricView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->pixelMetricView->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.StyleInspector.PixelMetricModel")));
 
-  ui->standardIconView->setModel(ObjectBroker::model("com.kdab.GammaRay.StyleInspector.StandardIconModel"));
-  ui->standardIconView->header()->setResizeMode(QHeaderView::ResizeToContents);
+  ui->standardIconView->header()->setObjectName("standardIconViewHeader");
+  ui->standardIconView->setDeferredResizeMode(0, QHeaderView::Stretch);
+  ui->standardIconView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->standardIconView->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.StyleInspector.StandardIconModel")));
 
-  ui->standardPaletteView->setModel(ObjectBroker::model("com.kdab.GammaRay.StyleInspector.PaletteModel"));
-  ui->standardIconView->header()->setResizeMode(QHeaderView::ResizeToContents);
+  ui->standardPaletteView->header()->setObjectName("standardPaletteViewHeader");
+  ui->standardPaletteView->setDeferredResizeMode(0, QHeaderView::Stretch);
+  ui->standardPaletteView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->standardPaletteView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+  ui->standardPaletteView->setDeferredResizeMode(3, QHeaderView::ResizeToContents);
+  ui->standardPaletteView->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.StyleInspector.PaletteModel")));
+
 
   // TODO this will fail due to lazy model population
   if (ui->styleSelector->count()) {

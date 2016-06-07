@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -45,17 +45,17 @@ FontBrowserServer::FontBrowserServer(ProbeInterface *probe, QObject *parent)
   , m_selectedFontModel(new FontModel(this))
 {
   auto model = new FontDatabaseModel(this);
-  probe->registerModel("com.kdab.GammaRay.FontModel", model);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.FontModel"), model);
   m_fontSelectionModel = ObjectBroker::selectionModel(model);
   connect(m_fontSelectionModel, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           SLOT(updateFonts()));
-  probe->registerModel("com.kdab.GammaRay.SelectedFontModel", m_selectedFontModel);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.SelectedFontModel"), m_selectedFontModel);
 }
 
 void FontBrowserServer::updateFonts()
 {
   const auto rows = m_fontSelectionModel->selectedRows();
-  QList<QFont> currentFonts;
+  QVector<QFont> currentFonts;
   currentFonts.reserve(rows.size());
   foreach (const QModelIndex &index, rows) {
     currentFonts << index.data(Qt::UserRole + 1).value<QFont>();

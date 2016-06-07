@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -70,7 +70,7 @@ class MetaObjectModel : public QAbstractItemModel
       }
     }
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE
     {
       if (!index.isValid() || !m_metaObject ||
           index.row() < 0 || index.row() >= rowCount(index.parent())) {
@@ -88,7 +88,7 @@ class MetaObjectModel : public QAbstractItemModel
       return metaData(index, metaThing, role);
     }
 
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE
     {
       if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
         if (section == columnCount() - 1) {
@@ -99,7 +99,7 @@ class MetaObjectModel : public QAbstractItemModel
       return QAbstractItemModel::headerData(section, orientation, role);
     }
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const
+    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE
     {
       if (!m_metaObject || parent.isValid()) {
         return 0;
@@ -107,7 +107,7 @@ class MetaObjectModel : public QAbstractItemModel
       return (m_metaObject->*MetaCount)();
     }
 
-    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const
+    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE
     {
       if (row >= 0 && row < rowCount(parent) && column >= 0 &&
           column < columnCount(parent) && !parent.isValid()) {
@@ -116,7 +116,7 @@ class MetaObjectModel : public QAbstractItemModel
       return QModelIndex();
     }
 
-    QModelIndex parent(const QModelIndex &child) const
+    QModelIndex parent(const QModelIndex &child) const Q_DECL_OVERRIDE
     {
       Q_UNUSED(child);
       return QModelIndex();

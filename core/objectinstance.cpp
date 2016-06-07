@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,6 +27,8 @@
 */
 
 #include "objectinstance.h"
+#include "metaobjectrepository.h"
+#include "metaobject.h"
 
 using namespace GammaRay;
 
@@ -77,12 +79,46 @@ ObjectInstance::ObjectInstance(const QVariant& value) :
         if (QMetaType::typeFlags(value.userType()) & QMetaType::IsGadget) {
             m_metaObj = QMetaType::metaObjectForType(value.userType());
             if (m_metaObj) {
-                m_obj = const_cast<void*>(value.data());
                 m_type = QtGadget;
             }
+        } else {
+            unpackVariant();
         }
 #endif
     }
+}
+
+ObjectInstance::ObjectInstance(const ObjectInstance &other)
+{
+    copy(other);
+}
+
+ObjectInstance& ObjectInstance::operator=(const ObjectInstance& other)
+{
+    copy(other);
+    return *this;
+}
+
+bool ObjectInstance::operator==(const ObjectInstance &rhs) const
+{
+    if (type() != rhs.type())
+        return false;
+    switch (type()) {
+        case Invalid:
+            return false;
+        case QtObject:
+        case QtGadget:
+        case Object:
+            return object() == rhs.object();
+        case QtMetaObject:
+            return metaObject() == rhs.metaObject();
+        case Value:
+        case QtVariant:
+            return variant() == rhs.variant();
+    }
+
+    Q_ASSERT(false);
+    return false;
 }
 
 ObjectInstance::Type ObjectInstance::type() const
@@ -97,15 +133,19 @@ QObject* ObjectInstance::qtObject() const
 
 void* ObjectInstance::object() const
 {
-    Q_ASSERT(m_type == QtObject || m_type == QtGadget || m_type == Object);
-    if (m_type == QtObject)
-        return m_qtObj;
-    return m_obj;
+    Q_ASSERT(m_type == QtObject || m_type == QtGadget || m_type == Object || m_type == Value);
+    switch (m_type) {
+        case QtObject: return m_qtObj;
+        case QtGadget: return m_obj ? m_obj : const_cast<void*>(m_variant.constData());
+        default: return m_obj;
+    }
+    Q_ASSERT(false);
+    return Q_NULLPTR;
 }
 
-QVariant ObjectInstance::variant() const
+const QVariant& ObjectInstance::variant() const
 {
-    Q_ASSERT(m_type == QtVariant);
+    Q_ASSERT(m_type == QtVariant || m_type == Value);
     return m_variant;
 }
 
@@ -136,4 +176,35 @@ bool ObjectInstance::isValid() const
             break;
     }
     return true;
+}
+
+void ObjectInstance::copy(const ObjectInstance& other)
+{
+    m_obj = other.m_obj;
+    m_qtObj = other.m_qtObj.data();
+    m_variant = other.m_variant;
+    m_metaObj = other.m_metaObj;
+    m_typeName = other.m_typeName;
+    m_type = other.m_type;
+
+    if (m_type == Value)
+        unpackVariant(); // pointer changes when copying the variant
+}
+
+void ObjectInstance::unpackVariant()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+    const auto mo = MetaObjectRepository::instance()->metaObject(m_variant.typeName());
+    if (mo && strstr(m_variant.typeName(), "*") != Q_NULLPTR) { // pointer types
+        QMetaType::construct(m_variant.userType(), &m_obj, m_variant.constData());
+        if (m_obj) {
+            m_type = Object;
+            m_typeName = m_variant.typeName();
+        }
+    } else if (mo) { // value types
+        m_obj = const_cast<void*>(m_variant.constData());
+        m_type = Value;
+        m_typeName = m_variant.typeName();
+    }
+#endif
 }

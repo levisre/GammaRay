@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -64,12 +64,13 @@ class ToolModel : public QAbstractListModel
     QVector<ToolFactory*> plugins() const;
     /** returns all plugin load errors. */
     PluginLoadErrors pluginErrors() const;
-    /** returns the tool that is best suited to show information about \p object. */
-    QModelIndex toolForObject(QObject *object) const;
-    /** returns the tool that is best suited to show information about \p object. */
-    QModelIndex toolForObject(const void *object, const QString &typeName) const;
+    /** returns the tools that are best suited to show information about \p object. */
+    QModelIndexList toolsForObject(QObject *object) const;
+    /** returns the tools that are best suited to show information about \p object. */
+    QModelIndexList toolsForObject(const void *object, const QString &typeName) const;
 
   public slots:
+    QPair<int, QVariant> defaultSelectedItem() const;
     /** Check if we have to activate tools for this type */
     void objectAdded(QObject *obj);
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,6 +31,7 @@
 #include "connectionsclientproxymodel.h"
 
 #include <ui/propertywidget.h>
+#include <ui/searchlinecontroller.h>
 
 #include <common/objectbroker.h>
 #include <common/tools/objectinspector/connectionsextensioninterface.h>
@@ -41,20 +42,22 @@
 
 using namespace GammaRay;
 
-ConnectionsTab::ConnectionsTab(PropertyWidget* parent):
-  QWidget(parent),
-  ui(new Ui::ConnectionsTab)
+ConnectionsTab::ConnectionsTab(PropertyWidget* parent)
+  : QWidget(parent)
+  , ui(new Ui::ConnectionsTab)
 {
   m_interface = ObjectBroker::object<ConnectionsExtensionInterface*>(parent->objectBaseName() + ".connectionsExtension");
 
   ui->setupUi(this);
+  ui->inboundView->header()->setObjectName("inboundViewHeader");
+  ui->outboundView->header()->setObjectName("outboundViewHeader");
 
   QSortFilterProxyModel *proxy = new ConnectionsClientProxyModel(this);
   proxy->setDynamicSortFilter(true);
   proxy->setSourceModel(ObjectBroker::model(parent->objectBaseName() + ".inboundConnections"));
   ui->inboundView->setModel(proxy);
   ui->inboundView->sortByColumn(0, Qt::AscendingOrder);
-  ui->inboundSearchLine->setProxy(proxy);
+  new SearchLineController(ui->inboundSearchLine, proxy);
   connect(ui->inboundView, SIGNAL(customContextMenuRequested(QPoint)), SLOT(inboundContextMenu(QPoint)));
 
   proxy = new ConnectionsClientProxyModel(this);
@@ -62,7 +65,7 @@ ConnectionsTab::ConnectionsTab(PropertyWidget* parent):
   proxy->setSourceModel(ObjectBroker::model(parent->objectBaseName() + ".outboundConnections"));
   ui->outboundView->setModel(proxy);
   ui->outboundView->sortByColumn(0, Qt::AscendingOrder);
-  ui->outboundSearchLine->setProxy(proxy);
+  new SearchLineController(ui->outboundSearchLine, proxy);
   connect(ui->outboundView, SIGNAL(customContextMenuRequested(QPoint)), SLOT(outboundContextMenu(QPoint)));
 }
 

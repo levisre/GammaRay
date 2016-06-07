@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,37 +29,33 @@
 #include "vtkpanel.h"
 #include "vtkwidget.h"
 
-#include "kde/kfilterproxysearchline.h"
-#include "kde/krecursivefilterproxymodel.h"
+#include <ui/deferredtreeview.h>
+#include <ui/searchlinecontroller.h>
 #include <common/objectbroker.h>
 #include <common/objectmodel.h>
 
 #include <QCoreApplication>
 #include <QDebug>
 #include <QHBoxLayout>
-#include <QSortFilterProxyModel>
+#include <QLineEdit>
 #include <QSplitter>
-#include <QStateMachine>
-#include <QTreeView>
 
 using namespace GammaRay;
 
 GraphViewerWidget::GraphViewerWidget(QWidget *parent)
-  : QWidget(parent),
-    mWidget(new GraphWidget(this))
+  : QWidget(parent)
+  , m_stateManager(this)
+  , mWidget(new GraphWidget(this))
 {
   mModel = ObjectBroker::model("com.kdab.GammaRay.ObjectVisualizerModel");
 
-  QSortFilterProxyModel *objectFilter = new KRecursiveFilterProxyModel(this);
-  objectFilter->setSourceModel(mModel);
-  objectFilter->setDynamicSortFilter(true);
-
   QVBoxLayout *vbox = new QVBoxLayout;
-  KFilterProxySearchLine *objectSearchLine = new KFilterProxySearchLine(this);
-  objectSearchLine->setProxy(objectFilter);
+  auto objectSearchLine = new QLineEdit(this);
+  new SearchLineController(objectSearchLine, mModel);
   vbox->addWidget(objectSearchLine);
-  QTreeView *objectTreeView = new QTreeView(this);
-  objectTreeView->setModel(objectFilter);
+  DeferredTreeView *objectTreeView = new DeferredTreeView(this);
+  objectTreeView->header()->setObjectName("objectTreeViewHeader");
+  objectTreeView->setModel(mModel);
   objectTreeView->setSortingEnabled(true);
   vbox->addWidget(objectTreeView);
 
@@ -74,30 +70,12 @@ GraphViewerWidget::GraphViewerWidget(QWidget *parent)
   QHBoxLayout *hbox = new QHBoxLayout(this);
   hbox->addWidget(splitter);
 
-  QMetaObject::invokeMethod(this, "delayedInit", Qt::QueuedConnection);
+  mWidget->vtkWidget()->setModel(mModel);
+  mWidget->vtkWidget()->setSelectionModel(mObjectTreeView->selectionModel());
 }
 
 GraphViewerWidget::~GraphViewerWidget()
 {
-}
-
-void GraphViewerWidget::delayedInit()
-{
-  // make all existing objects known to the vtk widget
-  mWidget->vtkWidget()->setModel(mModel);
-  mWidget->vtkWidget()->setSelectionModel(mObjectTreeView->selectionModel());
-
-  /// FIXME: This won't work for remote clients!
-  // select the qApp object (if any) in the object treeView
-  const QAbstractItemModel *viewModel = mObjectTreeView->model();
-  const QModelIndexList matches = viewModel->match(viewModel->index(0, 0),
-      ObjectModel::ObjectRole, QVariant::fromValue<QObject*>(qApp), 1,
-      Qt::MatchFlags(Qt::MatchExactly|Qt::MatchRecursive));
-
-  if (!matches.isEmpty()) {
-    Q_ASSERT(matches.first().data(ObjectModel::ObjectRole).value<QObject*>() == qApp);
-    mObjectTreeView->setCurrentIndex(matches.first());
-  }
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

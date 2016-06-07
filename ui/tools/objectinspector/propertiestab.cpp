@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,14 +31,15 @@
 #include "propertywidget.h"
 #include "editabletypesmodel.h"
 
-#include "ui/propertyeditor/propertyeditordelegate.h"
-#include "ui/propertyeditor/propertyeditorfactory.h"
-#include "ui/deferredresizemodesetter.h"
+#include <ui/contextmenuextension.h>
+#include <ui/propertyeditor/propertyeditordelegate.h>
+#include <ui/propertyeditor/propertyeditorfactory.h>
+#include <ui/searchlinecontroller.h>
 #include <propertybinder.h>
 
-#include "common/objectbroker.h"
+#include <common/objectbroker.h>
 #include <common/propertymodel.h>
-#include "common/tools/objectinspector/propertiesextensioninterface.h"
+#include <common/tools/objectinspector/propertiesextensioninterface.h>
 
 #include <QSortFilterProxyModel>
 #include <QMenu>
@@ -47,14 +48,15 @@
 using namespace GammaRay;
 
 PropertiesTab::PropertiesTab(PropertyWidget *parent)
- : QWidget(parent),
-   m_ui(new Ui_PropertiesTab),
-   m_interface(0),
-   m_newPropertyValue(0)
+ : QWidget(parent)
+ , m_ui(new Ui_PropertiesTab)
+ , m_interface(0)
+ , m_newPropertyValue(0)
 {
   m_ui->setupUi(this);
+  m_ui->propertyView->header()->setObjectName("propertyViewHeader");
 
-  m_ui->newPropertyButton->setIcon(QIcon::fromTheme("list-add"));
+  m_ui->newPropertyButton->setIcon(QIcon::fromTheme(QStringLiteral("list-add")));
 
   setObjectBaseName(parent->objectBaseName());
 }
@@ -72,9 +74,8 @@ void PropertiesTab::setObjectBaseName(const QString &baseName)
   proxy->setSourceModel(model);
   m_ui->propertyView->setModel(proxy);
   m_ui->propertyView->sortByColumn(0, Qt::AscendingOrder);
-  new DeferredResizeModeSetter(
-    m_ui->propertyView->header(), 0, QHeaderView::ResizeToContents);
-  m_ui->propertySearchLine->setProxy(proxy);
+  m_ui->propertyView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  new SearchLineController(m_ui->propertySearchLine, proxy);
   m_ui->propertyView->setItemDelegate(new PropertyEditorDelegate(this));
   connect(m_ui->propertyView, SIGNAL(customContextMenuRequested(QPoint)),
           this, SLOT(propertyContextMenu(QPoint)));
@@ -96,7 +97,7 @@ void PropertiesTab::setObjectBaseName(const QString &baseName)
 
   m_interface = ObjectBroker::object<PropertiesExtensionInterface*>(baseName + ".propertiesExtension");
   new PropertyBinder(m_interface, "canAddProperty", m_ui->newPropertyBar, "visible");
-  m_ui->propertyView->header()->setSectionHidden(1, !m_interface->hasPropertyValues());
+  m_ui->propertyView->setDeferredHidden(1, !m_interface->hasPropertyValues());
   m_ui->propertyView->setRootIsDecorated(m_interface->hasPropertyValues());
   connect(m_interface, SIGNAL(hasPropertyValuesChanged()), this, SLOT(hasValuesChanged()));
 }
@@ -132,11 +133,17 @@ void PropertiesTab::propertyContextMenu(const QPoint &pos)
   }
 
   const int actions = index.data(PropertyModel::ActionRole).toInt();
-  if (actions == PropertyModel::NoAction) {
+  const auto objectId = index.data(PropertyModel::ObjectIdRole).value<ObjectId>();
+  ContextMenuExtension ext(objectId);
+  const bool canShow = actions != PropertyModel::NoAction ||
+      ext.discoverPropertySourceLocation(ContextMenuExtension::GoTo, index);
+
+  if (!canShow) {
     return;
   }
 
   QMenu contextMenu;
+
   if (actions & PropertyModel::Delete) {
     QAction *action = contextMenu.addAction(tr("Remove"));
     action->setData(PropertyModel::Delete);
@@ -145,31 +152,16 @@ void PropertiesTab::propertyContextMenu(const QPoint &pos)
     QAction *action = contextMenu.addAction(tr("Reset"));
     action->setData(PropertyModel::Reset);
   }
-  if (actions & PropertyModel::NavigateTo) {
-    QAction *action =
-      contextMenu.addAction(tr("Show in %1").
-        arg(index.data(PropertyModel::AppropriateToolRole).toString()));
-    action->setData(PropertyModel::NavigateTo);
-  }
+
+  ext.populateMenu(&contextMenu);
 
   if (QAction *action = contextMenu.exec(m_ui->propertyView->viewport()->mapToGlobal(pos))) {
-    const QString propertyName = index.sibling(index.row(), 0).data(Qt::DisplayRole).toString();
     switch (action->data().toInt()) {
       case PropertyModel::Delete:
         m_ui->propertyView->model()->setData(index, QVariant(), Qt::EditRole);
         break;
       case PropertyModel::Reset:
         m_ui->propertyView->model()->setData(index, QVariant(), PropertyModel::ResetActionRole);
-        break;
-      case PropertyModel::NavigateTo:
-        QSortFilterProxyModel *proxy =
-          qobject_cast<QSortFilterProxyModel*>(m_ui->propertyView->model());
-        QModelIndex sourceIndex = index;
-        while (proxy) {
-          sourceIndex = proxy->mapToSource(sourceIndex);
-          proxy = qobject_cast<QSortFilterProxyModel*>(proxy->sourceModel());
-        }
-        m_interface->navigateToValue(sourceIndex.row());
         break;
     }
   }
@@ -190,6 +182,6 @@ void PropertiesTab::addNewProperty()
 
 void PropertiesTab::hasValuesChanged()
 {
-  m_ui->propertyView->header()->setSectionHidden(1, !m_interface->hasPropertyValues());
+  m_ui->propertyView->setDeferredHidden(1, !m_interface->hasPropertyValues());
   m_ui->propertyView->setRootIsDecorated(m_interface->hasPropertyValues());
 }

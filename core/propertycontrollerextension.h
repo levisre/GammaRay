@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,8 +33,10 @@
 
 #include <QString>
 
+QT_BEGIN_NAMESPACE
 class QObject;
 struct QMetaObject;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -81,6 +83,7 @@ public:
   QString name() const;
 
 private:
+  Q_DISABLE_COPY(PropertyControllerExtension)
   QString m_name;
 };
 
@@ -89,6 +92,8 @@ class PropertyControllerExtensionFactoryBase {
   public:
     explicit PropertyControllerExtensionFactoryBase() {}
     virtual PropertyControllerExtension *create(PropertyController *controller) = 0;
+  private:
+    Q_DISABLE_COPY(PropertyControllerExtensionFactoryBase)
 };
 
 template <typename T>
@@ -102,7 +107,7 @@ class PropertyControllerExtensionFactory : public PropertyControllerExtensionFac
       return s_instance;
     }
 
-    PropertyControllerExtension *create(PropertyController *controller)
+    PropertyControllerExtension *create(PropertyController *controller) Q_DECL_OVERRIDE
     {
       return new T(controller);
     }

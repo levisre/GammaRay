@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -51,7 +51,6 @@ class PropertiesExtension : public PropertiesExtensionInterface, public Property
     explicit PropertiesExtension(PropertyController *controller);
     ~PropertiesExtension();
 
-    void navigateToValue(int modelRow) Q_DECL_OVERRIDE;
     void setProperty(const QString &name, const QVariant &value) Q_DECL_OVERRIDE;
 
     bool setObject(void *object, const QString &typeName) Q_DECL_OVERRIDE;

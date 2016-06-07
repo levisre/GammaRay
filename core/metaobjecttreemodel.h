@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,12 +29,20 @@
 #ifndef GAMMARAY_METAOBJECTTREEMODEL_H
 #define GAMMARAY_METAOBJECTTREEMODEL_H
 
-#include <QModelIndex>
-#include <QReadWriteLock>
-#include <QVector>
 #include <common/modelroles.h>
 
+#include <QModelIndex>
+#include <QSet>
+#include <QVector>
+
+QT_BEGIN_NAMESPACE
+class QTimer;
+QT_END_NAMESPACE
+
 namespace GammaRay {
+
+class Probe;
+class MetaObjectInfoTracker;
 
 class MetaObjectTreeModel : public QAbstractItemModel
 {
@@ -46,12 +54,15 @@ class MetaObjectTreeModel : public QAbstractItemModel
     };
 
     enum Column {
-      ObjectColumn
+      ObjectColumn,
+      ObjectSelfCountColumn,
+      ObjectInclusiveCountColumn,
+      _Last
     };
 
-    explicit MetaObjectTreeModel(QObject *parent = 0);
+    explicit MetaObjectTreeModel(Probe *probe);
+    ~MetaObjectTreeModel();
 
-    // reimplemented methods
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
 
     int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
@@ -62,13 +73,10 @@ class MetaObjectTreeModel : public QAbstractItemModel
 
     QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
 
-    // headers
     QVariant headerData(int section, Qt::Orientation orientation,
                                 int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
 
-    // Probe callbacks
-    void objectAdded(QObject *obj);
-    void objectRemoved(QObject *obj);
+    QModelIndexList match(const QModelIndex & start, int role, const QVariant & value, int hits, Qt::MatchFlags flags) const Q_DECL_OVERRIDE;
 
   private:
     void scanMetaTypes();
@@ -79,15 +87,36 @@ class MetaObjectTreeModel : public QAbstractItemModel
     QModelIndex indexForMetaObject(const QMetaObject *metaObject) const;
     const QMetaObject *metaObjectForIndex(const QModelIndex &index) const;
 
-    mutable QReadWriteLock m_lock;
+    void scheduleDataChange(const QMetaObject* mo);
 
-    // data
+  private slots:
+    void objectAdded(QObject *obj);
+    void objectRemoved(QObject *obj);
+
+    void emitPendingDataChanged();
+
+  private:
     QHash<const QMetaObject*, const QMetaObject*> m_childParentMap;
     QHash<const QMetaObject*, QVector<const QMetaObject*> > m_parentChildMap;
+
+    struct MetaObjectInfo
+    {
+      MetaObjectInfo() : selfCount(0), inclusiveCount(0) {}
+
+      /// Number of objects of a particular meta object type
+      int selfCount;
+      /**
+       * Number of objects of the exact meta object type
+       * + number of objects of type that inherit from this meta type
+       */
+      int inclusiveCount;
+    };
+    QHash<const QMetaObject*, MetaObjectInfo> m_metaObjectInfoMap;
+
+    QSet<const QMetaObject*> m_pendingDataChanged;
+    QTimer *m_pendingDataChangedTimer;
 };
 
 }
-
-Q_DECLARE_METATYPE(const QMetaObject *)
 
 #endif // GAMMARAY_METAOBJECTTREEMODEL_H

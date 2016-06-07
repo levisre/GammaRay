@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -43,20 +43,35 @@ class NetworkSelectionModel : public QItemSelectionModel
 public:
   ~NetworkSelectionModel();
 
+  void select(const QItemSelection &selection, QItemSelectionModel::SelectionFlags command) Q_DECL_OVERRIDE;
+  using QItemSelectionModel::select;
+
 protected:
   explicit NetworkSelectionModel(const QString &objectName, QAbstractItemModel *model, QObject *parent = 0);
+  virtual bool isConnected() const;
+
   QString m_objectName;
   Protocol::ObjectAddress m_myAddress;
+
+protected slots:
+  void requestSelection();
+  void sendSelection();
+  void applyPendingSelection();
+
+private:
+  static Protocol::ItemSelection readSelection(const Message &msg);
+  bool translateSelection(const Protocol::ItemSelection &selection, QItemSelection &qselection) const;
 
 private slots:
   void newMessage(const GammaRay::Message &msg);
 
   void slotCurrentChanged(const QModelIndex &current, const QModelIndex &previous);
-  void slotCurrentColumnChanged(const QModelIndex &current, const QModelIndex &previous);
-  void slotCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous);
-  void slotSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+
+  void clearPendingSelection();
 
 private:
+  Protocol::ItemSelection m_pendingSelection;
+  SelectionFlags m_pendingCommand;
   bool m_handlingRemoteMessage;
 };
 

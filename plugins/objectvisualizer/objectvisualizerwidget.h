@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,15 +28,18 @@
 #define GAMMARAY_OBJECTVISUALIZER_OBJECTVISUALIZERWIDGET_H
 
 #include <ui/tooluifactory.h>
+#include <ui/uistatemanager.h>
 
 #include <QWidget>
 
+QT_BEGIN_NAMESPACE
 class QAbstractItemModel;
-class QTreeView;
 class QModelIndex;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
+class DeferredTreeView;
 class GraphWidget;
 
 class GraphViewerWidget : public QWidget
@@ -46,12 +49,10 @@ class GraphViewerWidget : public QWidget
     explicit GraphViewerWidget(QWidget *parent = 0);
     virtual ~GraphViewerWidget();
 
-  private Q_SLOTS:
-    void delayedInit();
-
   private:
+    UIStateManager m_stateManager;
     QAbstractItemModel* mModel;
-    QTreeView *mObjectTreeView;
+    DeferredTreeView *mObjectTreeView;
     GraphWidget *mWidget;
 };
 

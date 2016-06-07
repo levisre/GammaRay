@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,16 +28,16 @@
 
 #include "modelinspectorwidget.h"
 #include "ui_modelinspectorwidget.h"
-
 #include "modelinspectorclient.h"
+
+#include <ui/itemdelegate.h>
+#include <ui/searchlinecontroller.h>
+#include <ui/propertyeditor/propertyeditordelegate.h>
 
 #include <common/endpoint.h>
 #include <common/objectbroker.h>
 #include <common/objectmodel.h>
 
-#include <ui/deferredresizemodesetter.h>
-
-#include <kde/krecursivefilterproxymodel.h>
 #include <QDebug>
 
 using namespace GammaRay;
@@ -50,26 +50,36 @@ static QObject* createModelInspectorClient(const QString & /*name*/, QObject *pa
 ModelInspectorWidget::ModelInspectorWidget(QWidget *parent)
   : QWidget(parent)
   , ui(new Ui::ModelInspectorWidget)
+  , m_stateManager(this)
   , m_interface(0)
 {
   ui->setupUi(this);
+
+  ui->modelView->header()->setObjectName("modelViewHeader");
+  ui->modelView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+
+  ui->modelContentView->header()->setObjectName("modelContentViewHeader");
+  ui->modelContentView->setItemDelegate(new PropertyEditorDelegate(ItemDelegate::tr("(Item %r)"), this));
+
+  ui->modelCellView->header()->setObjectName("modelCellViewHeader");
+  ui->modelCellView->setItemDelegate(new PropertyEditorDelegate(this));
 
   ObjectBroker::registerClientObjectFactoryCallback<ModelInspectorInterface*>(createModelInspectorClient);
   m_interface = ObjectBroker::object<ModelInspectorInterface*>();
   connect(m_interface, SIGNAL(cellSelected(int,int,QString,QString)),
           SLOT(cellSelected(int,int,QString,QString)));
 
-  KRecursiveFilterProxyModel *modelFilterProxy = new KRecursiveFilterProxyModel(this);
-  modelFilterProxy->setSourceModel(ObjectBroker::model("com.kdab.GammaRay.ModelModel"));
-  ui->modelView->setModel(modelFilterProxy);
-  ui->modelView->setSelectionModel(ObjectBroker::selectionModel(modelFilterProxy));
-  ui->modelSearchLine->setProxy(modelFilterProxy);
+  auto modelModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ModelModel"));
+  ui->modelView->setModel(modelModel);
+  ui->modelView->setSelectionModel(ObjectBroker::selectionModel(modelModel));
+  new SearchLineController(ui->modelSearchLine, modelModel);
   connect(ui->modelView->selectionModel(),
           SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           SLOT(modelSelected(QItemSelection)));
-  new DeferredResizeModeSetter(ui->modelView->header(), 0, QHeaderView::ResizeToContents);
 
-  ui->modelCellView->setModel(ObjectBroker::model("com.kdab.GammaRay.ModelCellModel"));
+  ui->modelCellView->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ModelCellModel")));
+
+  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "33%" << "33%" << "33%");
 
   cellSelected(-1, -1, QString(), QString());
 }
@@ -96,7 +106,7 @@ void ModelInspectorWidget::modelSelected(const QItemSelection& selected)
               this, SLOT(objectRegistered(QString)), Qt::UniqueConnection);
     } else {
       // we are on the client side
-      model = ObjectBroker::model("com.kdab.GammaRay.ModelContent");
+      model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ModelContent"));
       ui->modelContentView->setModel(model);
       setupModelContentSelectionModel();
     }
@@ -122,7 +132,7 @@ void ModelInspectorWidget::cellSelected(int row, int column, const QString &inte
 
 void ModelInspectorWidget::objectRegistered(const QString& objectName)
 {
-  if (objectName == "com.kdab.GammaRay.ModelContent.selection")
+  if (objectName == QLatin1String("com.kdab.GammaRay.ModelContent.selection"))
     // delay, since it's not registered yet when the signal is emitted
     QMetaObject::invokeMethod(this, "setupModelContentSelectionModel", Qt::QueuedConnection);
 }

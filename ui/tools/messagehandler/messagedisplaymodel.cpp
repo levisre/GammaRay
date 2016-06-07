@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -90,7 +90,7 @@ QVariant MessageDisplayModel::data(const QModelIndex& proxyIndex, int role) cons
                 QString bt;
                 int i = 0;
                 foreach (const auto &frame, backtrace) {
-                    bt += QString("#%1: %2\n").arg(i, 2).arg(frame.trimmed());
+                    bt += QStringLiteral("#%1: %2\n").arg(i, 2).arg(frame.trimmed());
                     ++i;
                 }
                 return tr("<qt><dl>"

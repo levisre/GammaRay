@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -55,13 +55,13 @@ SelectionModelInspector::SelectionModelInspector(ProbeInterface *probe, QObject 
   ObjectTypeFilterProxyModel<QItemSelectionModel> *selectionModelProxy =
     new ObjectTypeFilterProxyModel<QItemSelectionModel>(this);
   selectionModelProxy->setSourceModel(probe->objectListModel());
-  probe->registerModel("com.kdab.GammaRay.SelectionModelsModel", selectionModelProxy);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.SelectionModelsModel"), selectionModelProxy);
 
   QItemSelectionModel *selectionModel = ObjectBroker::selectionModel(selectionModelProxy);
   connect(selectionModel, SIGNAL(currentChanged(QModelIndex,QModelIndex)),
           SLOT(currentChanged(QModelIndex)));
 
-  probe->registerModel("com.kdab.GammaRay.CurrentSelectionModel", m_current);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.CurrentSelectionModel"), m_current);
 }
 
 void SelectionModelInspector::currentChanged(const QModelIndex &current)
@@ -73,4 +73,9 @@ void SelectionModelInspector::currentChanged(const QModelIndex &current)
   } else {
     m_current->setSourceModel(0);
   }
+}
+
+QString SelectionModelInspectorFactory::name() const
+{
+  return tr("Selection Models");
 }

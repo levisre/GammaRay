@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -46,10 +46,13 @@ using namespace GammaRay;
 ///      was triggered and we close the mainwindow.
 
 ScriptEngineDebuggerWidget::ScriptEngineDebuggerWidget(QWidget *parent)
-  : QWidget(parent), ui(new Ui::ScriptEngineDebuggerWidget), debugger(new QScriptEngineDebugger(this))
+  : QWidget(parent)
+  , ui(new Ui::ScriptEngineDebuggerWidget)
+  , m_stateManager(this)
+  , debugger(new QScriptEngineDebugger(this))
 {
   ui->setupUi(this);
-  ui->scriptEngineComboBox->setModel(ObjectBroker::model("com.kdab.GammaRay.ScriptEngines"));
+  ui->scriptEngineComboBox->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ScriptEngines")));
   connect(ui->scriptEngineComboBox, SIGNAL(activated(int)), SLOT(scriptEngineSelected(int)));
 
   ui->verticalLayout_10->addWidget(debugger->standardWindow());

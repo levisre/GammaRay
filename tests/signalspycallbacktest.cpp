@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -57,7 +57,7 @@ private:
     void createProbe()
     {
         qputenv("GAMMARAY_ProbePath", QCoreApplication::applicationDirPath().toUtf8());
-        new ProbeCreator(ProbeCreator::CreateOnly);
+        new ProbeCreator(ProbeCreator::Create);
         QTest::qWait(1); // event loop re-entry
     }
 

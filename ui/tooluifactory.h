@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,6 +27,8 @@
 #ifndef GAMMARAY_TOOLUIFACTORY_H
 #define GAMMARAY_TOOLUIFACTORY_H
 
+#include "gammaray_ui_export.h"
+
 #include <QMetaType>
 #include <QStringList>
 #include <QtPlugin>
@@ -40,12 +42,11 @@ namespace GammaRay {
  * for GammaRay. The unique identifier used for the UI must match the one of the corresponding
  * probe tool.
  */
-class ToolUiFactory
+class GAMMARAY_UI_EXPORT ToolUiFactory
 {
   public:
-    virtual inline ~ToolUiFactory()
-    {
-    }
+    ToolUiFactory();
+    virtual ~ToolUiFactory();
 
     /**
      * Unique id of this tool, must match the id of a the corresponding probe tool.
@@ -54,9 +55,10 @@ class ToolUiFactory
     virtual QString id() const = 0;
 
     /**
-     * Return true if this tool supports remoting, false otherwise.
+     * Return @c true if this tool supports remoting, @c false otherwise.
+     * The default implementation returns @c true.
      */
-    virtual bool remotingSupported() const = 0;
+    virtual bool remotingSupported() const;
 
     /**
      * Create the UI part of this tool.
@@ -70,7 +72,10 @@ class ToolUiFactory
      * the plugin, before the widget itself is needed. Use createWidget to create
      * the actual widget.
      */
-    virtual void initUi() {}
+    virtual void initUi();
+
+  private:
+    Q_DISABLE_COPY(ToolUiFactory)
 };
 
 /**
@@ -80,25 +85,22 @@ template <typename ToolUi>
 class StandardToolUiFactory : public ToolUiFactory
 {
 public:
-  virtual inline QString id() const
+  QString id() const Q_DECL_OVERRIDE
   {
     return QString(); // TODO is this a problem??
   }
 
-  virtual inline QWidget *createWidget(QWidget *parentWidget)
+  QWidget *createWidget(QWidget *parentWidget) Q_DECL_OVERRIDE
   {
     return new ToolUi(parentWidget);
-  }
-
-  virtual bool remotingSupported() const
-  {
-    return true;
   }
 };
 
 }
 
+QT_BEGIN_NAMESPACE
 Q_DECLARE_INTERFACE(GammaRay::ToolUiFactory, "com.kdab.GammaRay.ToolUiFactory/1.0")
+QT_END_NAMESPACE
 Q_DECLARE_METATYPE(GammaRay::ToolUiFactory *)
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

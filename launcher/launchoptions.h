@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,9 +34,11 @@
 #include <QHash>
 #include <QSharedDataPointer>
 
+QT_BEGIN_NAMESPACE
 class QStringList;
 class QVariant;
 class QProcessEnvironment;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -91,6 +93,10 @@ public:
   QString injectorType() const;
   void setInjectorType(const QString &injectorType);
 
+  /** Injector executable override. */
+  QString injectorTypeExecutableOverride() const;
+  void setInjectorTypeExecutableOverride(const QString &filePath);
+
   /** Probe ABI. */
   ProbeABI probeABI() const;
   void setProbeABI(const ProbeABI &abi);
@@ -101,11 +107,9 @@ public:
   void setProbePath(const QString &path);
   QString probePath() const;
 
-  /** Full path to root gammarary path. This overrides specifying a probe ABI and
-   *  can be useful on non-standard installation layouts of the probes.
-   */
-  void setRootPath(const QString &path);
-  QString rootPath() const;
+  /** Working directory for launching the target. */
+  void setWorkingDirectory(const QString &path);
+  QString workingDirectory() const;
 
   /** Process environment for the launched target. By default the environment of the launcher process is used. */
   void setProcessEnvironment(const QProcessEnvironment &env);

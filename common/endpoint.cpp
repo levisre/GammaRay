@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -51,7 +51,7 @@ Endpoint::Endpoint(QObject* parent):
 
   ObjectInfo *endpointObj = new ObjectInfo;
   endpointObj->address = m_myAddress;
-  endpointObj->name = QLatin1String("com.kdab.GammaRay.Server");
+  endpointObj->name = QStringLiteral("com.kdab.GammaRay.Server");
   // TODO: we could set this as message handler here and use the same dispatch mechanism
   insertObjectInfo(endpointObj);
 
@@ -74,13 +74,20 @@ Endpoint* Endpoint::instance()
 void Endpoint::send(const Message& msg)
 {
   Q_ASSERT(s_instance);
-  Q_ASSERT(msg.address() != Protocol::InvalidObjectAddress);
-  msg.write(s_instance->m_socket);
+  s_instance->doSendMessage(msg);
 }
 
 void Endpoint::sendMessage(const Message& msg)
 {
-  send(msg);
+  if (!isConnected())
+    return;
+  doSendMessage(msg);
+}
+
+void Endpoint::doSendMessage(const GammaRay::Message& msg)
+{
+  Q_ASSERT(msg.address() != Protocol::InvalidObjectAddress);
+  msg.write(m_socket);
 }
 
 void Endpoint::waitForMessagesWritten()
@@ -226,9 +233,17 @@ void Endpoint::registerMessageHandler(Protocol::ObjectAddress objectAddress, QOb
   ObjectInfo *obj = m_addressMap.value(objectAddress);
   Q_ASSERT(obj);
   Q_ASSERT(!obj->receiver);
-  Q_ASSERT(obj->messageHandler.isEmpty());
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0 ,0)
+  Q_ASSERT(!obj->messageHandler.isValid());
+#endif
   obj->receiver = receiver;
-  obj->messageHandler = messageHandlerName;
+
+  QByteArray signature(messageHandlerName);
+  signature += "(GammaRay::Message)";
+  auto idx = receiver->metaObject()->indexOfMethod(signature);
+  Q_ASSERT(idx >= 0);
+  obj->messageHandler = receiver->metaObject()->method(idx);
+
   Q_ASSERT(!m_handlerMap.contains(receiver, obj));
   m_handlerMap.insert(receiver, obj);
   if (obj->receiver != obj->object)
@@ -244,7 +259,7 @@ void Endpoint::unregisterMessageHandler(Protocol::ObjectAddress objectAddress)
   disconnect(obj->receiver, SIGNAL(destroyed(QObject*)), this, SLOT(handlerDestroyed(QObject*)));
   m_handlerMap.remove(obj->receiver, obj);
   obj->receiver = 0;
-  obj->messageHandler.clear();
+  obj->messageHandler = QMetaMethod();
 }
 
 void Endpoint::objectDestroyed(QObject *obj)
@@ -270,7 +285,7 @@ void Endpoint::handlerDestroyed(QObject* obj)
   m_handlerMap.remove(obj);
   foreach (ObjectInfo *obj, objs) {
     obj->receiver = 0;
-    obj->messageHandler.clear();
+    obj->messageHandler = QMetaMethod();
     handlerDestroyed(obj->address, QString(obj->name)); // copy the name, in case unregisterMessageHandlerInternal() is called inside
   }
 }
@@ -300,7 +315,7 @@ void Endpoint::dispatchMessage(const Message& msg)
   }
 
   if (obj->receiver) {
-    QMetaObject::invokeMethod(obj->receiver, obj->messageHandler, Q_ARG(GammaRay::Message, msg));
+    obj->messageHandler.invoke(obj->receiver, Q_ARG(GammaRay::Message, msg));
   }
 
   if (!obj->receiver && (msg.type() != Protocol::MethodCall || !obj->object)) {

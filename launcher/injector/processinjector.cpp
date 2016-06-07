@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,6 +30,8 @@
 #include "processinjector.h"
 
 #include <QDebug>
+#include <iostream>
+
 
 using namespace GammaRay;
 
@@ -43,6 +45,8 @@ ProcessInjector::ProcessInjector() :
 #endif
     connect(&m_proc, SIGNAL(error(QProcess::ProcessError)), this, SLOT(processFailed()));
     connect(&m_proc, SIGNAL(finished(int)), this, SLOT(processFinished()));
+    connect(&m_proc, SIGNAL(readyReadStandardError()), this, SLOT(readStdErr()));
+    connect(&m_proc, SIGNAL(readyReadStandardOutput()), this, SLOT(readStdOut()));
 }
 
 ProcessInjector::~ProcessInjector()
@@ -58,25 +62,25 @@ void ProcessInjector::stop()
 
 bool ProcessInjector::launchProcess(const QStringList& programAndArgs, const QProcessEnvironment& env)
 {
+  m_proc.setWorkingDirectory(workingDirectory());
   m_proc.setProcessEnvironment(env);
-  m_proc.setProcessChannelMode(QProcess::ForwardedChannels);
 
   QStringList args = programAndArgs;
 
-  if (!env.value("GAMMARAY_TARGET_WRAPPER").isEmpty()) {
-    const QString fullWrapperCmd = env.value("GAMMARAY_TARGET_WRAPPER");
+  if (!env.value(QStringLiteral("GAMMARAY_TARGET_WRAPPER")).isEmpty()) {
+    const QString fullWrapperCmd = env.value(QStringLiteral("GAMMARAY_TARGET_WRAPPER"));
     // ### TODO properly handle quoted arguments!
     QStringList newArgs = fullWrapperCmd.split(' ');
     newArgs += args;
     args = newArgs;
     qDebug() << "Launching with target wrapper:" << args;
-  } else if (env.value("GAMMARAY_GDB").toInt()) {
+  } else if (env.value(QStringLiteral("GAMMARAY_GDB")).toInt()) {
     QStringList newArgs;
-    newArgs << "gdb";
+    newArgs << QStringLiteral("gdb");
 #ifndef Q_OS_MAC
-    newArgs << "--eval-command" << "run";
+    newArgs << QStringLiteral("--eval-command") << QStringLiteral("run");
 #endif
-    newArgs << "--args";
+    newArgs << QStringLiteral("--args");
     newArgs += args;
     args = newArgs;
   }
@@ -104,7 +108,7 @@ void ProcessInjector::processFinished()
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     if (mProcessError == QProcess::FailedToStart) {
-      mErrorString.prepend(QString("Could not start '%1': ").arg(m_proc.program()));
+      mErrorString.prepend(QStringLiteral("Could not start '%1': ").arg(m_proc.program()));
     }
 #endif
     emit finished();
@@ -128,4 +132,18 @@ QProcess::ProcessError ProcessInjector::processError()
 QString ProcessInjector::errorString()
 {
   return mErrorString;
+}
+
+void ProcessInjector::readStdErr()
+{
+  QString error = m_proc.readAllStandardError();
+  std::cerr << qPrintable(error);
+  emit stderrMessage(error);
+}
+
+void ProcessInjector::readStdOut()
+{
+  QString message = m_proc.readAllStandardOutput();
+  std::cout << qPrintable(message);
+  emit stdoutMessage(message);
 }

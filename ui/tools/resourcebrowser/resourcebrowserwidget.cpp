@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,15 +32,20 @@
 #include "resourcebrowserclient.h"
 #include "clientresourcemodel.h"
 
-#include <deferredtreeviewconfiguration.h>
+#include <ui/searchlinecontroller.h>
 #include <3rdparty/qt/resourcemodel.h>
 #include <common/objectbroker.h>
 
+#include <QBuffer>
 #include <QDebug>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontDatabase>
+#include <QImageReader>
 #include <QMenu>
+#include <QScrollBar>
 #include <QTimer>
+#include <QTextBlock>
 
 using namespace GammaRay;
 
@@ -52,57 +57,52 @@ static QObject* createResourceBrowserClient(const QString & /*name*/, QObject *p
 ResourceBrowserWidget::ResourceBrowserWidget(QWidget *parent)
   : QWidget(parent)
   , ui(new Ui::ResourceBrowserWidget)
-  , m_timer(new QTimer(this))
+  , m_stateManager(this)
   , m_interface(0)
 {
   ObjectBroker::registerClientObjectFactoryCallback<ResourceBrowserInterface*>(createResourceBrowserClient);
   m_interface = ObjectBroker::object<ResourceBrowserInterface*>();
   connect(m_interface, SIGNAL(resourceDeselected()), this, SLOT(resourceDeselected()));
-  connect(m_interface, SIGNAL(resourceSelected(QPixmap)), this, SLOT(resourceSelected(QPixmap)));
-  connect(m_interface, SIGNAL(resourceSelected(QByteArray)), this, SLOT(resourceSelected(QByteArray)));
-  connect(m_interface, SIGNAL(resourceDownloaded(QString,QPixmap)), this, SLOT(resourceDownloaded(QString,QPixmap)));
+  connect(m_interface, SIGNAL(resourceSelected(QByteArray,int,int)), this, SLOT(resourceSelected(QByteArray,int,int)));
   connect(m_interface, SIGNAL(resourceDownloaded(QString,QByteArray)), this, SLOT(resourceDownloaded(QString,QByteArray)));
 
   ui->setupUi(this);
+  auto resModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ResourceModel"));
   ClientResourceModel* model = new ClientResourceModel(this);
-  model->setSourceModel(ObjectBroker::model("com.kdab.GammaRay.ResourceModel"));
+  model->setSourceModel(resModel);
+  ui->treeView->header()->setObjectName("resourceTreeViewHeader");
+  ui->treeView->setExpandNewContent(true);
+  ui->treeView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->treeView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->treeView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+  ui->treeView->setDeferredHidden(3, true);
   ui->treeView->setModel(model);
   ui->treeView->setSelectionModel(ObjectBroker::selectionModel(ui->treeView->model()));
-  ui->searchLine->setProxy(model);
+  new SearchLineController(ui->searchLine, resModel);
 
-  DeferredTreeViewConfiguration *config = new DeferredTreeViewConfiguration(ui->treeView);
-  config->hideColumn(3);
-  connect(ui->treeView->model(), SIGNAL(rowsInserted(QModelIndex,int,int)),
-          SLOT(rowsInserted()));
+  connect(ui->treeView, SIGNAL(newContentExpanded()), SLOT(setupLayout()));
 
   ui->treeView->setContextMenuPolicy(Qt::CustomContextMenu);
   connect(ui->treeView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(handleCustomContextMenu(QPoint)));
 
   ui->resourceLabel->setText(tr("Select a Resource to Preview"));
   ui->stackedWidget->setCurrentWidget(ui->contentLabelPage);
-
-  m_timer->setInterval(100);
-  m_timer->setSingleShot(true);
-  connect(m_timer, SIGNAL(timeout()), SLOT(setupLayout()));
-  m_timer->start();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
+  ui->textBrowser->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+#endif
 }
 
 ResourceBrowserWidget::~ResourceBrowserWidget()
 {
 }
 
-void ResourceBrowserWidget::rowsInserted()
+void ResourceBrowserWidget::selectResource(const QString &sourceFilePath, int line, int column)
 {
-  m_timer->start();
+  m_interface->selectResource(sourceFilePath, line, column);
 }
 
 void ResourceBrowserWidget::setupLayout()
 {
-  // now we can assume the model is filled properly and can adjust the tree view column sizes
-  for(int i = 0; i < 3; ++i) {
-    ui->treeView->resizeColumnToContents(i);
-  }
-
   // now the view was setup properly and we can mess with the splitter to resize
   // the widgets for nicer display
 
@@ -110,12 +110,12 @@ void ResourceBrowserWidget::setupLayout()
                   ui->treeView->columnWidth(1) +
                   ui->treeView->columnWidth(2) +
                   ui->treeView->contentsMargins().left() +
-                  ui->treeView->contentsMargins().right() + 25;
-  const int totalWidth = ui->splitter->width();
+                  ui->treeView->contentsMargins().right() + ui->treeView->verticalScrollBar()->width();
+  const int totalWidth = ui->mainSplitter->width();
   const int minPreviewWidth = 150;
   if (totalWidth > viewWidth + minPreviewWidth) {
-    ui->splitter->setSizes(QList<int>() << viewWidth << (totalWidth - viewWidth));
-    ui->splitter->setStretchFactor(1, 3);
+    m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << viewWidth << (totalWidth - viewWidth - ui->mainSplitter->handleWidth()));
+    m_stateManager.restoreState();
   }
 }
 
@@ -125,25 +125,33 @@ void ResourceBrowserWidget::resourceDeselected()
   ui->stackedWidget->setCurrentWidget(ui->contentLabelPage);
 }
 
-void ResourceBrowserWidget::resourceSelected(const QPixmap &pixmap)
+void ResourceBrowserWidget::resourceSelected(const QByteArray &contents, int line, int column)
 {
-  ui->resourceLabel->setPixmap(pixmap);
-  ui->stackedWidget->setCurrentWidget(ui->contentLabelPage);
-}
-
-void ResourceBrowserWidget::resourceSelected(const QByteArray &contents)
-{
-  //TODO: make encoding configurable
-  ui->textBrowser->setText(contents);
-  ui->stackedWidget->setCurrentWidget(ui->contentTextPage);
-}
-
-void ResourceBrowserWidget::resourceDownloaded(const QString &targetFilePath, const QPixmap &pixmap)
-{
-  if (!pixmap.save(targetFilePath)) {
-    qWarning("Unable to write resource content to %s", qPrintable(targetFilePath));
-    return;
+  // try to decode as an image first, fall back to text otherwise
+  auto rawData = contents;
+  QBuffer buffer(&rawData);
+  buffer.open(QBuffer::ReadOnly);
+  QImageReader reader(&buffer);
+  const auto img = reader.read();
+  if (!img.isNull()) {
+      ui->resourceLabel->setPixmap(QPixmap::fromImage(img));
+      ui->stackedWidget->setCurrentWidget(ui->contentLabelPage);
+      return;
   }
+
+  //TODO: make encoding configurable
+  ui->textBrowser->setPlainText(contents);
+
+  QTextDocument *document = ui->textBrowser->document();
+  QTextCursor cursor(document->findBlockByLineNumber(line - 1));
+  if (!cursor.isNull()) {
+    if (column >= 1)
+      cursor.setPosition(cursor.position() + column - 1);
+    ui->textBrowser->setTextCursor(cursor);
+  }
+  ui->textBrowser->setFocus();
+
+  ui->stackedWidget->setCurrentWidget(ui->contentTextPage);
 }
 
 void ResourceBrowserWidget::resourceDownloaded(const QString &targetFilePath, const QByteArray &contents)
@@ -203,8 +211,8 @@ void ResourceBrowserWidget::handleCustomContextMenu(const QPoint &pos)
     return;
 
   QMenu menu;
-  menu.addAction(tr("Save As..."));
-  if (!menu.exec(ui->treeView->mapToGlobal(pos)))
+  menu.addAction(style()->standardIcon(QStyle::SP_DialogSaveButton), tr("Save As..."));
+  if (!menu.exec(ui->treeView->viewport()->mapToGlobal(pos)))
     return;
 
   if (selectedIndex.model()->hasChildren(selectedIndex)) {
@@ -217,7 +225,7 @@ void ResourceBrowserWidget::handleCustomContextMenu(const QPoint &pos)
         continue;
 
       QDir dir(targetDirectory + '/' + directoryPath);
-      dir.mkpath(".");
+      dir.mkpath(QStringLiteral("."));
     }
 
     // request all resource files

@@ -9,7 +9,7 @@
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   This program is free software; you can redistribute it and/or modify
@@ -35,6 +35,8 @@
 #include <QSignalTransition>
 #include <QState>
 #include <QStringList>
+
+#include <algorithm>
 
 // #include <modeltest.h>
 
@@ -73,7 +75,7 @@ QList<QObject*> TransitionModelPrivate::children(QObject *parent) const
     }
   }
 
-  qSort(result);
+  std::sort(result.begin(), result.end());
   return result;
 }
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,8 +30,6 @@
 #include "ui_textdocumentinspectorwidget.h"
 #include "core/tools/textdocumentinspector/textdocumentmodel.h"
 
-#include <ui/deferredresizemodesetter.h>
-
 #include <common/objectmodel.h>
 #include <common/objectbroker.h>
 #include <common/endpoint.h>
@@ -40,28 +38,40 @@
 
 using namespace GammaRay;
 
-TextDocumentInspectorWidget::TextDocumentInspectorWidget(QWidget *parent):
-  QWidget(parent),
-  ui(new Ui::TextDocumentInspectorWidget)
+TextDocumentInspectorWidget::TextDocumentInspectorWidget(QWidget *parent)
+  : QWidget(parent)
+  , ui(new Ui::TextDocumentInspectorWidget)
+  , m_stateManager(this)
 {
   ui->setupUi(this);
 
-  ui->documentList->setModel(ObjectBroker::model("com.kdab.GammaRay.TextDocumentsModel"));
-  QItemSelectionModel *selectionModel = ObjectBroker::selectionModel(ui->documentList->model());
-  ui->documentList->setSelectionModel(selectionModel);
-  connect(selectionModel, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
+  ui->documentList->header()->setObjectName("documentListHeader");
+  ui->documentList->setDeferredResizeMode(0, QHeaderView::Stretch);
+  ui->documentList->setDeferredResizeMode(1, QHeaderView::Stretch);
+  ui->documentList->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.TextDocumentsModel")));
+  ui->documentList->setSelectionModel(ObjectBroker::selectionModel(ui->documentList->model()));
+  connect(ui->documentList->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           SLOT(documentSelected(QItemSelection,QItemSelection)));
 
-  ui->documentTree->setModel(ObjectBroker::model("com.kdab.GammaRay.TextDocumentModel"));
-  selectionModel = ObjectBroker::selectionModel(ui->documentTree->model());
-  ui->documentTree->setSelectionModel(selectionModel);
-  connect(selectionModel, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
+  ui->documentTree->header()->setObjectName("documentTreeHeader");
+  ui->documentTree->setDeferredResizeMode(0, QHeaderView::Stretch);
+  ui->documentTree->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->documentTree->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.TextDocumentModel")));
+  ui->documentTree->setSelectionModel(ObjectBroker::selectionModel(ui->documentTree->model()));
+  connect(ui->documentTree->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           SLOT(documentElementSelected(QItemSelection,QItemSelection)));
-  ui->documentFormatView->setModel(ObjectBroker::model("com.kdab.GammaRay.TextDocumentFormatModel"));
-  new DeferredResizeModeSetter(ui->documentFormatView->header(), 0, QHeaderView::ResizeToContents);
+
+  ui->documentFormatView->header()->setObjectName("documentFormatViewHeader");
+  ui->documentFormatView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->documentFormatView->setDeferredResizeMode(1, QHeaderView::Stretch);
+  ui->documentFormatView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+  ui->documentFormatView->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.TextDocumentFormatModel")));
 
   if (Endpoint::instance()->isRemoteClient()) // FIXME: content preview doesn't work remotely yet
     ui->tabWidget->hide();
+
+  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << 280 << -1 << -1);
+  m_stateManager.setDefaultSizes(ui->structureSplitter, UISizeVector() << "50%" << "50%");
 }
 
 TextDocumentInspectorWidget::~TextDocumentInspectorWidget()

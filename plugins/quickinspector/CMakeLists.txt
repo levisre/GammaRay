@@ -8,7 +8,7 @@ if(Qt5Quick_FOUND AND HAVE_PRIVATE_Qt5Quick_HEADERS AND NOT ${Qt5Quick_VERSION} 
   # shared stuff
   set(gammaray_quickinspector_shared_srcs
         quickinspectorinterface.cpp
-        transferimage.cpp
+        quickitemgeometry.cpp
         materialextension/materialextensioninterface.cpp
         geometryextension/sggeometryextensioninterface.cpp
       )
@@ -17,12 +17,13 @@ if(Qt5Quick_FOUND AND HAVE_PRIVATE_Qt5Quick_HEADERS AND NOT ${Qt5Quick_VERSION} 
   target_link_libraries(gammaray_quickinspector_shared gammaray_common Qt5::Gui)
   set_target_properties(gammaray_quickinspector_shared PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-  include_directories(${Qt5Quick_PRIVATE_INCLUDE_DIRS})
+  include_directories(SYSTEM ${Qt5Quick_PRIVATE_INCLUDE_DIRS})
 
   set(gammaray_quickinspector_srcs
     quickinspector.cpp
     quickitemmodel.cpp
     quickscenegraphmodel.cpp
+    quickpaintanalyzerextension.cpp
 
     materialextension/materialextension.cpp
     geometryextension/sggeometryextension.cpp
@@ -30,13 +31,14 @@ if(Qt5Quick_FOUND AND HAVE_PRIVATE_Qt5Quick_HEADERS AND NOT ${Qt5Quick_VERSION} 
   )
 
   gammaray_add_plugin(gammaray_quickinspector
-    gammaray_quickinspector.desktop
-    ${gammaray_quickinspector_srcs}
+    JSON gammaray_quickinspector.json
+    SOURCES ${gammaray_quickinspector_srcs}
   )
 
   target_link_libraries(gammaray_quickinspector
     gammaray_quickinspector_shared
     gammaray_core Qt5::Quick
+    gammaray_kitemmodels
   )
 
   if(GAMMARAY_BUILD_UI)
@@ -47,7 +49,7 @@ if(Qt5Quick_FOUND AND HAVE_PRIVATE_Qt5Quick_HEADERS AND NOT ${Qt5Quick_VERSION} 
       quickclientitemmodel.cpp
       quickitemdelegate.cpp
       quickitemtreewatcher.cpp
-      annotatedscenepreview.cpp
+      quickscenepreviewwidget.cpp
 
       materialextension/materialextensionclient.cpp
       materialextension/materialtab.cpp
@@ -67,10 +69,11 @@ if(Qt5Quick_FOUND AND HAVE_PRIVATE_Qt5Quick_HEADERS AND NOT ${Qt5Quick_VERSION} 
     )
 
     gammaray_add_plugin(gammaray_quickinspector_ui
-      gammaray_quickinspector_ui.desktop
-      ${gammaray_quickinspector_ui_srcs}
+      JSON gammaray_quickinspector.json
+      SOURCES ${gammaray_quickinspector_ui_srcs}
     )
 
+    target_include_directories(gammaray_quickinspector_ui PRIVATE ${CMAKE_BINARY_DIR}/client) # for remotemodel.h
     target_link_libraries(gammaray_quickinspector_ui
       gammaray_quickinspector_shared
       gammaray_ui

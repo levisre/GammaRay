@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -69,6 +69,12 @@ class GAMMARAY_CORE_EXPORT MetaObject
      */
     void *castForPropertyAt(void *object, int index) const;
 
+    /** Casts to a void pointer for an instance of this type to one referring
+     *  to the given base class type. If @p baseClass is not a base class
+     *  of this type, @c nullptr is returned.
+     */
+    void* castTo(void *object, const QString &baseClass) const;
+
     void setClassName(const QString &className);
 
     MetaObject *superClass(int index = 0) const;
@@ -84,6 +90,7 @@ class GAMMARAY_CORE_EXPORT MetaObject
     QVector<MetaObject*> m_baseClasses;
 
   private:
+    Q_DISABLE_COPY(MetaObject)
     QVector<MetaProperty*> m_properties;
     QString m_className;
 };
@@ -93,7 +100,7 @@ template <typename T, typename Base1 = void, typename Base2 = void, typename Bas
 class MetaObjectImpl : public MetaObject
 {
   public:
-    void *castToBaseClass(void *object, int baseClassIndex) const
+    void *castToBaseClass(void *object, int baseClassIndex) const Q_DECL_OVERRIDE
     {
       Q_ASSERT(baseClassIndex >= 0 && baseClassIndex < m_baseClasses.size());
       switch (baseClassIndex) {

@@ -9,7 +9,7 @@
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   This program is free software; you can redistribute it and/or modify
@@ -35,6 +35,8 @@
 #include <QStateMachine>
 #include <QStringList>
 
+#include <algorithm>
+
 // #include <modeltest.h>
 
 using namespace GammaRay;
@@ -48,10 +50,19 @@ class StateModelPrivate
       m_stateMachineWatcher(new StateMachineWatcher(qq)),
       m_stateMachine(0)
   {
-    Q_ASSERT(qq->connect(m_stateMachineWatcher, SIGNAL(stateEntered(QAbstractState*)),
-                         qq, SLOT(stateConfigurationChanged())));
-    Q_ASSERT(qq->connect(m_stateMachineWatcher, SIGNAL(stateExited(QAbstractState*)),
-                         qq, SLOT(stateConfigurationChanged())));
+    qq->connect(m_stateMachineWatcher, SIGNAL(stateEntered(QAbstractState*)),
+                         qq, SLOT(stateConfigurationChanged()));
+    qq->connect(m_stateMachineWatcher, SIGNAL(stateExited(QAbstractState*)),
+                         qq, SLOT(stateConfigurationChanged()));
+  }
+
+  void emitDataChangedForState(QAbstractState *state)
+  {
+    const auto left = indexForState(state);
+    const auto right = left.sibling(left.row(), q_ptr->columnCount() - 1);
+    if (!left.isValid() || !right.isValid())
+      return;
+    emit q_ptr->dataChanged(left, right);
   }
 
   Q_DECLARE_PUBLIC(StateModel)
@@ -90,7 +101,7 @@ QList<QObject*> StateModelPrivate::children(QObject *parent) const
     }
   }
 
-  qSort(result);
+  std::sort(result.begin(), result.end());
   return result;
 }
 
@@ -122,22 +133,14 @@ QModelIndex StateModelPrivate::indexForState(QAbstractState *state) const
 
 void StateModelPrivate::stateConfigurationChanged()
 {
-  Q_Q(StateModel);
-
   QSet<QAbstractState *> newConfig = m_stateMachine->configuration();
   // states which became active
   foreach (QAbstractState *state, (newConfig - m_lastConfiguration)) {
-    const QModelIndex source = indexForState(state);
-    if (source.isValid()) {
-      q->dataChanged(source, source);
-    }
+    emitDataChangedForState(state);
   }
   // states which became inactive
   foreach (QAbstractState *state, (m_lastConfiguration - newConfig)) {
-    const QModelIndex source = indexForState(state);
-    if (source.isValid()) {
-      q->dataChanged(source, source);
-    }
+    emitDataChangedForState(state);
   }
   m_lastConfiguration = newConfig;
 }
@@ -217,7 +220,7 @@ QVariant StateModel::data(const QModelIndex &index, int role) const
         Q_ASSERT(l.contains(child));
         nums << QString::number(l.indexOf(child) - l.indexOf(state));
       }
-      return nums.join(",");
+      return nums.join(QStringLiteral(","));
     }
   }
   if (role == IsInitialStateRole) {
@@ -293,6 +296,17 @@ QModelIndex StateModel::parent(const QModelIndex &index) const
   QObject *grandParent = parent->parent();
   int row = d->children(grandParent).indexOf(parent);
   return createIndex(row, 0, grandParent);
+}
+
+QVariant StateModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+  if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
+    switch (section) {
+      case 0: return tr("State");
+      case 1: return tr("Type");
+    }
+  }
+  return QAbstractItemModel::headerData(section, orientation, role);
 }
 
 #include "moc_statemodel.cpp"

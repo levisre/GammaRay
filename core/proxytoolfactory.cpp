@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,6 +34,13 @@ using namespace std;
 ProxyToolFactory::ProxyToolFactory(const PluginInfo &pluginInfo, QObject *parent)
   : ProxyFactory<ToolFactory>(pluginInfo, parent)
 {
+  const QStringList typesList = pluginInfo.supportedTypes();
+  QVector<QByteArray> typesVector;
+  typesVector.reserve(typesList.count());
+  for (auto it = typesList.constBegin(), end = typesList.constEnd(); it != end; ++it) {
+    typesVector << (*it).toLatin1();
+  }
+  setSupportedTypes(typesVector);
 }
 
 bool ProxyToolFactory::isValid() const
@@ -47,11 +54,6 @@ bool ProxyToolFactory::isValid() const
 QString ProxyToolFactory::name() const
 {
   return pluginInfo().name();
-}
-
-QStringList ProxyToolFactory::supportedTypes() const
-{
-  return pluginInfo().supportedTypes();
 }
 
 void ProxyToolFactory::init(ProbeInterface *probe)
@@ -68,4 +70,9 @@ void ProxyToolFactory::init(ProbeInterface *probe)
 bool ProxyToolFactory::isHidden() const
 {
   return pluginInfo().isHidden();
+}
+
+QVector<QByteArray> ProxyToolFactory::selectableTypes() const
+{
+    return pluginInfo().selectableTypes();
 }

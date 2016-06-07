@@ -1,0 +1,45 @@
+/*
+    gammaray-metaobject-browser.qdoc
+
+    This file is part of the GammaRay documentation.
+
+    Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+    Author: Volker Krause <volker.krause@kdab.com>
+
+    Licensees holding valid commercial KDAB GammaRay licenses may use this file in
+    accordance with GammaRay Commercial License Agreement provided with the Software.
+
+    Contact info@kdab.com if any conditions of this licensing are not clear to you.
+
+    This work is also licensed under the Creative Commons Attribution-ShareAlike 4.0
+    International License. See <http://creativecommons.org/licenses/by-sa/4.0/>.
+*/
+
+/*!
+    \contentspage {Meta Object Browser}
+    \previouspage {Object Inspector}
+    \page gammaray-metaobject-browser.html
+
+    \title Meta Object Browser
+
+    \section1 Overview
+
+    The meta object browser shows the hierarchy of all QMetaObject instances found in the target in the tree view on the left side.
+    The property view on the right side shows information known by the QMetaObject system, including data from:
+
+    \list
+        \li QMetaProperty
+        \li QMetaMethod
+        \li QMetaEnum
+        \li QMetaClassInfo
+    \endlist
+
+    \section1 Instance Statistics
+
+    The meta object tree view also contains columns with information about how many instances of a specific type have been created, including and excluding sub-classes.
+
+    \image gammaray-metaobject-browser.png
+
+    Tooltips on these columns as well as colorization show the ratio of this type on the overall amount of QObject instances. This is particularly useful for identifying
+    unnecessarily often created instances, as QObject construction is not exactly cheap.
+*/

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -44,6 +44,10 @@ using namespace GammaRay;
 
 Q_GLOBAL_STATIC(QVector<AbstractPropertyAdaptorFactory*>, s_propertyAdaptorFactories)
 
+AbstractPropertyAdaptorFactory::AbstractPropertyAdaptorFactory()
+{
+}
+
 AbstractPropertyAdaptorFactory::~AbstractPropertyAdaptorFactory()
 {
 }
@@ -56,7 +60,7 @@ PropertyAdaptor* PropertyAdaptorFactory::create(const ObjectInstance& oi, QObjec
         adaptors.push_back(new QMetaPropertyAdaptor(parent));
     if (oi.type() == ObjectInstance::QtObject)
         adaptors.push_back(new DynamicPropertyAdaptor(parent));
-    if (oi.type() == ObjectInstance::QtObject || oi.type() == ObjectInstance::Object || oi.type() == ObjectInstance::QtGadget)
+    if (oi.type() == ObjectInstance::QtObject || oi.type() == ObjectInstance::Object || oi.type() == ObjectInstance::Value || oi.type() == ObjectInstance::QtGadget)
         adaptors.push_back(new MetaPropertyAdaptor(parent));
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
@@ -69,7 +73,7 @@ PropertyAdaptor* PropertyAdaptorFactory::create(const ObjectInstance& oi, QObjec
     }
 #endif
 
-    foreach (auto factory, *s_propertyAdaptorFactories()) { //krazy:exclude=foreach
+    foreach (auto factory, *s_propertyAdaptorFactories()) {
         auto a = factory->create(oi, parent);
         if (a)
             adaptors.push_back(a);

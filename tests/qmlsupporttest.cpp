@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,6 +29,7 @@
 #include <plugins/qmlsupport/qmllistpropertyadaptor.h>
 #include <plugins/qmlsupport/qmlattachedpropertyadaptor.h>
 #include <plugins/qmlsupport/qjsvaluepropertyadaptor.h>
+#include <plugins/qmlsupport/qmlcontextpropertyadaptor.h>
 
 #include <core/propertyadaptor.h>
 #include <core/propertyadaptorfactory.h>
@@ -36,6 +37,7 @@
 #include <core/propertydata.h>
 
 #include <QQmlComponent>
+#include <QQmlContext>
 #include <QQmlEngine>
 
 #include <QDebug>
@@ -66,6 +68,7 @@ private slots:
         PropertyAdaptorFactory::registerFactory(QmlListPropertyAdaptorFactory::instance());
         PropertyAdaptorFactory::registerFactory(QmlAttachedPropertyAdaptorFactory::instance());
         PropertyAdaptorFactory::registerFactory(QJSValuePropertyAdaptorFactory::instance());
+        PropertyAdaptorFactory::registerFactory(QmlContextPropertyAdaptorFactory::instance());
     }
 
     void testQmlListProperty()
@@ -83,7 +86,7 @@ private slots:
         auto idx = indexOfProperty(adaptor, "data");
         QVERIFY(idx >= 0);
         auto pd = adaptor->propertyData(idx);
-        QCOMPARE(pd.className(), QString("QQuickItem"));
+        QCOMPARE(pd.className(), QStringLiteral("QQuickItem"));
 
         auto listAdaptor = PropertyAdaptorFactory::create(pd.value(), this);
         QVERIFY(listAdaptor);
@@ -112,7 +115,7 @@ private slots:
         QVERIFY(idx >= 0);
 
         auto data = adaptor->propertyData(idx);
-        QCOMPARE(data.name(), QString("Keys"));
+        QCOMPARE(data.name(), QStringLiteral("Keys"));
         QVERIFY(!data.typeName().isEmpty());
         QVERIFY(data.value().isValid());
         QVERIFY(data.value().canConvert<QObject*>());
@@ -148,8 +151,29 @@ private slots:
         QVERIFY(jsValueAdaptor);
         QCOMPARE(jsValueAdaptor->count(), 2);
         data = jsValueAdaptor->propertyData(1);
-        QCOMPARE(data.name(), QString("1"));
+        QCOMPARE(data.name(), QStringLiteral("1"));
         QCOMPARE(data.value(), QVariant("world"));
+#endif
+    }
+
+    void testContextProperty()
+    {
+        QQmlEngine engine;
+        engine.rootContext()->setContextProperty("myContextProp", 42);
+
+        auto adaptor = PropertyAdaptorFactory::create(engine.rootContext(), this);
+        QVERIFY(adaptor);
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+        auto idx = indexOfProperty(adaptor, "myContextProp");
+        QVERIFY(idx >= 0);
+
+        auto data = adaptor->propertyData(idx);
+        QCOMPARE(data.name(), QStringLiteral("myContextProp"));
+        QCOMPARE(data.value().toInt(), 42);
+
+        adaptor->writeProperty(idx, 23);
+        QCOMPARE(engine.rootContext()->contextProperty("myContextProp").toInt(), 23);
 #endif
     }
 };

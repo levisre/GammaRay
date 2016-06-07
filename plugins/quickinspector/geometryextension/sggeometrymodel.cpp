@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -82,22 +82,22 @@ QVariant SGGeometryModel::data(const QModelIndex &index, int role) const
     attrInfo += index.column();
     switch (attrInfo->type) {
     case GL_BYTE:
-      return toStringList<char>(index.internalPointer(), attrInfo->tupleSize).join(", ");
+      return toStringList<char>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
     case GL_UNSIGNED_BYTE:
-      return toStringList<unsigned char>(index.internalPointer(), attrInfo->tupleSize).join(", ");
+      return toStringList<unsigned char>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
     case GL_UNSIGNED_SHORT:
-      return toStringList<quint16>(index.internalPointer(), attrInfo->tupleSize).join(", ");
+      return toStringList<quint16>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
     case GL_SHORT:
-      return toStringList<qint16>(index.internalPointer(), attrInfo->tupleSize).join(", ");
+      return toStringList<qint16>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
     case GL_INT:
-      return toStringList<int>(index.internalPointer(), attrInfo->tupleSize).join(", ");
+      return toStringList<int>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
     case GL_UNSIGNED_INT:
-      return toStringList<uint>(index.internalPointer(), attrInfo->tupleSize).join(", ");
+      return toStringList<uint>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
     case GL_FLOAT:
-      return toStringList<float>(index.internalPointer(), attrInfo->tupleSize).join(", ");
+      return toStringList<float>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
 #if defined(GL_DOUBLE) && GL_DOUBLE != GL_FLOAT
     case GL_DOUBLE:
-      return toStringList<double>(index.internalPointer(), attrInfo->tupleSize).join(", ");
+      return toStringList<double>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
 #endif
 #ifndef QT_OPENGL_ES_2
     case GL_2_BYTES:
@@ -108,7 +108,7 @@ QVariant SGGeometryModel::data(const QModelIndex &index, int role) const
       return "4Bytes";
 #endif
     default:
-      return QString("Unknown %1 byte data: 0x").
+      return QStringLiteral("Unknown %1 byte data: 0x").
         arg(attrInfo->tupleSize).
           append(QByteArray((char*)index.internalPointer(), attrInfo->tupleSize).
             toHex());

@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,8 +37,8 @@
 #include <QtTest/qtest.h>
 
 #include <QAbstractItemModel>
-#include <QAction>
 #include <QObject>
+#include <QWidget>
 
 using namespace GammaRay;
 
@@ -52,7 +52,7 @@ private:
         qputenv("GAMMARAY_ProbePath", Paths::currentProbePath().toUtf8());
         Hooks::installHooks();
         Probe::startupHookReceived();
-        new ProbeCreator(ProbeCreator::CreateOnly);
+        new ProbeCreator(ProbeCreator::Create);
         QTest::qWait(1); // event loop re-entry
     }
 
@@ -76,7 +76,7 @@ private slots:
         auto w1 = new QWidget;
         QTest::qWait(1); // event loop re-entry
 
-        auto *model = ObjectBroker::model("com.kdab.GammaRay.WidgetTree");
+        auto *model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.WidgetTree"));
         QVERIFY(model);
         ModelTest modelTest(model);
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,6 +32,8 @@
 #include <QAbstractTableModel>
 #include <QVector>
 
+namespace GammaRay {
+
 class MetaTypesModel : public QAbstractTableModel
 {
   Q_OBJECT
@@ -51,5 +53,7 @@ class MetaTypesModel : public QAbstractTableModel
 
     QVector<int> m_metaTypes;
 };
+
+}
 
 #endif

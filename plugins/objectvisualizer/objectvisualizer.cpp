@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,6 +27,8 @@
 #include "objectvisualizer.h"
 #include "objectvisualizermodel.h"
 
+#include <core/remote/serverproxymodel.h>
+
 #include <QtPlugin>
 
 using namespace GammaRay;
@@ -34,13 +36,21 @@ using namespace GammaRay;
 GraphViewer::GraphViewer(ProbeInterface *probe, QObject *parent)
   : QObject(parent)
 {
-  ObjectVisualizerModel *model = new ObjectVisualizerModel(this);
+  auto model = new ServerProxyModel<ObjectVisualizerModel>(this);
   model->setSourceModel(probe->objectTreeModel());
+  model->addProxyRole(ObjectVisualizerModel::ObjectId);
+  model->addProxyRole(ObjectVisualizerModel::ObjectDisplayName);
+  model->addProxyRole(ObjectVisualizerModel::ClassName);
   probe->registerModel("com.kdab.GammaRay.ObjectVisualizerModel", model);
 }
 
 GraphViewer::~GraphViewer()
 {
+}
+
+QString GraphViewerFactory::name() const
+{
+  return tr("Object Visualizer");
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

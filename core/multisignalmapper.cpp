@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,7 +41,7 @@ class MultiSignalMapperPrivate : public QObject
     explicit MultiSignalMapperPrivate(MultiSignalMapper* parent) : QObject(parent), q(parent) {}
     ~MultiSignalMapperPrivate() {}
 
-    int qt_metacall(QMetaObject::Call call, int methodId, void** args)
+    int qt_metacall(QMetaObject::Call call, int methodId, void** args) Q_DECL_OVERRIDE
     {
       methodId = QObject::qt_metacall(call, methodId, args);
       if (methodId < 0)

@@ -2,21 +2,27 @@
 # Shared code between in-process and out-of-process UI
 #
 set(gammaray_ui_srcs
-  ${CMAKE_SOURCE_DIR}/3rdparty/kde/kfilterproxysearchline.cpp
-
   aboutdata.cpp
   clienttoolmodel.cpp
-  deferredresizemodesetter.cpp
-  deferredtreeviewconfiguration.cpp
+  contextmenuextension.cpp
+  deferredtreeview.cpp
   editabletypesmodel.cpp
+  itemdelegate.cpp
   methodinvocationdialog.cpp
   palettemodel.cpp
   propertybinder.cpp
   propertywidget.cpp
+  propertywidgettab.cpp
   proxytooluifactory.cpp
   splashscreen.cpp
   searchlinecontroller.cpp
+  tooluifactory.cpp
   uiintegration.cpp
+  uistatemanager.cpp
+  remoteviewwidget.cpp
+
+  paintanalyzerwidget.cpp
+  paintbufferviewer.cpp
 
   propertyeditor/propertycoloreditor.cpp
   propertyeditor/propertydoublepaireditor.cpp
@@ -27,13 +33,17 @@ set(gammaray_ui_srcs
   propertyeditor/propertypaletteeditor.cpp
   propertyeditor/palettedialog.cpp
   propertyeditor/propertyeditordelegate.cpp
+  propertyeditor/propertymatrixdialog.cpp
+  propertyeditor/propertymatrixeditor.cpp
+  propertyeditor/propertymatrixmodel.cpp
+  propertyeditor/propertytexteditor.cpp
 
-  tools/connectioninspector/connectioninspectorwidget.cpp
   tools/localeinspector/localeinspectorwidget.cpp
   tools/messagehandler/messagedisplaymodel.cpp
   tools/messagehandler/messagehandlerwidget.cpp
   tools/messagehandler/messagehandlerclient.cpp
   tools/metaobjectbrowser/metaobjectbrowserwidget.cpp
+  tools/metaobjectbrowser/metaobjecttreeclientproxymodel.cpp
   tools/metatypebrowser/metatypebrowserwidget.cpp
   tools/mimetypes/mimetypeswidget.cpp
   tools/modelinspector/modelinspectorwidget.cpp
@@ -49,6 +59,7 @@ set(gammaray_ui_srcs
   tools/objectinspector/enumstab.cpp
   tools/objectinspector/classinfotab.cpp
   tools/objectinspector/methodstab.cpp
+  tools/objectinspector/applicationattributetab.cpp
   tools/resourcebrowser/clientresourcemodel.cpp
   tools/resourcebrowser/resourcebrowserwidget.cpp
   tools/resourcebrowser/resourcebrowserclient.cpp
@@ -60,12 +71,16 @@ set(gammaray_ui_srcs
 qt4_wrap_ui(gammaray_ui_srcs
   methodinvocationdialog.ui
 
+  paintanalyzerwidget.ui
+  paintbufferviewer.ui
+
   propertyeditor/propertydoublepaireditor.ui
   propertyeditor/propertyextendededitor.ui
   propertyeditor/propertyintpaireditor.ui
+  propertyeditor/propertymatrixdialog.ui
+  propertyeditor/propertytexteditor.ui
   propertyeditor/palettedialog.ui
 
-  tools/connectioninspector/connectioninspectorwidget.ui
   tools/localeinspector/localeinspectorwidget.ui
   tools/messagehandler/messagehandlerwidget.ui
   tools/metatypebrowser/metatypebrowserwidget.ui
@@ -78,24 +93,39 @@ qt4_wrap_ui(gammaray_ui_srcs
   tools/objectinspector/enumstab.ui
   tools/objectinspector/classinfotab.ui
   tools/objectinspector/methodstab.ui
+  tools/objectinspector/applicationattributetab.ui
   tools/resourcebrowser/resourcebrowserwidget.ui
   tools/standardpaths/standardpathswidget.ui
   tools/textdocumentinspector/textdocumentinspectorwidget.ui
 )
 
+qt4_add_resources(gammaray_ui_srcs resources/ui.qrc)
+
 add_library(gammaray_ui SHARED ${gammaray_ui_srcs})
+generate_export_header(gammaray_ui)
 set_target_properties(gammaray_ui PROPERTIES
   ${GAMMARAY_DEFAULT_LIBRARY_PROPERTIES}
-  DEFINE_SYMBOL MAKE_GAMMARAY_UI_LIB
   OUTPUT_NAME gammaray_ui-${GAMMARAY_PROBE_ABI}
 )
 
+gammaray_target_relocatable_interfaces(gammaray_ui_ipaths)
+target_include_directories(gammaray_ui PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> $<INSTALL_INTERFACE:${gammaray_ui_ipaths}>)
+if(HAVE_PRIVATE_QT_HEADERS)
+  if(Qt5Widgets_FOUND)
+    include_directories(SYSTEM ${Qt5Widgets_PRIVATE_INCLUDE_DIRS})
+  elseif(QtGui_FOUND)
+    include_directories(SYSTEM ${QtGui_PRIVATE_INCLUDE_DIRS})
+  endif()
+else(HAVE_PRIVATE_QT_HEADERS)
+  add_feature_info("QHeaderView geometry/state restoration" HAVE_PRIVATE_QT_HEADERS
+    "You must have a build version of Qt available. Make sure the qmake found first in your execute comes from this build version."
+  )
+endif(HAVE_PRIVATE_QT_HEADERS)
+
 target_link_libraries(gammaray_ui
   LINK_PUBLIC ${QT_QTCORE_LIBRARIES} ${QT_QTGUI_LIBRARIES} gammaray_common
-  LINK_PRIVATE gammaray_common_internal
+  LINK_PRIVATE gammaray_common_internal gammaray_kitemmodels
 )
-
-install(TARGETS gammaray_ui EXPORT GammaRayTargets ${INSTALL_TARGETS_DEFAULT_ARGS})
 
 set(gammaray_ui_internal_srcs
   sidepane.cpp
@@ -119,22 +149,29 @@ target_link_libraries(gammaray_ui_internal
   gammaray_ui
 )
 
-gammaray_install_headers(
-  gammaray_ui_export.h
-  clienttoolmodel.h
-  deferredresizemodesetter.h
-  deferredtreeviewconfiguration.h
-  propertywidget.h
-  propertywidgettab.h
-  tooluifactory.h
-  uiintegration.h
-)
+if(NOT GAMMARAY_PROBE_ONLY_BUILD)
+  install(TARGETS gammaray_ui EXPORT GammaRayTargets ${INSTALL_TARGETS_DEFAULT_ARGS})
 
-ecm_generate_pri_file(BASE_NAME GammaRayUi
-                      LIB_NAME gammaray_ui-${GAMMARAY_PROBE_ABI}
-                      DEPS "core gui widgets GammaRayCommon"
-                      FILENAME_VAR PRI_FILENAME
-                      INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_DIR}/..
-)
+  gammaray_install_headers(
+    ${CMAKE_CURRENT_BINARY_DIR}/gammaray_ui_export.h
+    clienttoolmodel.h
+    deferredtreeview.h
+    itemdelegate.h
+    propertywidget.h
+    propertywidgettab.h
+    tooluifactory.h
+    uiintegration.h
+    uistatemanager.h
+  )
 
-install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
+  ecm_generate_pri_file(BASE_NAME GammaRayUi
+                        LIB_NAME gammaray_ui-${GAMMARAY_PROBE_ABI}
+                        DEPS "core gui widgets GammaRayCommon"
+                        FILENAME_VAR PRI_FILENAME
+                        INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_DIR}
+  )
+
+  install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
+else()
+  install(TARGETS gammaray_ui ${INSTALL_TARGETS_DEFAULT_ARGS})
+endif()

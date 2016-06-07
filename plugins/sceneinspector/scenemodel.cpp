@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,6 +28,9 @@
 
 #include "scenemodel.h"
 
+#include <common/objectmodel.h>
+#include <common/probecontrollerinterface.h> // for ObjectId
+
 #include <QApplication>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
@@ -38,7 +41,7 @@ using namespace GammaRay;
 #define QGV_ITEMTYPE(Type) \
 { \
   Type t; \
-  m_typeNames.insert(t.type(), QLatin1String(#Type)); \
+  m_typeNames.insert(t.type(), QStringLiteral(#Type)); \
 }
 
 SceneModel::SceneModel(QObject *parent)
@@ -81,7 +84,7 @@ QVariant SceneModel::data(const QModelIndex &index, int role) const
         return obj->objectName();
       }
       return
-        QString::fromLatin1("0x%1").
+        QStringLiteral("0x%1").
           arg(QString::number(reinterpret_cast<qlonglong>(item), 16));
     } else if (index.column() == 1) {
       if (obj) {
@@ -95,6 +98,9 @@ QVariant SceneModel::data(const QModelIndex &index, int role) const
     if (!item->isVisible()) {
       return qApp->palette().color(QPalette::Disabled, QPalette::Text);
     }
+  } else if (item && role == ObjectModel::ObjectIdRole) {
+    // TODO also handle the non-QObject case
+    return QVariant::fromValue(ObjectId(item->toGraphicsObject()));
   }
   return QVariant();
 }
@@ -189,11 +195,11 @@ QString SceneModel::typeName(int itemType) const
     return it.value();
   }
   if (itemType == QGraphicsItem::UserType) {
-    return QLatin1String("UserType");
+    return QStringLiteral("UserType");
   }
   if (itemType > QGraphicsItem::UserType) {
     return
-      QString::fromLatin1("UserType + %1").
+      QStringLiteral("UserType + %1").
         arg(itemType - static_cast<int>(QGraphicsItem::UserType));
   }
   return QString::number(itemType);

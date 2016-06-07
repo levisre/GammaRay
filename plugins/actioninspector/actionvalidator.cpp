@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,10 +32,12 @@
 
 using namespace GammaRay;
 
+QT_BEGIN_NAMESPACE
 uint qHash(const QKeySequence &sequence)
 {
   return qHash(sequence.toString(QKeySequence::PortableText));
 }
+QT_END_NAMESPACE
 
 ActionValidator::ActionValidator(QObject *parent)
   : QObject(parent)
@@ -120,7 +122,7 @@ bool ActionValidator::hasAmbiguousShortcut(const QAction *action) const
   }
 
   Q_FOREACH (const QKeySequence &sequence, action->shortcuts()) {
-    if (m_shortcutActionMap.values(sequence).size() > 1) {
+    if (m_shortcutActionMap.count(sequence) > 1) {
       return true;
     }
   }

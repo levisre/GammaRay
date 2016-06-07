@@ -1,3 +1,4 @@
+# <a name="title"></a> [![Logo](https://github.com/KDAB/GammaRay/blob/master/resources/gammaray-trademark-medium.png)](http://www.kdab.com/gammaray)
 Introduction
 ============
 GammaRay is a software introspection tool for Qt applications developed by KDAB.
@@ -52,11 +53,11 @@ If you want to contribute, please check out: https://github.com/KDAB/GammaRay/wi
 
 KDAB will happily accept external contributions, but substantial
 contributions will require a signed Copyright Assignment Agreement.
-Contact support@kdab.com for more information.
+Contact info@kdab.com for more information.
 
 License
 =======
-The GammaRay Software is (C) 2010-2015 Klarälvdalens Datakonsult AB (KDAB),
+The GammaRay Software is (C) 2010-2016 Klarälvdalens Datakonsult AB (KDAB),
 and is available under the terms of the GPL version 2 (or any later version,
 at your option).  See LICENSE.GPL.txt for license details.
 
@@ -77,3 +78,7 @@ or debug your own specific components or applications, get in touch with us
 via http://www.kdab.com/contact. KDAB engineers have a lot of experience
 writing GammaRay plugins and can be contracted to help you get yours working
 and improve your development efficiency.
+
+GammaRay and the GammaRay logo are registered trademarks of Klarälvdalens Datakonsult AB
+in the European Union, the United States and/or other countries.  Other product and
+company names and logos may be trademarks or registered trademarks of their respective companies.

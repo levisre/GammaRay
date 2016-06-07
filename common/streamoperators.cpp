@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,39 +27,24 @@
 */
 
 #include "streamoperators.h"
-#include "enums.h"
 #include "metatypedeclarations.h"
 #include "variantwrapper.h"
+#include "sourcelocation.h"
 
-#include <QDataStream>
 #include <QMetaMethod>
 
 using namespace GammaRay;
 
-#define MAKE_ENUM_OPERATORS(enumType) \
-  QDataStream &operator<<(QDataStream &out, enumType value) \
-  { \
-    out << qint32(value); \
-    return out; \
-  } \
-  \
-  QDataStream &operator>>(QDataStream &in, enumType &value) \
-  { \
-    qint32 t; \
-    in >> t; \
-    value = static_cast<enumType>(t); \
-    return in; \
-  }
-
-MAKE_ENUM_OPERATORS(QMetaMethod::MethodType)
-MAKE_ENUM_OPERATORS(PropertyWidgetDisplayState::State)
-MAKE_ENUM_OPERATORS(Qt::ConnectionType)
+QT_BEGIN_NAMESPACE
+GAMMARAY_ENUM_STREAM_OPERATORS(QMetaMethod::MethodType)
+GAMMARAY_ENUM_STREAM_OPERATORS(Qt::ConnectionType)
+QT_END_NAMESPACE
 
 void StreamOperators::registerOperators()
 {
   qRegisterMetaTypeStreamOperators<QMetaMethod::MethodType>();
-  qRegisterMetaTypeStreamOperators<PropertyWidgetDisplayState::State>();
   qRegisterMetaTypeStreamOperators<Qt::ConnectionType>();
 
   qRegisterMetaTypeStreamOperators<GammaRay::VariantWrapper>();
+  qRegisterMetaTypeStreamOperators<GammaRay::SourceLocation>();
 }

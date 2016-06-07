@@ -1,3 +1,6 @@
+# TODO replace with Qt5::qhelpgenerator for Qt >= 5.7.1
+find_program(QHELPGEN_EXECUTABLE qhelpgenerator)
+
 #
 # man page
 #
@@ -10,7 +13,7 @@ if(UNIX)
     PURPOSE "Generate GammaRay man pages."
   )
 
-  if(POD2MAN_EXECUTABLE AND NOT GAMMARAY_PROBE_ONLY_BUILD)
+  if(POD2MAN_EXECUTABLE)
     add_custom_command(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gammaray.1
       COMMAND ${POD2MAN_EXECUTABLE} -c "KDAB Products" -r "\"${GAMMARAY_VERSION}\"" -s 1 ${CMAKE_CURRENT_SOURCE_DIR}/gammaray.pod ${CMAKE_CURRENT_BINARY_DIR}/gammaray.1
@@ -22,36 +25,10 @@ if(UNIX)
   endif()
 endif()
 
-#
-# API docs
-#
-find_package(Doxygen)
-set_package_properties(Doxygen PROPERTIES
-  TYPE OPTIONAL
-  DESCRIPTION "API Documentation system"
-  URL "http://www.doxygen.org"
-  PURPOSE "Needed to build the API documention."
-)
-if(DOXYGEN_FOUND)
-  file(GLOB _dox_deps *.dox *.html)
-  gammaray_all_installed_headers(_all_hdrs)
-  list(APPEND _all_hdrs ${_dox_deps})
-  gammaray_join_list(DOXYGEN_INPUT " " ${_all_hdrs})
-
-  #apidox generation using doxygen
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-  )
-
-  add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/apidocs/html/index.html
-    COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-    DEPENDS ${_all_hdrs} ${_dox_deps} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.cmake
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-  )
-  add_custom_target(docs
-    DEPENDS ${CMAKE_BINARY_DIR}/apidocs/html/index.html
-  )
-
+# Don't attempt create the user manual for Qt versions < 5.4
+if(Qt5Core_FOUND AND NOT Qt5Core_VERSION VERSION_LESS 5.4.0)
+  add_subdirectory(manual)
+else()
+  add_feature_info("User Manual creation in qch format" False "Requires Qt5.4 or higher")
 endif()
+add_subdirectory(api)

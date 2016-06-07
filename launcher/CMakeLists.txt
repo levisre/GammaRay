@@ -11,19 +11,24 @@ set(gammaray_launcher_shared_srcs
   injector/processinjector.cpp
   injector/injectorfactory.cpp
   injector/styleinjector.cpp
-  injector/windllinjector.cpp
 
   probeabi.cpp
   probeabidetector.cpp
   probefinder.cpp
   launchoptions.cpp
+  networkdiscoverymodel.cpp
   clientlauncher.cpp
   launcherfinder.cpp
   launcher.cpp
+  selftest.cpp
 )
 
 if(WIN32)
-  list(APPEND gammaray_launcher_shared_srcs probeabidetector_win.cpp)
+  list(APPEND gammaray_launcher_shared_srcs
+    probeabidetector_win.cpp
+    pefile.cpp
+    injector/windllinjector.cpp
+  )
 else()
   list(APPEND gammaray_launcher_shared_srcs
     injector/debuggerinjector.cpp
@@ -34,7 +39,7 @@ else()
   )
   if(APPLE)
     list(APPEND gammaray_launcher_shared_srcs probeabidetector_mac.cpp)
-  elseif(UNIX AND NOT QNXNTO)
+  elseif(UNIX)
     list(APPEND gammaray_launcher_shared_srcs probeabidetector_elf.cpp)
   else()
     list(APPEND gammaray_launcher_shared_srcs probeabidetector_dummy.cpp)
@@ -42,13 +47,14 @@ else()
 endif()
 
 add_library(gammaray_launcher SHARED ${gammaray_launcher_shared_srcs})
-
+generate_export_header(gammaray_launcher)
 set_target_properties(gammaray_launcher PROPERTIES
   ${GAMMARAY_DEFAULT_LIBRARY_PROPERTIES}
-  DEFINE_SYMBOL MAKE_GAMMARAY_LAUNCHER_LIB
 )
 
-target_link_libraries(gammaray_launcher LINK_PUBLIC ${QT_QTCORE_LIBRARIES} LINK_PRIVATE gammaray_common)
+gammaray_target_relocatable_interfaces(gammaray_launcher_ipaths)
+target_include_directories(gammaray_launcher PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> $<INSTALL_INTERFACE:${gammaray_launcher_ipaths}>)
+target_link_libraries(gammaray_launcher LINK_PUBLIC ${QT_QTCORE_LIBRARIES} LINK_PRIVATE gammaray_common ${QT_QTNETWORK_LIBRARIES})
 if(HAVE_QT_WIDGETS)
   target_link_libraries(gammaray_launcher LINK_PRIVATE ${QT_QTGUI_LIBRARIES})
 endif()
@@ -61,23 +67,30 @@ if(UNIX AND NOT APPLE AND NOT QNXNTO)
   target_link_libraries(gammaray_launcher LINK_PRIVATE dl) # for preload check
 endif()
 
-install(TARGETS gammaray_launcher EXPORT GammaRayTargets ${INSTALL_TARGETS_DEFAULT_ARGS})
+if(NOT GAMMARAY_PROBE_ONLY_BUILD)
+  install(TARGETS gammaray_launcher EXPORT GammaRayTargets ${INSTALL_TARGETS_DEFAULT_ARGS})
 
-ecm_generate_pri_file(BASE_NAME GammaRayLauncher
-                      LIB_NAME gammaray_launcher
-                      DEPS "core gui GammaRayCommon"
-                      FILENAME_VAR PRI_FILENAME
-                      INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_DIR}/..
-)
+  gammaray_install_headers(
+      ${CMAKE_CURRENT_BINARY_DIR}/gammaray_launcher_export.h
+      launcher.h
+      launchoptions.h
+      probeabi.h
+      probeabidetector.h
+      probefinder.h
+      networkdiscoverymodel.h
+  )
 
-install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
-gammaray_install_headers(
-    gammaray_launcher_export.h
-    launcher.h
-    launchoptions.h
-    probeabi.h
-    probeabidetector.h
-)
+  ecm_generate_pri_file(BASE_NAME GammaRayLauncher
+                        LIB_NAME gammaray_launcher
+                        DEPS "core gui GammaRayCommon"
+                        FILENAME_VAR PRI_FILENAME
+                        INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_DIR}
+  )
+
+  install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
+else()
+  install(TARGETS gammaray_launcher ${INSTALL_TARGETS_DEFAULT_ARGS})
+endif()
 
 
 # command line launcher
@@ -90,9 +103,6 @@ add_executable(gammaray ${gammaray_runner_srcs})
 target_link_libraries(gammaray gammaray_launcher gammaray_common)
 if(HAVE_QT_WIDGETS)
   target_link_libraries(gammaray ${QT_QTGUI_LIBRARIES})
-endif()
-if(QNXNTO)
-  target_link_libraries(gammaray cpp)
 endif()
 
 gammaray_embed_info_plist(gammaray ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in)

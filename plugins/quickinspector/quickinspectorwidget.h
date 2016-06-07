@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,6 +29,7 @@
 #ifndef GAMMARAY_QUICKINSPECTOR_QUICKINSPECTORWIDGET_H
 #define GAMMARAY_QUICKINSPECTOR_QUICKINSPECTORWIDGET_H
 
+#include <ui/uistatemanager.h>
 #include <ui/tooluifactory.h>
 #include <ui/propertywidget.h>
 #include <common/objectbroker.h>
@@ -37,15 +38,14 @@
 #include <QWidget>
 #include <QVariant>
 
-class QQuickItem;
-class QQuickView;
-class QTimer;
+QT_BEGIN_NAMESPACE
 class QLabel;
 class QImage;
 class QItemSelection;
+QT_END_NAMESPACE
 
 namespace GammaRay {
-class QuickSceneImageProvider;
+class QuickScenePreviewWidget;
 
 namespace Ui {
   class QuickInspectorWidget;
@@ -54,38 +54,21 @@ namespace Ui {
 class QuickInspectorWidget : public QWidget
 {
   Q_OBJECT
-
-  enum Action {
-      NavigateToCode
-  };
-
   public:
     explicit QuickInspectorWidget(QWidget *parent = 0);
     ~QuickInspectorWidget();
 
-  private:
-    void showEvent(QShowEvent *event) Q_DECL_OVERRIDE;
-    void hideEvent(QHideEvent *event) Q_DECL_OVERRIDE;
-
   private slots:
-    void sceneChanged();
-    void sceneRendered(const QVariantMap &previewData);
     void itemSelectionChanged(const QItemSelection &selection);
-    void requestRender();
     void setFeatures(GammaRay::QuickInspectorInterface::Features features);
-    void setSplitterSizes();
-    void itemModelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
+    void itemModelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles);
     void itemContextMenu(const QPoint &pos);
 
   private:
     QScopedPointer<Ui::QuickInspectorWidget> ui;
+    UIStateManager m_stateManager;
+    QuickScenePreviewWidget *m_previewWidget;
     QuickInspectorInterface *m_interface;
-    QTimer *m_renderTimer;
-    bool m_sceneChangedSinceLastRequest;
-    bool m_waitingForImage;
-    QuickSceneImageProvider *m_imageProvider;
-    QQuickItem *m_rootItem;
-    QQuickView *m_preview;
 };
 
 class QuickInspectorUiFactory : public QObject, public StandardToolUiFactory<QuickInspectorWidget>

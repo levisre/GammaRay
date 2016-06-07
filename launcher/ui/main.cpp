@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,9 +39,9 @@ using namespace GammaRay;
 
 int main(int argc, char **argv)
 {
-  QCoreApplication::setOrganizationName("KDAB");
-  QCoreApplication::setOrganizationDomain("kdab.com");
-  QCoreApplication::setApplicationName("GammaRay");
+  QCoreApplication::setOrganizationName(QStringLiteral("KDAB"));
+  QCoreApplication::setOrganizationDomain(QStringLiteral("kdab.com"));
+  QCoreApplication::setApplicationName(QStringLiteral("GammaRay"));
 
   QApplication app(argc, argv);
   Paths::setRelativeRootPath(GAMMARAY_INVERSE_LIBEXEC_DIR);

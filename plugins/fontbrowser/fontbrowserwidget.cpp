@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -33,7 +33,6 @@
 #include "fontbrowserclient.h"
 
 #include <common/objectbroker.h>
-#include <ui/deferredresizemodesetter.h>
 
 #include <QAbstractItemModel>
 #include <QDebug>
@@ -48,6 +47,7 @@ static QObject* fontBrowserClientFactory(const QString &/*name*/, QObject *paren
 FontBrowserWidget::FontBrowserWidget(QWidget *parent)
   : QWidget(parent)
   , ui(new Ui::FontBrowserWidget)
+  , m_stateManager(this)
   , m_selectedFontModel(0)
   , m_fontBrowser(0)
 {
@@ -56,11 +56,12 @@ FontBrowserWidget::FontBrowserWidget(QWidget *parent)
 
   ui->setupUi(this);
 
-  m_selectedFontModel = ObjectBroker::model("com.kdab.GammaRay.SelectedFontModel");
+  m_selectedFontModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SelectedFontModel"));
 
+  ui->selectedFontsView->header()->setObjectName("selectedFontsViewHeader");
+  ui->selectedFontsView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->selectedFontsView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
   ui->selectedFontsView->setModel(m_selectedFontModel);
-  ui->selectedFontsView->setRootIsDecorated(false);
-  new DeferredResizeModeSetter(ui->selectedFontsView->header(), 0, QHeaderView::ResizeToContents);
 
   connect(ui->fontText, SIGNAL(textChanged(QString)),
           m_fontBrowser, SLOT(updateText(QString)));
@@ -73,11 +74,12 @@ FontBrowserWidget::FontBrowserWidget(QWidget *parent)
   connect(ui->pointSize, SIGNAL(valueChanged(int)),
           m_fontBrowser, SLOT(setPointSize(int)));
 
-  QAbstractItemModel *fontModel = ObjectBroker::model("com.kdab.GammaRay.FontModel");
+  QAbstractItemModel *fontModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.FontModel"));
+  ui->fontTree->header()->setObjectName("fontTreeHeader");
+  ui->fontTree->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
   ui->fontTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
   ui->fontTree->setModel(fontModel);
   ui->fontTree->setSelectionModel(ObjectBroker::selectionModel(fontModel));
-  new DeferredResizeModeSetter(ui->fontTree->header(), 0, QHeaderView::ResizeToContents);
 
   ui->pointSize->setValue(font().pointSize());
 
@@ -88,6 +90,7 @@ FontBrowserWidget::FontBrowserWidget(QWidget *parent)
   m_fontBrowser->toggleUnderlineFont(ui->underlineBox->isChecked());
   m_fontBrowser->setPointSize(ui->pointSize->value());
 
+  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "50%" << "50%");
   QMetaObject::invokeMethod(this, "delayedInit", Qt::QueuedConnection);
 }
 

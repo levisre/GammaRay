@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,6 +29,24 @@
 #include <QStringList>
 
 using namespace GammaRay;
+
+static QString dayNamesToString(const QLocale &locale, QString (QLocale::* accessor)(int, QLocale::FormatType) const, QLocale::FormatType type)
+{
+  QStringList result;
+  result.reserve(7);
+  for (int i = 1; i <= 7; ++i)
+    result.push_back((locale.*accessor)(i, type));
+  return result.join(QStringLiteral(", "));
+}
+
+static QString monthNamesToString(const QLocale &locale, QString (QLocale::* accessor)(int, QLocale::FormatType) const, QLocale::FormatType type)
+{
+  QStringList result;
+  result.reserve(12);
+  for (int i = 1; i <= 12; ++i)
+    result.push_back((locale.*accessor)(i, type));
+  return result.join(QStringLiteral(", "));
+}
 
 LocaleDataAccessorRegistry::LocaleDataAccessorRegistry(QObject *parent)
   : QObject(parent)
@@ -61,13 +79,14 @@ void LocaleDataAccessorRegistry::setAccessorEnabled(LocaleDataAccessor *accessor
   QVector< LocaleDataAccessor * > &accessors = m_enabledAccessors;
   if (enabled && !accessors.contains(accessor)) {
     accessors.push_back(accessor);
+    emit accessorAdded();
   } else {
     int idx = accessors.indexOf(accessor);
     if (idx >= 0) {
       accessors.remove(idx);
+      emit accessorRemoved(idx);
     }
   }
-  emit accessorsChanged();
 }
 
 void LocaleDataAccessorRegistry::init()
@@ -85,7 +104,6 @@ LOCALE_SIMPLE_DEFAULT_ACCESSOR(Country,
   return QLocale::countryToString(locale.country());
 )
 
-#if QT_VERSION >= QT_VERSION_CHECK(4, 8, 0)
 LOCALE_SIMPLE_ACCESSOR(Script,
   return QLocale::scriptToString(locale.script());
 )
@@ -98,9 +116,8 @@ LOCALE_SIMPLE_ACCESSOR(Currency,
                        locale.currencySymbol(QLocale::CurrencyDisplayName);
 )
 
-#endif
 LOCALE_SIMPLE_ACCESSOR(TextDirection,
-  return locale.textDirection() == Qt::LeftToRight ? "LTR" : "RTL";
+  return locale.textDirection() == Qt::LeftToRight ? QStringLiteral("LTR") : QStringLiteral("RTL");
 )
 
 LOCALE_SIMPLE_DEFAULT_ACCESSOR(TimeFormatLong,
@@ -139,10 +156,6 @@ LOCALE_SIMPLE_ACCESSOR(DateTimeFormatNarrow,
   return locale.dateTimeFormat(QLocale::NarrowFormat);
 )
 
-LOCALE_SIMPLE_DEFAULT_ACCESSOR(MeasurementSystem,
-  return locale.measurementSystem() == QLocale::ImperialSystem ? "Imperial" : "Metric";
-)
-
 LOCALE_SIMPLE_ACCESSOR(AmText,
   return locale.amText();
 )
@@ -151,17 +164,28 @@ LOCALE_SIMPLE_ACCESSOR(PmText,
   return locale.pmText();
 )
 
-LOCALE_SIMPLE_DEFAULT_ACCESSOR(FloatFormat,
-  return locale.toString(10000.1);
+LOCALE_SIMPLE_ACCESSOR(DayNamesLong,
+  return dayNamesToString(locale, &QLocale::dayName, QLocale::LongFormat);
 )
 
-#if QT_VERSION >= QT_VERSION_CHECK(4, 8, 0)
-LOCALE_SIMPLE_ACCESSOR(NativeCountry,
-  return locale.nativeCountryName();
+LOCALE_SIMPLE_ACCESSOR(DayNamesNarrow,
+  return dayNamesToString(locale, &QLocale::dayName, QLocale::NarrowFormat);
 )
 
-LOCALE_SIMPLE_ACCESSOR(NativeLanguage,
-  return locale.nativeLanguageName();
+LOCALE_SIMPLE_ACCESSOR(DayNamesShort,
+  return dayNamesToString(locale, &QLocale::dayName, QLocale::ShortFormat);
+)
+
+LOCALE_SIMPLE_ACCESSOR(StandaloneDayNamesLong,
+  return dayNamesToString(locale, &QLocale::standaloneDayName, QLocale::LongFormat);
+)
+
+LOCALE_SIMPLE_ACCESSOR(StandaloneDayNamesNarrow,
+  return dayNamesToString(locale, &QLocale::standaloneDayName, QLocale::NarrowFormat);
+)
+
+LOCALE_SIMPLE_ACCESSOR(StandaloneDayNamesShort,
+  return dayNamesToString(locale, &QLocale::standaloneDayName, QLocale::ShortFormat);
 )
 
 LOCALE_SIMPLE_DEFAULT_ACCESSOR(FirstDayOfWeek,
@@ -172,16 +196,59 @@ LOCALE_SIMPLE_DEFAULT_ACCESSOR(WeekDays,
   const auto wds = locale.weekdays();
   QStringList resultList;
   resultList.reserve(wds.size());
-  Q_FOREACH (const Qt::DayOfWeek &dayNumber, wds) {
+  Q_FOREACH (Qt::DayOfWeek dayNumber, wds) {
     resultList << QLocale().dayName(dayNumber);
   }
   return QLocale().createSeparatedList(resultList);
 )
 
+LOCALE_SIMPLE_ACCESSOR(MonthNamesLong,
+  return monthNamesToString(locale, &QLocale::monthName, QLocale::LongFormat);
+)
+
+LOCALE_SIMPLE_ACCESSOR(MonthNamesNarrow,
+  return monthNamesToString(locale, &QLocale::monthName, QLocale::NarrowFormat);
+)
+
+LOCALE_SIMPLE_ACCESSOR(MonthNamesShort,
+  return monthNamesToString(locale, &QLocale::monthName, QLocale::ShortFormat);
+)
+
+LOCALE_SIMPLE_ACCESSOR(StandaloneMonthNamesLong,
+  return monthNamesToString(locale, &QLocale::standaloneMonthName, QLocale::LongFormat);
+)
+
+LOCALE_SIMPLE_ACCESSOR(StandaloneMonthNamesNarrow,
+  return monthNamesToString(locale, &QLocale::standaloneMonthName, QLocale::NarrowFormat);
+)
+
+LOCALE_SIMPLE_ACCESSOR(StandaloneMonthNamesLongShort,
+  return monthNamesToString(locale, &QLocale::standaloneMonthName, QLocale::ShortFormat);
+)
+
 LOCALE_SIMPLE_ACCESSOR(BCP47,
   return locale.bcp47Name();
 )
-#endif
+
+LOCALE_SIMPLE_ACCESSOR(NativeCountry,
+  return locale.nativeCountryName();
+)
+
+LOCALE_SIMPLE_ACCESSOR(NativeLanguage,
+  return locale.nativeLanguageName();
+)
+
+LOCALE_SIMPLE_ACCESSOR(UiLanguages,
+  return locale.uiLanguages().join(QStringLiteral(", "));
+)
+
+LOCALE_SIMPLE_DEFAULT_ACCESSOR(MeasurementSystem,
+  return locale.measurementSystem() == QLocale::ImperialSystem ? QStringLiteral("Imperial") : QStringLiteral("Metric");
+)
+
+LOCALE_SIMPLE_DEFAULT_ACCESSOR(FloatFormat,
+  return locale.toString(10000.1);
+)
 
 LOCALE_SIMPLE_ACCESSOR(DecimalPoint,
   return locale.decimalPoint();
@@ -205,6 +272,10 @@ LOCALE_SIMPLE_ACCESSOR(PositiveSign,
 
 LOCALE_SIMPLE_ACCESSOR(NegativeSign,
   return locale.negativeSign();
+)
+
+LOCALE_SIMPLE_ACCESSOR(ZeroDigit,
+  return locale.zeroDigit();
 )
 
 }

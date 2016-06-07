@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,8 +32,21 @@
 
 using namespace GammaRay;
 
-ProbeControllerClient::ProbeControllerClient(QObject* parent): QObject(parent)
+ProbeControllerClient::ProbeControllerClient(QObject* parent)
+  : ProbeControllerInterface(parent)
 {
+}
+
+void ProbeControllerClient::selectObject(ObjectId id, const QString &toolId)
+{
+  Endpoint::instance()->invokeObject(objectName(), "selectObject",
+                                     QVariantList() << QVariant::fromValue(id) << toolId);
+}
+
+void ProbeControllerClient::requestSupportedTools(ObjectId id)
+{
+  Endpoint::instance()->invokeObject(objectName(), "requestSupportedTools",
+                                     QVariantList() << QVariant::fromValue(id));
 }
 
 void ProbeControllerClient::detachProbe()

@@ -3,15 +3,18 @@ set(gammaray_sceneinspector_plugin_srcs
   scenemodel.cpp
   sceneinspectorinterface.cpp
   sceneinspector.cpp
+  paintanalyzerextension.cpp
 )
 
 gammaray_add_plugin(gammaray_sceneinspector_plugin
-  gammaray_sceneinspector.desktop
-  ${gammaray_sceneinspector_plugin_srcs}
+  DESKTOP gammaray_sceneinspector.desktop.in
+  JSON gammaray_sceneinspector.json
+  SOURCES ${gammaray_sceneinspector_plugin_srcs}
 )
 
 target_link_libraries(gammaray_sceneinspector_plugin
   ${QT_QTGUI_LIBRARIES}
+  gammaray_kitemmodels
   gammaray_core
 )
 
@@ -31,8 +34,9 @@ if(GAMMARAY_BUILD_UI)
   )
 
   gammaray_add_plugin(gammaray_sceneinspector_ui_plugin
-    gammaray_sceneinspector_ui.desktop
-    ${gammaray_sceneinspector_ui_plugin_srcs}
+    DESKTOP gammaray_sceneinspector_ui.desktop.in
+    JSON gammaray_sceneinspector.json
+    SOURCES ${gammaray_sceneinspector_ui_plugin_srcs}
   )
 
   target_link_libraries(gammaray_sceneinspector_ui_plugin

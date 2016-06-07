@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -45,14 +45,14 @@ private slots:
     abi.setQtVersion(5, 2);
     QVERIFY(!abi.isValid());
 
-    abi.setArchitecture("x86_64");
+    abi.setArchitecture(QStringLiteral("x86_64"));
 #ifndef Q_OS_WIN
     QVERIFY(abi.isValid());
 #else
     QVERIFY(!abi.isValid());
 #endif
 
-    abi.setCompiler("MSVC");
+    abi.setCompiler(QStringLiteral("MSVC"));
     QVERIFY(abi.isValid());
   }
 
@@ -67,10 +67,14 @@ private slots:
 
     QTest::newRow("invalid") << QString() << -1 << -1 << false << QString() << QString();
 #ifndef Q_OS_WIN
-    QTest::newRow("unix") << "qt5.2-x86_64" << 5 << 2 << true << "x86_64" << "GCC";
+#if defined(Q_OS_MAC)
+    QTest::newRow("mac") << "qt5_2-x86_64_debug" << 5 << 2 << true << "x86_64" << "CLANG";
 #else
-    QTest::newRow("msvc") << "qt5.2-MSVC-debug-x86_64" << 5 << 2 << true << "x86_64" << "MSVC";
-    QTest::newRow("mingw") << "qt5.2-GNU-i686" << 5 << 2 << false << "i686" << "GNU";
+    QTest::newRow("unix") << "qt5_2-x86_64" << 5 << 2 << true << "x86_64" << "GCC";
+#endif
+#else
+    QTest::newRow("msvc") << "qt5_2-MSVC-x86_64d" << 5 << 2 << true << "x86_64" << "MSVC";
+    QTest::newRow("mingw") << "qt5_2-GNU-i686" << 5 << 2 << false << "i686" << "GNU";
 #endif
   }
 
@@ -103,15 +107,19 @@ private slots:
     QTest::addColumn<QString>("compiler");
 
     QTest::newRow("invalid") << QString() << false << -1 << -1 << false << QString() << QString();
-    QTest::newRow("only version") << "qt5.2" << false << -1 << -1 << false << QString() << QString();
-    QTest::newRow("too many items") << "qt5.2-some-random-stuff-with-too-many-dashs" << false << -1 << -1 << false << QString() << QString();
-    QTest::newRow("missing debug/release") << "qt5.2-MSVC-i686" << false << -1 << -1 << false << QString() << QString();
-    QTest::newRow("extra debug/release") << "qt5.2-GNU-debug-arm" << false << -1 << -1 << false << QString() << QString();
+    QTest::newRow("only version") << "qt5_2" << false << -1 << -1 << false << QString() << QString();
+    QTest::newRow("too many items") << "qt5_2-some-random-stuff-with-too-many-dashs" << false << -1 << -1 << false << QString() << QString();
+    QTest::newRow("extra debug/release") << "qt5_2-MSVC-release-i686" << false << -1 << -1 << false << QString() << QString();
+    QTest::newRow("extra debug/release") << "qt5_2-GNU-debug-arm" << false << -1 << -1 << false << QString() << QString();
 #ifndef Q_OS_WIN
-    QTest::newRow("unix") << "qt5.2-x86_64" << true << 5 << 2 << true << "x86_64" << "GCC";
+#if defined(Q_OS_MAC)
+    QTest::newRow("mac") << "qt5_2-x86_64_debug" << true << 5 << 2 << true << "x86_64" << "CLANG";
 #else
-    QTest::newRow("msvc") << "qt5.2-MSVC-debug-x86_64" << true << 5 << 2 << true << "x86_64" << "MSVC";
-    QTest::newRow("mingw") << "qt5.2-GNU-i686" << true << 5 << 2 << true << "i686" << "GNU";
+    QTest::newRow("unix") << "qt5_2-x86_64" << true << 5 << 2 << true << "x86_64" << "GCC";
+#endif
+#else
+    QTest::newRow("msvc") << "qt5_2-MSVC-x86_64d" << true << 5 << 2 << true << "x86_64" << "MSVC";
+    QTest::newRow("mingw") << "qt5_2-GNU-i686" << true << 5 << 2 << true << "i686" << "GNU";
 #endif
   }
 
@@ -149,10 +157,14 @@ private slots:
 
     QTest::newRow("invalid") << QString() << QString();
 #ifndef Q_OS_WIN
-    QTest::newRow("unix") << "qt5.2-x86_64" << "Qt 5.2 (x86_64)";
+#if defined(Q_OS_MAC)
+    QTest::newRow("mac") << "qt5_2-x86_64_debug" << "Qt 5.2 (debug, x86_64)";
 #else
-    QTest::newRow("msvc") << "qt5.2-MSVC-debug-x86_64" << "Qt 5.2 (MSVC, debug, x86_64)";
-    QTest::newRow("mingw") << "qt5.2-GNU-i686" << "Qt 5.2 (GNU, i686)";
+    QTest::newRow("unix") << "qt5_2-x86_64" << "Qt 5.2 (x86_64)";
+#endif
+#else
+    QTest::newRow("msvc") << "qt5_2-MSVC-x86_64d" << "Qt 5.2 (MSVC, debug, x86_64)";
+    QTest::newRow("mingw") << "qt5_2-GNU-i686" << "Qt 5.2 (GNU, i686)";
 #endif
   }
 
@@ -168,12 +180,18 @@ private slots:
   void testProbeABICompat()
   {
 #ifndef Q_OS_WIN
-    const ProbeABI targetABI = ProbeABI::fromString("qt5.2-x86_64");
-    const ProbeABI probeABI = ProbeABI::fromString("qt5.1-x86_64");
+    const ProbeABI targetABI = ProbeABI::fromString(QStringLiteral("qt5_2-x86_64"));
+    const ProbeABI probeABI = ProbeABI::fromString(QStringLiteral("qt5_1-x86_64"));
+#if defined(Q_OS_MAC)
+    const bool debugAbiMatters = true;
+#else
+    const bool debugAbiMatters = false;
+#endif
     const bool compilerAbiMatters = false;
 #else
-    const ProbeABI targetABI = ProbeABI::fromString("qt5.2-MSVC-release-x86_64");
-    const ProbeABI probeABI = ProbeABI::fromString("qt5.1-MSVC-release-x86_64");
+    const ProbeABI targetABI = ProbeABI::fromString(QStringLiteral("qt5_2-MSVC-x86_64"));
+    const ProbeABI probeABI = ProbeABI::fromString(QStringLiteral("qt5_1-MSVC-x86_64"));
+    const bool debugAbiMatters = true;
     const bool compilerAbiMatters = true;
 #endif
 
@@ -193,17 +211,17 @@ private slots:
 
     // different architecture
     incompatABI = targetABI;
-    incompatABI.setArchitecture("i686");
+    incompatABI.setArchitecture(QStringLiteral("i686"));
     QVERIFY(!targetABI.isCompatible(incompatABI));
 
     // different debug/release mode
     incompatABI = targetABI;
     incompatABI.setIsDebug(true);
-    QCOMPARE(targetABI.isCompatible(incompatABI), !compilerAbiMatters);
+    QCOMPARE(targetABI.isCompatible(incompatABI), !debugAbiMatters);
 
     // different compiler
     incompatABI = targetABI;
-    incompatABI.setCompiler("Clang");
+    incompatABI.setCompiler(QStringLiteral("Clang"));
     QCOMPARE(targetABI.isCompatible(incompatABI), !compilerAbiMatters);
   }
 

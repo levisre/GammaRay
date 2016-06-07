@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,6 +38,7 @@
 #include "varianthandler.h"
 #include "util.h"
 
+#include <common/probecontrollerinterface.h>
 #include <common/propertymodel.h>
 
 #include <QDebug>
@@ -46,7 +47,8 @@ using namespace GammaRay;
 
 AggregatedPropertyModel::AggregatedPropertyModel(QObject* parent) :
     QAbstractItemModel(parent),
-    m_rootAdaptor(0)
+    m_rootAdaptor(0),
+    m_inhibitAdaptorCreation(false)
 {
     qRegisterMetaType<GammaRay::PropertyAdaptor*>();
 }
@@ -124,7 +126,7 @@ QMap<int, QVariant> AggregatedPropertyModel::itemData(const QModelIndex& index) 
     res.insert(Qt::DisplayRole, data(adaptor, d, index.column(), Qt::DisplayRole));
     res.insert(Qt::ToolTipRole, data(adaptor, d, index.column(), Qt::ToolTipRole));
     res.insert(PropertyModel::ActionRole, data(adaptor, d, index.column(), PropertyModel::ActionRole));
-    res.insert(PropertyModel::AppropriateToolRole, data(adaptor, d, index.column(), PropertyModel::AppropriateToolRole));
+    res.insert(PropertyModel::ObjectIdRole, data(adaptor, d, index.column(), PropertyModel::ObjectIdRole));
     if (index.column() == 1) {
         res.insert(Qt::EditRole, data(adaptor, d, index.column(), Qt::EditRole));
         res.insert(Qt::DecorationRole, data(adaptor, d, index.column(), Qt::DecorationRole));
@@ -175,23 +177,14 @@ QVariant AggregatedPropertyModel::data(PropertyAdaptor *adaptor, const PropertyD
                 actions |= PropertyModel::NavigateTo;
             return actions;
         }
-        case PropertyModel::ValueRole:
-            return d.value();
-        case PropertyModel::AppropriateToolRole:
-        {
-            ToolModel *toolModel = Probe::instance()->toolModel();
-            ToolFactory *factory = 0;
+        case PropertyModel::ObjectIdRole:
             if (d.value().canConvert<QObject*>()) {
-                factory = toolModel->data(toolModel->toolForObject(d.value().value<QObject*>()), ToolModelRole::ToolFactory).value<ToolFactory*>();
+                return QVariant::fromValue(ObjectId(d.value().value<QObject*>()));
             } else if (d.value().isValid()) {
-                const auto v = d.value();
-                factory = toolModel->data(toolModel->toolForObject(*reinterpret_cast<void* const*>(v.data()), v.typeName()), ToolModelRole::ToolFactory).value<ToolFactory*>();
-            }
-            if (factory) {
-                return factory->name();
+                const auto &v = d.value();
+                return QVariant::fromValue(ObjectId(*reinterpret_cast<void* const*>(v.data()), v.typeName()));
             }
             return QVariant();
-        }
     }
 
     return QVariant();
@@ -230,7 +223,7 @@ int AggregatedPropertyModel::rowCount(const QModelIndex& parent) const
 
     auto adaptor = adaptorForIndex(parent);
     auto& siblings = m_parentChildrenMap[adaptor];
-    if (!siblings.at(parent.row())) {
+    if (!m_inhibitAdaptorCreation && !siblings.at(parent.row())) {
         // TODO: remember we tried any of this
         auto pd = adaptor->propertyData(parent.row());
         if (!hasLoop(adaptor, pd.value())) {
@@ -387,12 +380,14 @@ void AggregatedPropertyModel::objectInvalidated(PropertyAdaptor* adaptor)
 
 bool AggregatedPropertyModel::hasLoop(PropertyAdaptor* adaptor, const QVariant& v) const
 {
-    auto newObj = v.value<QObject*>();
-    if (!newObj)
+    const ObjectInstance newOi(v);
+    if (newOi.type() != ObjectInstance::QtObject && newOi.type() != ObjectInstance::Object)
+        return false;
+    if (!newOi.object())
         return false;
 
     while (adaptor) {
-        if (adaptor->object().qtObject() == newObj)
+        if (adaptor->object() == newOi)
             return true;
         adaptor = qobject_cast<PropertyAdaptor*>(adaptor->parent());
     }
@@ -406,6 +401,10 @@ void AggregatedPropertyModel::reloadSubTree(PropertyAdaptor* parentAdaptor, int 
     Q_ASSERT(m_parentChildrenMap.contains(parentAdaptor));
     Q_ASSERT(index >= 0);
     Q_ASSERT(index < m_parentChildrenMap.value(parentAdaptor).size());
+
+    // prevent rowCount calls as a result of the change notification to re-create
+    // the adaptor
+    m_inhibitAdaptorCreation = true;
 
     // remove the old sub-tree, if present
     auto oldAdaptor = m_parentChildrenMap.value(parentAdaptor).at(index);
@@ -423,11 +422,15 @@ void AggregatedPropertyModel::reloadSubTree(PropertyAdaptor* parentAdaptor, int 
     // re-add the sub-tree
     // TODO consolidate with code in rowCount()
     auto pd = parentAdaptor->propertyData(index);
-    if (hasLoop(parentAdaptor, pd.value()))
+    if (hasLoop(parentAdaptor, pd.value())) {
+        m_inhibitAdaptorCreation = false;
         return;
+    }
     auto newAdaptor = PropertyAdaptorFactory::create(pd.value(), parentAdaptor);
-    if (!newAdaptor)
+    if (!newAdaptor) {
+        m_inhibitAdaptorCreation = false;
         return;
+    }
     auto newRowCount = newAdaptor->count();
     if (newRowCount > 0)
         beginInsertRows(createIndex(index, 0, parentAdaptor), 0, newRowCount - 1);
@@ -435,4 +438,6 @@ void AggregatedPropertyModel::reloadSubTree(PropertyAdaptor* parentAdaptor, int 
     addPropertyAdaptor(newAdaptor);
     if (newRowCount > 0)
         endInsertRows();
+
+    m_inhibitAdaptorCreation = false;
 }

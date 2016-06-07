@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,26 +29,26 @@
 #include "mimetypeswidget.h"
 #include "ui_mimetypeswidget.h"
 
-#include <ui/deferredresizemodesetter.h>
-#include <common/objectbroker.h>
+#include <ui/searchlinecontroller.h>
 
-#include <kde/krecursivefilterproxymodel.h>
+#include <common/objectbroker.h>
 
 using namespace GammaRay;
 
 MimeTypesWidget::MimeTypesWidget(QWidget *parent)
-  : QWidget(parent), ui(new Ui::MimeTypesWidget)
+  : QWidget(parent)
+  , ui(new Ui::MimeTypesWidget)
+  , m_stateManager(this)
 {
   ui->setupUi(this);
 
-  QSortFilterProxyModel *proxy = new KRecursiveFilterProxyModel(this);
-  proxy->setDynamicSortFilter(true);
-  proxy->setSourceModel(ObjectBroker::model("com.kdab.GammaRay.MimeTypeModel"));
-  ui->mimeTypeView->setModel(proxy);
-  new DeferredResizeModeSetter(ui->mimeTypeView->header(), 0, QHeaderView::ResizeToContents);
-  new DeferredResizeModeSetter(ui->mimeTypeView->header(), 1, QHeaderView::ResizeToContents);
+  auto model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.MimeTypeModel"));
+  ui->mimeTypeView->header()->setObjectName("mimeTypeViewHeader");
+  ui->mimeTypeView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->mimeTypeView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->mimeTypeView->setModel(model);
   ui->mimeTypeView->sortByColumn(0, Qt::AscendingOrder);
-  ui->searchLine->setProxy(proxy);
+  new SearchLineController(ui->searchLine, model);
 }
 
 MimeTypesWidget::~MimeTypesWidget()

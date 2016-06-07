@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,6 +31,7 @@
 
 #include <QHash>
 #include <QProxyStyle>
+#include <QPointer>
 
 namespace GammaRay {
 
@@ -54,7 +55,7 @@ class DynamicProxyStyle : public QProxyStyle
 
   private:
     QHash<QStyle::PixelMetric, int> m_pixelMetrics;
-    static QWeakPointer<DynamicProxyStyle> s_instance;
+    static QPointer<DynamicProxyStyle> s_instance;
 };
 
 }

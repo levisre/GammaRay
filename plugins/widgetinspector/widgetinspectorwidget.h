@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,14 +29,18 @@
 #ifndef GAMMARAY_WIDGETINSPECTOR_WIDGETINSPECTORWIDGET_H
 #define GAMMARAY_WIDGETINSPECTOR_WIDGETINSPECTORWIDGET_H
 
+#include <ui/uistatemanager.h>
 #include <ui/tooluifactory.h>
 #include <QWidget>
 
+QT_BEGIN_NAMESPACE
 class QItemSelection;
 class QModelIndex;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
+class RemoteViewWidget;
 class WidgetInspectorInterface;
 
 namespace Ui {
@@ -50,23 +54,22 @@ class WidgetInspectorWidget : public QWidget
     explicit WidgetInspectorWidget(QWidget *parent = 0);
     ~WidgetInspectorWidget();
 
-  private:
-    void setActionsEnabled(bool enabled);
-
   private slots:
     void widgetSelected(const QItemSelection &selection);
+    void widgetTreeContextMenu(QPoint pos);
 
     void saveAsImage();
     void saveAsSvg();
     void saveAsPdf();
     void saveAsUiFile();
-    void widgetPreviewAvailable(const QPixmap &preview);
     void analyzePainting();
-    void setFeatures(bool svg, bool print, bool designer, bool privateHeaders);
+    void updateActions();
 
   private:
     QScopedPointer<Ui::WidgetInspectorWidget> ui;
+    UIStateManager m_stateManager;
     WidgetInspectorInterface *m_inspector;
+    RemoteViewWidget *m_remoteView;
 };
 
 class WidgetInspectorUiFactory : public QObject, public StandardToolUiFactory<WidgetInspectorWidget>
@@ -74,6 +77,8 @@ class WidgetInspectorUiFactory : public QObject, public StandardToolUiFactory<Wi
   Q_OBJECT
   Q_INTERFACES(GammaRay::ToolUiFactory)
   Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_widgetinspector.json")
+public:
+    void initUi() Q_DECL_OVERRIDE;
 };
 
 }

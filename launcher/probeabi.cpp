@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,6 +26,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config-gammaray.h>
 #include "probeabi.h"
 
 #include <QObject>
@@ -135,7 +136,11 @@ void ProbeABI::setIsDebug(bool debug)
 
 bool ProbeABI::isDebugRelevant() const
 {
-  return compiler() == "MSVC";
+#if defined(Q_OS_MACX)
+  return true;
+#else
+  return compiler() == QLatin1String("MSVC");
+#endif
 }
 
 bool ProbeABI::isValid() const
@@ -166,18 +171,14 @@ QString ProbeABI::id() const
     return QString();
 
   QStringList idParts;
-  idParts.push_back(QString("qt%1.%2").arg(majorQtVersion()).arg(minorQtVersion()));
+  idParts.push_back(QStringLiteral("qt%1_%2").arg(majorQtVersion()).arg(minorQtVersion()));
 
 #ifdef Q_OS_WIN
   idParts.push_back(compiler());
 #endif
 
-  if (isDebugRelevant())
-    idParts.push_back(isDebug() ? "debug" : "release");
-
   idParts.push_back(architecture());
-
-  return idParts.join("-");
+  return idParts.join(QStringLiteral("-")).append(isDebugRelevant() && isDebug() ? QStringLiteral(GAMMARAY_DEBUG_POSTFIX) : QString());
 }
 
 ProbeABI ProbeABI::fromString(const QString& id)
@@ -190,7 +191,7 @@ ProbeABI ProbeABI::fromString(const QString& id)
   ProbeABI abi;
 
   // version
-  static QRegExp versionRegExp("^qt(\\d+)\\.(\\d+)$");
+  static QRegExp versionRegExp("^qt(\\d+)\\_(\\d+)$");
   if (versionRegExp.indexIn(idParts.value(index++)) != 0)
     return ProbeABI();
   abi.setQtVersion(versionRegExp.cap(1).toInt(), versionRegExp.cap(2).toInt());
@@ -200,20 +201,24 @@ ProbeABI ProbeABI::fromString(const QString& id)
   abi.setCompiler(idParts.value(index++));
 #endif
 
-  // debug/release
-  if (abi.isDebugRelevant()) {
-    if (idParts.size() <= index)
-      return ProbeABI();
-    const QString s = idParts.value(index++);
-    if (s != "release" && s != "debug")
-      return ProbeABI();
-    abi.setIsDebug(s == "debug");
-  }
-
-  // architecture
   if (idParts.size() != index + 1)
     return ProbeABI();
-  abi.setArchitecture(idParts.value(index));
+
+  // architecture / debug/release
+  const QString postfix = QStringLiteral(GAMMARAY_DEBUG_POSTFIX);
+  QString arch = idParts.value(index);
+
+  if (!postfix.isEmpty()) {
+      if (arch.endsWith(postfix, Qt::CaseInsensitive)) {
+          arch.chop(postfix.length());
+
+          if (abi.isDebugRelevant()) {
+              abi.setIsDebug(true);
+          }
+      }
+  }
+
+  abi.setArchitecture(arch);
   return abi;
 }
 
@@ -233,7 +238,7 @@ QString ProbeABI::displayString() const
   return QObject::tr("Qt %1.%2 (%3)")
     .arg(majorQtVersion())
     .arg(minorQtVersion())
-    .arg(details.join(", "));
+    .arg(details.join(QStringLiteral(", ")));
 }
 
 bool ProbeABI::operator==(const ProbeABI& rhs) const

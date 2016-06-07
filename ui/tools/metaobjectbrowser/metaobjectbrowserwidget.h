@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,11 +29,18 @@
 #ifndef GAMMARAY_METAOBJECTBROWSERWIDGET_H
 #define GAMMARAY_METAOBJECTBROWSERWIDGET_H
 
+#include <ui/uistatemanager.h>
+
 #include <QWidget>
+
+QT_BEGIN_NAMESPACE
+class QItemSelection;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
 class PropertyWidget;
+class DeferredTreeView;
 
 class MetaObjectBrowserWidget : public QWidget
 {
@@ -42,8 +49,13 @@ class MetaObjectBrowserWidget : public QWidget
   public:
     explicit MetaObjectBrowserWidget(QWidget *parent = 0);
 
+  private slots:
+    void selectionChanged(const QItemSelection &selection);
+
   private:
-     PropertyWidget *m_propertyWidget;
+    UIStateManager m_stateManager;
+    PropertyWidget *m_propertyWidget;
+    DeferredTreeView *m_treeView;
 };
 
 }

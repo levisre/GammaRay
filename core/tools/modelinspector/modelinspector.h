@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,16 +33,19 @@
 
 #include "common/modelinspectorinterface.h"
 
+QT_BEGIN_NAMESPACE
+class QAbstractItemModel;
 class QItemSelection;
 class QItemSelectionModel;
-class SafetyFilterProxyModel;
+class QModelIndex;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
-class ModelModel;
 class ModelCellModel;
 class ModelTester;
 class RemoteModelServer;
+class SafetyFilterProxyModel;
 
 class ModelInspector : public ModelInspectorInterface
 {
@@ -53,14 +56,14 @@ class ModelInspector : public ModelInspectorInterface
 
   private slots:
     void modelSelected(const QItemSelection &selected);
-    void selectionChanged(const QItemSelection &selected);
+    void selectionChanged(const QModelIndex &selected);
 
     void objectSelected(QObject* object);
     void objectCreated(QObject *object);
 
   private:
     ProbeInterface *m_probe;
-    ModelModel *m_modelModel;
+    QAbstractItemModel *m_modelModel;
     QItemSelectionModel *m_modelSelectionModel;
 
     RemoteModelServer *m_modelContentServer;
@@ -82,6 +85,7 @@ class ModelInspectorFactory : public QObject, public StandardToolFactory<QAbstra
     }
 
     QString name() const Q_DECL_OVERRIDE;
+    QVector<QByteArray> selectableTypes() const Q_DECL_OVERRIDE;
 };
 
 }

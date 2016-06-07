@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -78,7 +78,7 @@ QVariant ObjectMethodModel::metaData(const QModelIndex &index,
     }
   } else if (role == Qt::ToolTipRole) {
     QString tt = Util::prettyMethodSignature(method);
-    tt += tr("\nTag: %1\n").arg(qstrlen(method.tag()) > 0 ? method.tag() : "<none>");
+    tt += tr("\nTag: %1\n").arg(qstrlen(method.tag()) > 0 ? method.tag() : tr("<none>"));
 #if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
     tt += tr("Revision: %1").arg(method.revision());
 #endif

@@ -9,7 +9,7 @@
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   This program is free software; you can redistribute it and/or modify
@@ -31,7 +31,9 @@
 
 #include <core/objectmodelbase.h>
 
+QT_BEGIN_NAMESPACE
 class QAbstractState;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -39,6 +41,7 @@ class TransitionModelPrivate;
 
 class TransitionModel : public ObjectModelBase<QAbstractItemModel>
 {
+  Q_OBJECT
   public:
     explicit TransitionModel(QObject *parent = 0);
     ~TransitionModel();

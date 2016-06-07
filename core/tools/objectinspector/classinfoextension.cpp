@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,7 +27,6 @@
 */
 
 #include "classinfoextension.h"
-#include "connectionfilterproxymodel.h"
 #include "propertycontroller.h"
 #include "probe.h"
 #include "objectclassinfomodel.h"
@@ -39,7 +38,7 @@ ClassInfoExtension::ClassInfoExtension(PropertyController* controller) :
   PropertyControllerExtension(controller->objectBaseName() + ".classInfo"),
   m_model(new ObjectClassInfoModel(controller))
 {
-  controller->registerModel(m_model, "classInfo");
+  controller->registerModel(m_model, QStringLiteral("classInfo"));
 }
 
 ClassInfoExtension::~ClassInfoExtension()
@@ -49,11 +48,11 @@ ClassInfoExtension::~ClassInfoExtension()
 bool ClassInfoExtension::setQObject(QObject* object)
 {
   m_model->setMetaObject(object ? object->metaObject() : 0);
-  return true;
+  return m_model->rowCount() > 0;
 }
 
 bool ClassInfoExtension::setMetaObject(const QMetaObject* metaObject)
 {
   m_model->setMetaObject(metaObject);
-  return true;
+  return m_model->rowCount() > 0;
 }

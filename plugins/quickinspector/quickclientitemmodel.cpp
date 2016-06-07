@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -67,7 +67,7 @@ QVariant QuickClientItemModel::data(const QModelIndex &index, int role) const
           (~flags & QuickItemModelRole::Invisible)) {
         QByteArray byteArray;
         QBuffer buffer(&byteArray);
-        QIcon::fromTheme("dialog-warning").pixmap(16, 16).save(&buffer, "PNG");
+        QIcon::fromTheme(QStringLiteral("dialog-warning")).pixmap(16, 16).save(&buffer, "PNG");
         tooltip.append("<img src=\"data:image/png;base64,").
                 append(byteArray.toBase64()).
                 append("\"> Item is visible, but out of view.");
@@ -104,10 +104,10 @@ QVariant QuickClientItemModel::data(const QModelIndex &index, int role) const
 
         QByteArray byteArray;
         QBuffer buffer(&byteArray);
-        QIcon::fromTheme("dialog-information").pixmap(16, 16).save(&buffer, "PNG");
-        tooltip.append(QString("<img src=\"data:image/png;base64,").
+        QIcon::fromTheme(QStringLiteral("dialog-information")).pixmap(16, 16).save(&buffer, "PNG");
+        tooltip.append(QStringLiteral("<img src=\"data:image/png;base64,").
                 append(byteArray.toBase64()).
-                append("\"> Item %1.").arg(flagStrings.join(", ")));
+                append("\"> Item %1.").arg(flagStrings.join(QStringLiteral(", "))));
       }
       tooltip.append("</p>");
       return tooltip;

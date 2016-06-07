@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,7 +33,6 @@
 #include "probe.h"
 #include "probesettings.h"
 
-#include "tools/connectioninspector/connectioninspector.h"
 #include "tools/localeinspector/localeinspector.h"
 #include "tools/metatypebrowser/metatypebrowser.h"
 #include "tools/modelinspector/modelinspector.h"
@@ -65,9 +64,6 @@ ToolModel::ToolModel(QObject *parent): QAbstractListModel(parent)
   // built-in tools
   addToolFactory(new ObjectInspectorFactory(this));
   addToolFactory(new ModelInspectorFactory(this));
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-  addToolFactory(new ConnectionInspectorFactory(this));
-#endif
   addToolFactory(new ResourceBrowserFactory(this));
   addToolFactory(new MetaObjectBrowserFactory(this));
   addToolFactory(new MetaTypeBrowserFactory(this));
@@ -117,6 +113,8 @@ QVariant ToolModel::data(const QModelIndex &index, int role) const
     return toolIface->id();
   } else if (role == ToolModelRole::ToolEnabled) {
     return !m_inactiveTools.contains(toolIface);
+  } else if (role == ToolModelRole::ToolHasUi) {
+    return !toolIface->isHidden();
   }
   return QVariant();
 }
@@ -146,6 +144,7 @@ QMap<int, QVariant> ToolModel::itemData(const QModelIndex& index) const
   QMap<int, QVariant> map = QAbstractListModel::itemData(index);
   map.insert(ToolModelRole::ToolId, data(index, ToolModelRole::ToolId));
   map.insert(ToolModelRole::ToolEnabled, data(index, ToolModelRole::ToolEnabled));
+  map.insert(ToolModelRole::ToolHasUi, data(index, ToolModelRole::ToolHasUi));
   // the other custom roles are useless on the client anyway, since they contain raw pointers
   return map;
 }
@@ -165,6 +164,10 @@ void ToolModel::objectAdded(QObject *obj)
 void ToolModel::objectAdded(const QMetaObject *mo)
 {
   Q_ASSERT(thread() == QThread::currentThread());
+  // as plugins can depend on each other, start from the base classes
+  if (mo->superClass()) {
+    objectAdded(mo->superClass());
+  }
   foreach (ToolFactory *factory, m_inactiveTools) {
     if (factory->supportedTypes().contains(mo->className())) {
       m_inactiveTools.remove(factory);
@@ -172,9 +175,6 @@ void ToolModel::objectAdded(const QMetaObject *mo)
       const int row = m_tools.indexOf(factory);
       emit dataChanged(index(row, 0), index(row, 0));
     }
-  }
-  if (mo->superClass()) {
-    objectAdded(mo->superClass());
   }
 }
 
@@ -188,43 +188,52 @@ PluginLoadErrors ToolModel::pluginErrors() const
   return m_pluginManager->errors();
 }
 
-QModelIndex ToolModel::toolForObject(QObject* object) const
+QModelIndexList ToolModel::toolsForObject(QObject* object) const
 {
   if (!object)
-    return QModelIndex();
+    return QModelIndexList();
+
+  QModelIndexList ret;
   const QMetaObject *metaObject = object->metaObject();
   while (metaObject) {
     for (int i = 0; i < m_tools.size(); i++) {
       const ToolFactory *factory = m_tools.at(i);
-      if (factory && factory->supportedTypes().contains(metaObject->className())) {
-        return index(i, 0);
+      if (factory && factory->selectableTypes().contains(metaObject->className())) {
+        ret += index(i, 0);
       }
     }
     metaObject = metaObject->superClass();
   }
-  return QModelIndex();
+  return ret;
 }
 
-QModelIndex ToolModel::toolForObject(const void* object, const QString& typeName) const
+QModelIndexList ToolModel::toolsForObject(const void* object, const QString& typeName) const
 {
   if (!object)
-    return QModelIndex();
+    return QModelIndexList();
+
+  QModelIndexList ret;
   const MetaObject *metaObject = MetaObjectRepository::instance()->metaObject(typeName);
   while (metaObject) {
     for (int i = 0; i < m_tools.size(); i++) {
       const ToolFactory *factory = m_tools.at(i);
-      if (factory && factory->supportedTypes().contains(metaObject->className())) {
-        return index(i, 0);
+      if (factory && factory->selectableTypes().contains(metaObject->className().toUtf8())) {
+        ret += index(i, 0);
       }
     }
     metaObject = metaObject->superClass();
   }
-  return QModelIndex();
+  return ret;
+}
+
+QPair<int, QVariant> ToolModel::defaultSelectedItem() const
+{
+  // Select the Objects tool by default
+  return QPair<int, QVariant>(ToolModelRole::ToolId, QStringLiteral("GammaRay::ObjectInspector"));
 }
 
 void ToolModel::addToolFactory(ToolFactory* tool)
 {
-  if (!tool->isHidden())
     m_tools.push_back(tool);
-  m_inactiveTools.insert(tool);
+    m_inactiveTools.insert(tool);
 }

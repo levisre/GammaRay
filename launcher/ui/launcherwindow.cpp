@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -54,7 +54,7 @@ LauncherWindow::LauncherWindow(QWidget *parent)
   setWindowTitle(tr("GammaRay Launcher"));
 
   QSettings settings;
-  ui->tabWidget->setCurrentIndex(settings.value(QLatin1String("Launcher/TabIndex")).toInt());
+  ui->tabWidget->setCurrentIndex(settings.value(QStringLiteral("Launcher/TabIndex")).toInt());
 }
 
 LauncherWindow::~LauncherWindow()
@@ -92,7 +92,7 @@ void LauncherWindow::tabChanged()
 void LauncherWindow::accept()
 {
   QSettings settings;
-  settings.setValue(QLatin1String("Launcher/TabIndex"), ui->tabWidget->currentIndex());
+  settings.setValue(QStringLiteral("Launcher/TabIndex"), ui->tabWidget->currentIndex());
 
   ui->launchPage->writeSettings();
   ui->attachPage->writeSettings();

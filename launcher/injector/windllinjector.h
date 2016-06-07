@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Patrick Spendrin <ps_ml@gmx.de>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,11 +32,8 @@
 #include "abstractinjector.h"
 
 #include <qglobal.h>
-
-#ifdef Q_OS_WIN
-
 #include <QStringList>
-#include <windows.h>
+#include <qt_windows.h>
 
 namespace GammaRay {
 class FinishWaiter;
@@ -71,7 +68,5 @@ class WinDllInjector : public AbstractInjector
 };
 
 }
-
-#endif
 
 #endif // GAMMARAY_WINDLLINJECTOR_H

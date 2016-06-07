@@ -2,7 +2,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2014-2015 Klar?lvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2014-2016 Klar?lvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,9 +32,13 @@
 
 #include <QObject>
 
+QT_BEGIN_NAMESPACE
+class QUrl;
+QT_END_NAMESPACE
+
 namespace GammaRay {
 
-/** Interface for UI plugins to integrate with the client UI.
+/** @brief Interface for UI plugins to integrate with the client UI.
  *  This is especially relevant when the client is embedded inside another application
  *  such as an IDE.
  */
@@ -52,10 +56,10 @@ public:
      *  The stand-alone client will launch a text editor for this,
      *  if the client is embedded in an IDE it can chose to navigate directly.
      */
-    static void requestNavigateToCode(const QString &filePath, int lineNumber, int columnNumber = 0);
+    static void requestNavigateToCode(const QUrl &url, int lineNumber, int columnNumber = 0);
 
 Q_SIGNALS:
-    void navigateToCode(const QString &filePath, int lineNumber, int columnNumber);
+    void navigateToCode(const QUrl &url, int lineNumber, int columnNumber);
 
 private:
     /** Singleton instance. */

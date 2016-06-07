@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -30,12 +30,15 @@
 #ifndef GAMMARAY_FONTBROWSER_FONTBROWSERWIDGET_H
 #define GAMMARAY_FONTBROWSER_FONTBROWSERWIDGET_H
 
+#include <ui/uistatemanager.h>
 #include <ui/tooluifactory.h>
 
 #include <QWidget>
 
+QT_BEGIN_NAMESPACE
 class QAbstractItemModel;
 class QItemSelection;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -57,6 +60,7 @@ class FontBrowserWidget : public QWidget
 
   private:
     QScopedPointer<Ui::FontBrowserWidget> ui;
+    UIStateManager m_stateManager;
     QAbstractItemModel *m_selectedFontModel;
     FontBrowserInterface *m_fontBrowser;
 };

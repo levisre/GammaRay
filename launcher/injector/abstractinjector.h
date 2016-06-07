@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,9 +32,11 @@
 #include <QProcess>
 #include <QSharedPointer>
 
+QT_BEGIN_NAMESPACE
 class QProcessEnvironment;
 class QString;
 class QStringList;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -100,10 +102,21 @@ class AbstractInjector : public QObject
 
     virtual void stop();
 
+    /** Returns the working directory supposed to be used for launching. */
+    QString workingDirectory() const;
+    /** Set working directory for launching. */
+    void setWorkingDirectory(const QString &path);
+
 signals:
     void started();
     void finished();
     void attached();
+
+    void stdoutMessage(const QString &message);
+    void stderrMessage(const QString &message);
+
+private:
+    QString m_workingDir;
 };
 
 }

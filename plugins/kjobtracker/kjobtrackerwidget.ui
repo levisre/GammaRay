@@ -12,10 +12,10 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="KFilterProxySearchLine" name="searchLine"/>
+    <widget class="QLineEdit" name="searchLine"/>
    </item>
    <item>
-    <widget class="QTreeView" name="jobView">
+    <widget class="GammaRay::DeferredTreeView" name="jobView">
      <property name="rootIsDecorated">
       <bool>false</bool>
      </property>
@@ -31,9 +31,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>KFilterProxySearchLine</class>
-   <extends>QWidget</extends>
-   <header>kde/kfilterproxysearchline.h</header>
+   <class>GammaRay::DeferredTreeView</class>
+   <extends>QTreeView</extends>
+   <header location="global">ui/deferredtreeview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

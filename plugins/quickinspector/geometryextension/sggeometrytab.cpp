@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,10 +36,11 @@
 
 using namespace GammaRay;
 
-SGGeometryTab::SGGeometryTab(PropertyWidget *parent) : QWidget(parent),
-  m_ui(new Ui_SGGeometryTab),
-  m_interface(0),
-  m_model(0)
+SGGeometryTab::SGGeometryTab(PropertyWidget *parent)
+  : QWidget(parent)
+  , m_ui(new Ui_SGGeometryTab)
+  , m_interface(0)
+  , m_model(0)
 {
   m_ui->setupUi(this);
 

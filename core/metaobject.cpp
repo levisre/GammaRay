@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -96,6 +96,21 @@ void *MetaObject::castForPropertyAt(void *object, int index) const
     }
   }
   return object; // our own property
+}
+
+void* MetaObject::castTo(void* object, const QString& baseClass) const
+{
+    if (className() == baseClass)
+        return object;
+
+    for (int i = 0; i < m_baseClasses.size(); ++i) {
+        const MetaObject *base = m_baseClasses.at(i);
+        const auto result = base->castTo(castToBaseClass(object, i), baseClass);
+        if (result)
+            return result;
+    }
+
+    return Q_NULLPTR;
 }
 
 MetaObject* MetaObject::superClass(int index) const

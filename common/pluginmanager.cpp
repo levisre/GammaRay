@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,6 +26,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config-gammaray.h>
 #include "pluginmanager.h"
 #include "paths.h"
 
@@ -61,11 +62,19 @@ QStringList PluginManagerBase::pluginFilter() const
 {
   QStringList filter;
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-  filter.push_back("*.desktop");
-#elif defined(Q_OS_ANDROID)
-  filter.push_back(QLatin1String("libplugins_gammaray_gammaray_*") + Paths::pluginExtension());
+#if defined(GAMMARAY_INSTALL_QT_LAYOUT)
+  filter.push_back(QStringLiteral("*") + QStringLiteral(GAMMARAY_PROBE_ABI) + QStringLiteral(".desktop"));
 #else
-  filter.push_back(QLatin1String("*") + Paths::pluginExtension());
+  filter.push_back(QStringLiteral("*.desktop"));
+#endif
+#elif defined(Q_OS_ANDROID)
+  filter.push_back(QStringLiteral("libplugins_gammaray_gammaray_*") + Paths::pluginExtension());
+#else
+#if defined(GAMMARAY_INSTALL_QT_LAYOUT)
+  filter.push_back(QStringLiteral("*") + QStringLiteral(GAMMARAY_PROBE_ABI) + Paths::pluginExtension());
+#else
+  filter.push_back(QStringLiteral("*") + Paths::pluginExtension());
+#endif
 #endif
   return filter;
 }
@@ -86,7 +95,7 @@ void PluginManagerBase::scan(const QString &serviceType)
         continue;
       }
 
-      if (pluginInfo.interface() != serviceType) {
+      if (pluginInfo.interfaceId() != serviceType) {
         IF_DEBUG(qDebug() << Q_FUNC_INFO << "skipping" << pluginFile << "not supporting service type" << serviceType << "service types are: " << pluginInfo.interface();)
         continue;
       }

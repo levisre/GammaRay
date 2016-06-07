@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,7 +30,8 @@
 #include "ui_enumstab.h"
 #include "propertywidget.h"
 
-#include "common/objectbroker.h"
+#include <ui/searchlinecontroller.h>
+#include <common/objectbroker.h>
 
 #include "kde/krecursivefilterproxymodel.h"
 
@@ -38,10 +39,12 @@
 
 using namespace GammaRay;
 
-EnumsTab::EnumsTab(PropertyWidget *parent) : QWidget(parent),
-  m_ui(new Ui_EnumsTab)
+EnumsTab::EnumsTab(PropertyWidget *parent)
+  : QWidget(parent)
+  , m_ui(new Ui_EnumsTab)
 {
   m_ui->setupUi(this);
+  m_ui->enumView->header()->setObjectName("enumViewHeader");
   setObjectBaseName(parent->objectBaseName());
 }
 
@@ -57,5 +60,5 @@ void EnumsTab::setObjectBaseName(const QString &baseName)
   m_ui->enumView->setModel(proxy);
   m_ui->enumView->sortByColumn(0, Qt::AscendingOrder);
   m_ui->enumView->header()->setResizeMode(QHeaderView::ResizeToContents);
-  m_ui->enumSearchLine->setProxy(proxy);
+  new SearchLineController(m_ui->enumSearchLine, proxy);
 }

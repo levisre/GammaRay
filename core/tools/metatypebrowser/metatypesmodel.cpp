@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,6 +31,8 @@
 #include <QDebug>
 #include <QMetaType>
 #include <QStringList>
+
+using namespace GammaRay;
 
 MetaTypesModel::MetaTypesModel(QObject *parent)
   : QAbstractTableModel(parent)
@@ -65,7 +67,7 @@ QVariant MetaTypesModel::data(const QModelIndex &index, int role) const
   {
     const QMetaType::TypeFlags flags = QMetaType::typeFlags(metaTypeId);
     QStringList l;
-    #define F(x) if (flags & QMetaType:: x) l.push_back(#x)
+    #define F(x) if (flags & QMetaType:: x) l.push_back(QStringLiteral(#x))
     F(NeedsConstruction);
     F(NeedsDestruction);
     F(MovableType);
@@ -80,7 +82,7 @@ QVariant MetaTypesModel::data(const QModelIndex &index, int role) const
 #endif
     #undef F
 
-    return l.join(", ");
+    return l.join(QStringLiteral(", "));
   }
 #endif
   }

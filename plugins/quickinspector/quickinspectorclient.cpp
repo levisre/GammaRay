@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -46,51 +46,6 @@ void QuickInspectorClient::selectWindow(int index)
   Endpoint::instance()->invokeObject(objectName(), "selectWindow", QVariantList() << index);
 }
 
-void QuickInspectorClient::renderScene()
-{
-  Endpoint::instance()->invokeObject(objectName(), "renderScene");
-}
-
-void QuickInspectorClient::sendKeyEvent(int type, int key, int modifiers, const QString &text,
-                                        bool autorep, ushort count)
-{
-  Endpoint::instance()->invokeObject(objectName(),
-                                     "sendKeyEvent",
-                                     QVariantList()
-                                       << QVariant::fromValue(type)
-                                       << QVariant::fromValue(key)
-                                       << QVariant::fromValue(modifiers)
-                                       << QVariant::fromValue(text)
-                                       << QVariant::fromValue(autorep)
-                                       << QVariant::fromValue(count));
-}
-
-void QuickInspectorClient::sendMouseEvent(int type, const QPointF &localPos, int button,
-                                          int buttons, int modifiers)
-{
-  Endpoint::instance()->invokeObject(objectName(),
-                                     "sendMouseEvent",
-                                      QVariantList()
-                                        << QVariant::fromValue(type)
-                                        << QVariant::fromValue(localPos)
-                                        << QVariant::fromValue(button)
-                                        << QVariant::fromValue(buttons)
-                                        << QVariant::fromValue(modifiers));
-}
-
-void QuickInspectorClient::sendWheelEvent(const QPointF &localPos, QPoint pixelDelta,
-                                          QPoint angleDelta, int buttons, int modifiers)
-{
-  Endpoint::instance()->invokeObject(objectName(),
-                                     "sendWheelEvent",
-                                     QVariantList()
-                                       << QVariant::fromValue(localPos)
-                                       << QVariant::fromValue(pixelDelta)
-                                       << QVariant::fromValue(angleDelta)
-                                       << QVariant::fromValue(buttons)
-                                       << QVariant::fromValue(modifiers));
-}
-
 void QuickInspectorClient::setCustomRenderMode(
   GammaRay::QuickInspectorInterface::RenderMode customRenderMode)
 {
@@ -103,9 +58,4 @@ void QuickInspectorClient::setCustomRenderMode(
 void QuickInspectorClient::checkFeatures()
 {
   Endpoint::instance()->invokeObject(objectName(), "checkFeatures");
-}
-
-void QuickInspectorClient::setSceneViewActive(bool active)
-{
-  Endpoint::instance()->invokeObject(objectName(), "setSceneViewActive", QVariantList() << QVariant::fromValue(active));
 }

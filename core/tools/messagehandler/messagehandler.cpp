@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,6 +28,9 @@
 
 #include "messagehandler.h"
 #include "messagemodel.h"
+#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
+#include "loggingcategorymodel.h"
+#endif
 
 #include "backtrace.h"
 
@@ -43,7 +46,7 @@
 #include <QSortFilterProxyModel>
 #include <QThread>
 
-static QTextStream cerr(stdout);
+#include <iostream>
 
 using namespace GammaRay;
 
@@ -78,9 +81,9 @@ static void handleMessage(QtMsgType type, const QMessageLogContext &context, con
   message.message = msg;
   message.time = QTime::currentTime();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-  message.category = context.category;
-  message.file = context.file;
-  message.function = context.function;
+  message.category = QString::fromUtf8(context.category);
+  message.file = QString::fromUtf8(context.file);
+  message.function = QString::fromUtf8(context.function);
   message.line = context.line;
 #endif
 
@@ -103,14 +106,14 @@ static void handleMessage(QtMsgType type, const QMessageLogContext &context, con
 
   if (!message.backtrace.isEmpty() && (qgetenv("GAMMARAY_UNITTEST") == "1" || type == QtFatalMsg)) {
     if (type == QtFatalMsg) {
-      cerr << "QFatal in " << qPrintable(qApp->applicationName()) << " (" << qPrintable(qApp->applicationFilePath()) << ')' << endl;
+      std::cerr << "QFatal in " << qPrintable(qApp->applicationName()) << " (" << qPrintable(qApp->applicationFilePath()) << ')' << std::endl;
     }
-    cerr << "START BACKTRACE:" << endl;
+    std::cerr << "START BACKTRACE:" << std::endl;
     int i = 0;
     foreach (const QString &frame, message.backtrace) {
-      cerr << (++i) << "\t" << frame << endl;
+      std::cerr << (++i) << "\t" << qPrintable(frame) << std::endl;
     }
-    cerr << "END BACKTRACE" << endl;
+    std::cerr << "END BACKTRACE" << std::endl;
   }
 
   if (type == QtFatalMsg && qgetenv("GAMMARAY_GDB") != "1" && qgetenv("GAMMARAY_UNITTEST") != "1") {
@@ -154,7 +157,6 @@ MessageHandler::MessageHandler(ProbeInterface *probe, QObject *parent)
   : MessageHandlerInterface(parent),
   m_messageModel(new MessageModel(this))
 {
-
   Q_ASSERT(s_model == 0);
   s_model = m_messageModel;
 
@@ -164,7 +166,7 @@ MessageHandler::MessageHandler(ProbeInterface *probe, QObject *parent)
   proxy->addRole(MessageModelRole::Backtrace);
   proxy->setSourceModel(m_messageModel);
   proxy->setSortRole(MessageModelRole::Sort);
-  probe->registerModel("com.kdab.GammaRay.MessageModel", proxy);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.MessageModel"), proxy);
 
   // install handler directly, catches most cases,
   // i.e. user has no special handler or the handler
@@ -173,6 +175,11 @@ MessageHandler::MessageHandler(ProbeInterface *probe, QObject *parent)
   // recheck when eventloop is entered, if the user
   // installs a handler after QApp but before .exec()
   QMetaObject::invokeMethod(this, "ensureHandlerInstalled", Qt::QueuedConnection);
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
+  auto catModel = new LoggingCategoryModel(this);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.LoggingCategoryModel"), catModel);
+#endif
 }
 
 MessageHandler::~MessageHandler()
@@ -218,3 +225,7 @@ MessageHandlerFactory::MessageHandlerFactory(QObject* parent): QObject(parent)
 {
 }
 
+QString MessageHandlerFactory::name() const
+{
+  return tr("Messages");
+}

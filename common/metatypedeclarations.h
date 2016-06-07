@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,6 +39,9 @@
 #define GAMMARAY_METATYPEDECLARATIONS_H
 
 #include <QMetaMethod>
+#include <QMetaObject>
+
+#ifdef QT_GUI_LIB
 #include <QMargins>
 #include <QPainterPath>
 #include <QMatrix4x4>
@@ -46,18 +49,26 @@
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QGuiApplication>
 #include <QOpenGLShader>
-#include <QSurface>
 #include <QSurfaceFormat>
+#endif
 #endif
 
 Q_DECLARE_METATYPE(Qt::ConnectionType)
+Q_DECLARE_METATYPE(QMetaMethod::MethodType)
+Q_DECLARE_METATYPE(const QMetaObject*)
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
+#include <QTimeZone>
+Q_DECLARE_METATYPE(QTimeZone)
+#endif
+
+#ifdef QT_GUI_LIB // TODO move all this to the GUI support plug-in
 Q_DECLARE_METATYPE(Qt::FillRule)
 Q_DECLARE_METATYPE(Qt::InputMethodHints)
 Q_DECLARE_METATYPE(Qt::MouseButtons)
 Q_DECLARE_METATYPE(Qt::TransformationMode)
 Q_DECLARE_METATYPE(QPainterPath)
 Q_DECLARE_METATYPE(QPolygonF)
-Q_DECLARE_METATYPE(QMetaMethod::MethodType)
 Q_DECLARE_METATYPE(QMargins)
 Q_DECLARE_METATYPE(Qt::WindowType)
 Q_DECLARE_METATYPE(Qt::WindowState)
@@ -66,8 +77,7 @@ Q_DECLARE_METATYPE(const QMatrix4x4*)
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 Q_DECLARE_METATYPE(QOpenGLShader::ShaderType)
 Q_DECLARE_METATYPE(QSurfaceFormat)
-Q_DECLARE_METATYPE(QSurface::SurfaceClass)
-Q_DECLARE_METATYPE(QSurface::SurfaceType)
+#endif
 #endif
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0) && QT_VERSION < QT_VERSION_CHECK(5, 5, 0)

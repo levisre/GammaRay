@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -129,12 +129,12 @@ void PropertySyncer::handleMessage(const GammaRay::Message& msg)
             if (it == m_objects.constEnd())
                 break;
 
-            QVector<QPair<QString, QVariant> > values;
+            QVector<QPair<QByteArray, QVariant> > values;
             const auto propCount = (*it).obj->metaObject()->propertyCount();
             values.reserve(propCount);
             for (int i = qobjectPropertyOffset(); i < propCount; ++i) {
                 const auto prop = (*it).obj->metaObject()->property(i);
-                values.push_back(qMakePair(QString(prop.name()), prop.read((*it).obj)));
+                values.push_back(qMakePair(QByteArray(prop.name()), prop.read((*it).obj)));
             }
             Q_ASSERT(!values.isEmpty());
 
@@ -160,11 +160,11 @@ void PropertySyncer::handleMessage(const GammaRay::Message& msg)
                 break;
 
             for (quint32 i = 0; i < changeSize; ++i) {
-                QString propName;
+                QByteArray propName;
                 QVariant propValue;
                 msg.payload() >> propName >> propValue;
                 (*it).recursionLock = true;
-                (*it).obj->setProperty(propName.toUtf8(), propValue);
+                (*it).obj->setProperty(propName, propValue);
 
                 // it can be invalid if as a result of the above call new objects have been registered for example
                 it = std::find_if(m_objects.begin(), m_objects.end(), [addr](const ObjectInfo &info) {
@@ -193,12 +193,12 @@ void PropertySyncer::propertyChanged()
         return;
 
     const auto sigIndex = senderSignalIndex();
-    QVector<QPair<QString, QVariant> > changes;
+    QVector<QPair<QByteArray, QVariant> > changes;
     for (int i = qobjectPropertyOffset(); i < obj->metaObject()->propertyCount(); ++i) {
         const auto prop = obj->metaObject()->property(i);
         if (prop.notifySignalIndex() != sigIndex)
             continue;
-        changes.push_back(qMakePair(QString(prop.name()), prop.read(obj)));
+        changes.push_back(qMakePair(QByteArray(prop.name()), prop.read(obj)));
     }
     Q_ASSERT(!changes.isEmpty());
 

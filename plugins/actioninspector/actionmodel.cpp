@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -43,14 +43,14 @@ Q_DECLARE_METATYPE(QAction::Priority)
 
 using namespace GammaRay;
 
-template<class T>
-static QString toString(QList<T> list)
+static QString toString(const QList<QKeySequence> &list)
 {
   QStringList items;
-  Q_FOREACH (const T &item, list) {
-    items << item;
+  items.reserve(list.size());
+  Q_FOREACH (const auto &item, list) {
+    items << item.toString();
   }
-  return items.join(", ");
+  return items.join(QStringLiteral(", "));
 }
 
 ActionModel::ActionModel(QObject *parent)
@@ -176,7 +176,7 @@ QVariant ActionModel::data(const QModelIndex &index, int role) const
     if (column == NameColumn) {
       return action->icon();
     } else if (column == ShortcutsPropColumn && m_duplicateFinder->hasAmbiguousShortcut(action)) {
-      QIcon icon = QIcon::fromTheme("dialog-warning");
+      QIcon icon = QIcon::fromTheme(QStringLiteral("dialog-warning"));
       if (!icon.isNull()) {
         return icon;
       } else {

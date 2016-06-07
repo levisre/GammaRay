@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,7 +36,8 @@ LocaleModel::LocaleModel(LocaleDataAccessorRegistry *registry, QObject *parent)
   : QAbstractTableModel(parent), m_registry(registry)
 {
   init();
-  connect(registry, SIGNAL(accessorsChanged()), SLOT(reinit()));
+  connect(registry, SIGNAL(accessorAdded()), SLOT(accessorAdded()));
+  connect(registry, SIGNAL(accessorRemoved(int)), SLOT(accessorRemoved(int)));
 }
 
 int LocaleModel::columnCount(const QModelIndex &parent) const
@@ -75,29 +76,23 @@ void LocaleModel::init()
 {
   m_localeData = m_registry->enabledAccessors();
 
-#if QT_VERSION >= QT_VERSION_CHECK(4, 8, 0)
-  m_locales =
-    QLocale::matchingLocales(QLocale::AnyLanguage,
-                             QLocale::AnyScript, QLocale::AnyCountry).toVector();
-#else
-  m_locales.clear();
-  QLocale::Language l = QLocale::C;
-  while (QLocale::languageToString(l) != QLatin1String("Unknown"))
-  {
-    QList<QLocale::Country> countries = QLocale::countriesForLanguage(l);
-    Q_FOREACH (const QLocale::Country &c, countries) {
-      m_locales.append(QLocale(l, c));
-    }
-    l = (QLocale::Language)((int)(l) + 1);
-  }
-#endif
+  m_locales = QLocale::matchingLocales(QLocale::AnyLanguage, QLocale::AnyScript, QLocale::AnyCountry).toVector();
 }
 
-void LocaleModel::reinit()
+void LocaleModel::accessorAdded()
 {
-  beginResetModel();
-  init();
-  endResetModel();
+  Q_ASSERT(m_localeData.size() + 1 == m_registry->enabledAccessors().size());
+  beginInsertColumns(QModelIndex(), m_localeData.size(), m_localeData.size());
+  m_localeData = m_registry->enabledAccessors();
+  endInsertColumns();
+}
+
+void LocaleModel::accessorRemoved(int idx)
+{
+  Q_ASSERT(m_localeData.size() - 1 == m_registry->enabledAccessors().size());
+  beginRemoveColumns(QModelIndex(), idx, idx);
+  m_localeData = m_registry->enabledAccessors();
+  endRemoveColumns();
 }
 
 int LocaleModel::rowCount(const QModelIndex &parent) const

@@ -1,10 +1,46 @@
 # GammaRay-specific CMake macros that don't make sense outside of the GammaRay source tree.
 
-#  Copyright (c) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
-
+# Copyright (c) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
+# All rights reserved.
+#
 # Author: Volker Krause <volker.krause@kdab.com>
 #
-# Redistribution and use is allowed according to the terms of the BSD license.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. The name of the author may not be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+macro(gammaray_target_relocatable_interfaces _paths)
+  # See https://cmake.org/cmake/help/v3.3/manual/cmake-packages.7.html#creating-relocatable-packages
+  get_filename_component(_dir ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+  # Allow include like:
+  # #include <file.h>
+  # #include <module/file.h>
+  # #include <gammaray/module/file.h>
+  set(${_paths}
+      "$<INSTALL_PREFIX>/${INCLUDE_INSTALL_DIR}/${_dir}"
+      "$<INSTALL_PREFIX>/${INCLUDE_INSTALL_DIR}"
+      "$<INSTALL_PREFIX>/${INCLUDE_INSTALL_DIR}/.."
+    )
+endmacro()
 
 macro(gammaray_install_headers)
   get_filename_component(_dir ${CMAKE_CURRENT_SOURCE_DIR} NAME)
@@ -24,7 +60,11 @@ macro(gammaray_all_installed_headers _var)
   foreach(_dir ${_include_dirs})
     get_directory_property(_hdrs DIRECTORY ${CMAKE_SOURCE_DIR}/${_dir} GAMMARAY_INSTALLED_HEADERS)
     foreach(_hdr ${_hdrs})
-      list(APPEND ${_var} "${CMAKE_SOURCE_DIR}/${_dir}/${_hdr}")
+      if(IS_ABSOLUTE ${_hdr})
+        list(APPEND ${_var} ${_hdr})
+      else()
+        list(APPEND ${_var} "${CMAKE_SOURCE_DIR}/${_dir}/${_hdr}")
+      endif()
     endforeach()
   endforeach()
 endmacro()
@@ -37,7 +77,9 @@ macro(gammaray_join_list _var _sep)
 endmacro()
 
 macro(gammaray_inverse_dir _var _prefix)
-  file(RELATIVE_PATH ${_var} "${CMAKE_INSTALL_PREFIX}/${_prefix}" "${CMAKE_INSTALL_PREFIX}")
+  # strip out relative components, those break the following on OSX
+  get_filename_component(_clean_prefix "${CMAKE_INSTALL_PREFIX}/${_prefix}" ABSOLUTE)
+  file(RELATIVE_PATH ${_var} ${_clean_prefix} "${CMAKE_INSTALL_PREFIX}")
 endmacro()
 
 # embed an Info.plist file into a non-bundled Mac executable

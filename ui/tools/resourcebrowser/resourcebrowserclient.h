@@ -4,7 +4,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Milian Wolff <milian.wolff@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,7 +30,7 @@
 #ifndef RESOURCEBROWSERCLIENT_H
 #define RESOURCEBROWSERCLIENT_H
 
-#include <common/resourcebrowserinterface.h>
+#include <common/tools/resourcebrowser/resourcebrowserinterface.h>
 
 namespace GammaRay {
 
@@ -43,6 +43,7 @@ class ResourceBrowserClient : public ResourceBrowserInterface
     virtual ~ResourceBrowserClient();
 
     void downloadResource(const QString &sourceFilePath, const QString &targetFilePath) Q_DECL_OVERRIDE;
+    void selectResource(const QString &sourceFilePath, int line = -1, int column = -1) Q_DECL_OVERRIDE;
 };
 
 }

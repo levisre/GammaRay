@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,6 +27,9 @@
 */
 
 #include "modelevent.h"
+
+#include <QAbstractItemModel>
+#include <QCoreApplication>
 
 using namespace GammaRay;
 
@@ -51,4 +54,18 @@ QEvent::Type ModelEvent::eventType()
     if (id < 0)
         id = registerEventType();
     return static_cast<QEvent::Type>(id);
+}
+
+void Model::used(const QAbstractItemModel* model)
+{
+    Q_ASSERT(model);
+    ModelEvent ev(true);
+    QCoreApplication::sendEvent(const_cast<QAbstractItemModel*>(model), &ev); // const_cast hack is needed since QItemSelectionModel gives us const*...
+}
+
+void Model::unused(QAbstractItemModel* model)
+{
+    Q_ASSERT(model);
+    ModelEvent ev(false);
+    QCoreApplication::sendEvent(model, &ev);
 }

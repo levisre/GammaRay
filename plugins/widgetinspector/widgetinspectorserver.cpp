@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -30,12 +30,11 @@
 #include <config-gammaray.h>
 
 #include "widgetinspectorserver.h"
+#include "widgetpaintanalyzerextension.h"
+#include "waextension/widgetattributeextension.h"
 
 #include "overlaywidget.h"
-#include "paintbufferviewer.h"
 #include "widgettreemodel.h"
-#include "paintbuffermodel.h"
-#include "modelutils.h"
 
 #include "core/propertycontroller.h"
 #include "core/metaobject.h"
@@ -45,12 +44,17 @@
 #include "core/objecttypefilterproxymodel.h"
 #include "core/probeinterface.h"
 #include "core/probeguard.h"
+#include <core/paintanalyzer.h>
+#include <core/remoteviewserver.h>
+#include <core/remote/serverproxymodel.h>
 
 #include "common/objectbroker.h"
 #include "common/settempvalue.h"
 #include "common/metatypedeclarations.h"
+#include "common/modelutils.h"
 #include "common/objectmodel.h"
 #include "common/paths.h"
+#include <common/remoteviewframe.h>
 
 #include <3rdparty/kde/krecursivefilterproxymodel.h>
 
@@ -58,76 +62,72 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDesktopWidget>
+#include <QDialog>
 #include <QLayout>
+#include <QLibrary>
 #include <QItemSelectionModel>
 #include <QPainter>
 #include <QPixmap>
 #include <QMainWindow>
 #include <QMouseEvent>
 #include <QEvent>
-#include <QTimer>
 #include <QStyle>
 
 #include <iostream>
 
-#ifdef HAVE_PRIVATE_QT_HEADERS
-#include <private/qpaintbuffer_p.h>
-#endif
-
 Q_DECLARE_METATYPE(const QStyle *)
+Q_DECLARE_METATYPE(QSizePolicy::ControlTypes)
+#if QT_VERSION < QT_VERSION_CHECK(5, 5, 0)
+Q_DECLARE_METATYPE(Qt::Orientations)
+Q_DECLARE_METATYPE(Qt::Alignment)
+#endif
 
 using namespace GammaRay;
 using namespace std;
 
 WidgetInspectorServer::WidgetInspectorServer(ProbeInterface *probe, QObject *parent)
   : WidgetInspectorInterface(parent)
+  , m_externalExportActions(new QLibrary(this))
   , m_propertyController(new PropertyController(objectName(), this))
-  , m_updatePreviewTimer(new QTimer(this))
-  , m_paintBufferModel(0)
-  , m_paintAnalyzerTimer(new QTimer(this))
+  , m_paintAnalyzer(new PaintAnalyzer(QStringLiteral("com.kdab.GammaRay.WidgetPaintAnalyzer"), this))
+  , m_remoteView(new RemoteViewServer(QStringLiteral("com.kdab.GammaRay.WidgetRemoteView"), this))
   , m_probe(probe)
 {
   registerWidgetMetaTypes();
   registerVariantHandlers();
   probe->installGlobalEventFilter(this);
+  PropertyController::registerExtension<WidgetPaintAnalyzerExtension>();
+PropertyController::registerExtension<WidgetAttributeExtension>();
 
-  m_updatePreviewTimer->setSingleShot(true);
-  m_updatePreviewTimer->setInterval(100);
-  connect(m_updatePreviewTimer, SIGNAL(timeout()), SLOT(updateWidgetPreview()));
 
-  m_paintAnalyzerTimer->setSingleShot(true);
-  m_paintAnalyzerTimer->setInterval(100);
-  connect(m_paintAnalyzerTimer, SIGNAL(timeout()), SLOT(updatePaintAnalyzer()));
+  connect(m_remoteView, SIGNAL(requestUpdate()), this, SLOT(updateWidgetPreview()));
 
   recreateOverlayWidget();
 
   WidgetTreeModel *widgetFilterProxy = new WidgetTreeModel(this);
   widgetFilterProxy->setSourceModel(probe->objectTreeModel());
 
-  auto widgetSearchProxy = new KRecursiveFilterProxyModel(this);
+  auto widgetSearchProxy = new ServerProxyModel<KRecursiveFilterProxyModel>(this);
   widgetSearchProxy->setSourceModel(widgetFilterProxy);
+  widgetSearchProxy->addRole(ObjectModel::ObjectIdRole);
 
-  probe->registerModel("com.kdab.GammaRay.WidgetTree", widgetSearchProxy);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.WidgetTree"), widgetSearchProxy);
 
   m_widgetSelectionModel = ObjectBroker::selectionModel(widgetSearchProxy);
   connect(m_widgetSelectionModel,
           SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           SLOT(widgetSelected(QItemSelection)));
 
-#ifdef HAVE_PRIVATE_QT_HEADERS
-  m_paintBufferModel = new PaintBufferModel(this);
-  probe->registerModel("com.kdab.GammaRay.PaintBufferModel", m_paintBufferModel);
-  connect(ObjectBroker::selectionModel(m_paintBufferModel), SIGNAL(currentChanged(QModelIndex,QModelIndex)),
-          this, SLOT(eventuallyUpdatePaintAnalyzer()));
-#endif
-
-  // TODO this needs to be delayed until there actually is something to select
-  selectDefaultItem();
-
-  if (!m_probe->hasReliableObjectTracking()) {
+  if (m_probe->needsObjectDiscovery()) {
     connect(m_probe->probe(), SIGNAL(objectCreated(QObject*)), SLOT(objectCreated(QObject*)));
     discoverObjects();
   }
+
+  connect(probe->probe(), SIGNAL(objectSelected(QObject*,QPoint)), this, SLOT(objectSelected(QObject*)));
+
+  connect(m_remoteView, SIGNAL(doPickElement(QPoint)), this, SLOT(pickElement(QPoint)));
+
+  checkFeatures();
 }
 
 WidgetInspectorServer::~WidgetInspectorServer()
@@ -137,32 +137,15 @@ WidgetInspectorServer::~WidgetInspectorServer()
   delete m_overlayWidget.data();
 }
 
-static bool isMainWindowSubclassAcceptor(const QVariant &v)
-{
-  return qobject_cast<QMainWindow*>(v.value<QObject*>());
-}
-
-void WidgetInspectorServer::selectDefaultItem()
-{
-  const QAbstractItemModel *viewModel = m_widgetSelectionModel->model();
-  const QModelIndexList matches =
-    ModelUtils::match(
-      viewModel, viewModel->index(0, 0),
-      ObjectModel::ObjectRole, isMainWindowSubclassAcceptor);
-
-  if (!matches.isEmpty()) {
-    m_widgetSelectionModel->select(matches.first(), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-  }
-}
-
 void WidgetInspectorServer::widgetSelected(const QItemSelection &selection)
 {
   ProbeGuard guard;
 
-  m_propertyController->setObject(0);
 
-  if (selection.isEmpty())
+  if (selection.isEmpty()) {
+    m_propertyController->setObject(0);
     return;
+  }
   const QModelIndex index = selection.first().topLeft();
 
   QWidget *widget = 0;
@@ -174,13 +157,20 @@ void WidgetInspectorServer::widgetSelected(const QItemSelection &selection)
     if (!widget && layout) {
       widget = layout->parentWidget();
     }
+  } else {
+    m_propertyController->setObject(0);
   }
 
   if (m_selectedWidget == widget) {
     return;
   }
 
+  if (!m_selectedWidget || !widget || m_selectedWidget->window() != widget->window())
+      m_remoteView->resetView();
   m_selectedWidget = widget;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+  m_remoteView->setEventReceiver(m_selectedWidget->window()->windowHandle());
+#endif
 
   if (m_selectedWidget &&
       (qobject_cast<QDesktopWidget*>(m_selectedWidget) ||
@@ -205,11 +195,7 @@ void WidgetInspectorServer::widgetSelected(const QItemSelection &selection)
 bool WidgetInspectorServer::eventFilter(QObject *object, QEvent *event)
 {
   if (object == m_selectedWidget && event->type() == QEvent::Paint) {
-    // delay pixmap grabbing such that the object can update itself beforehand
-    // also use a timer to prevent aggregation of previews
-    if (!m_updatePreviewTimer->isActive()) {
-      m_updatePreviewTimer->start();
-    }
+    m_remoteView->sourceChanged();
   }
 
   // make modal dialogs non-modal so that the gammaray window is still reachable
@@ -245,22 +231,29 @@ bool WidgetInspectorServer::eventFilter(QObject *object, QEvent *event)
 
 void WidgetInspectorServer::updateWidgetPreview()
 {
-  if (!m_selectedWidget) {
+  if (!m_remoteView->isActive() || !m_selectedWidget) {
     return;
   }
 
-  emit widgetPreviewAvailable(pixmapForWidget(m_selectedWidget));
+  RemoteViewFrame frame;
+  frame.setImage(imageForWidget(m_selectedWidget->window()));
+  m_remoteView->sendFrame(frame);
 }
 
-QPixmap WidgetInspectorServer::pixmapForWidget(QWidget *widget)
+QImage WidgetInspectorServer::imageForWidget(QWidget *widget)
 {
   // prevent "recursion", i.e. infinite update loop, in our eventFilter
   Util::SetTempValue<QPointer<QWidget> > guard(m_selectedWidget, 0);
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-  return QPixmap::grabWidget(widget);
-#else
-  return widget->grab();
+  // We should use hidpi rendering but it's buggy so let stay with
+  // low dpi rendering. See QTBUG-53801
+  const qreal ratio = 1; //widget->window()->devicePixelRatio();
+  QImage img(widget->size() * ratio, QImage::Format_ARGB32);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+  img.setDevicePixelRatio(ratio);
 #endif
+  img.fill(Qt::transparent);
+  widget->render(&img);
+  return img;
 }
 
 void WidgetInspectorServer::recreateOverlayWidget()
@@ -278,12 +271,15 @@ void WidgetInspectorServer::recreateOverlayWidget()
 
 void WidgetInspectorServer::widgetSelected(QWidget *widget)
 {
+  if (m_selectedWidget == widget)
+    return;
+
   const QAbstractItemModel *model = m_widgetSelectionModel->model();
   const QModelIndexList indexList =
     model->match(model->index(0, 0),
                  ObjectModel::ObjectRole,
                  QVariant::fromValue<QObject*>(widget), 1,
-                 Qt::MatchExactly | Qt::MatchRecursive);
+                 Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
   if (indexList.isEmpty()) {
     return;
   }
@@ -294,6 +290,18 @@ void WidgetInspectorServer::widgetSelected(QWidget *widget)
     QItemSelectionModel::Rows | QItemSelectionModel::Current);
 }
 
+void WidgetInspectorServer::objectSelected(QObject* obj)
+{
+    if (auto wdg = qobject_cast<QWidget*>(obj)) {
+        widgetSelected(wdg);
+    } else if (auto layout = qobject_cast<QLayout*>(obj)) {
+        // TODO select the layout directly here
+        if (layout->parentWidget())
+            widgetSelected(layout->parentWidget());
+    }
+}
+
+
 // TODO the following actions should actually store the file on the client!
 
 void WidgetInspectorServer::saveAsImage(const QString& fileName)
@@ -303,9 +311,9 @@ void WidgetInspectorServer::saveAsImage(const QString& fileName)
   }
 
   m_overlayWidget->hide();
-  QPixmap pixmap = pixmapForWidget(m_selectedWidget);
+  QImage img = imageForWidget(m_selectedWidget);
   m_overlayWidget->show();
-  pixmap.save(fileName);
+    img.save(fileName);
 }
 
 void WidgetInspectorServer::saveAsSvg(const QString &fileName)
@@ -343,18 +351,22 @@ void WidgetInspectorServer::callExternalExportAction(const char *name,
                                                QWidget *widget,
                                                const QString &fileName)
 {
-  if (!m_externalExportActions.isLoaded()) {
-    m_externalExportActions.setFileName(
-      Paths::currentProbePath() + QLatin1String("/libgammaray_widget_export_actions"));
+  if (!m_externalExportActions->isLoaded()) {
+    m_externalExportActions->setFileName(
+      Paths::currentPluginsPath() + QLatin1String("/libgammaray_widget_export_actions")
+#if defined(GAMMARAY_INSTALL_QT_LAYOUT)
+        + QStringLiteral("-") + QStringLiteral(GAMMARAY_PROBE_ABI)
+#endif
+    );
 
-    m_externalExportActions.load();
+    m_externalExportActions->load();
   }
 
   void(*function)(QWidget *, const QString &) =
-    reinterpret_cast<void(*)(QWidget *, const QString &)>(m_externalExportActions.resolve(name));
+    reinterpret_cast<void(*)(QWidget *, const QString &)>(m_externalExportActions->resolve(name));
 
   if (!function) {
-    cerr << Q_FUNC_INFO << ' ' << qPrintable(m_externalExportActions.errorString()) << endl;
+    cerr << Q_FUNC_INFO << ' ' << qPrintable(m_externalExportActions->errorString()) << endl;
     return;
   }
   function(widget, fileName);
@@ -362,80 +374,80 @@ void WidgetInspectorServer::callExternalExportAction(const char *name,
 
 void WidgetInspectorServer::analyzePainting()
 {
-  if (!m_selectedWidget) {
+  if (!m_selectedWidget || !PaintAnalyzer::isAvailable()) {
     return;
   }
-#ifdef HAVE_PRIVATE_QT_HEADERS
-  QPaintBuffer buffer;
+
   m_overlayWidget->hide();
-  buffer.setBoundingRect(m_selectedWidget->rect());
-  m_selectedWidget->render(&buffer);
+  m_paintAnalyzer->beginAnalyzePainting();
+  m_paintAnalyzer->setBoundingRect(m_selectedWidget->rect());
+  m_selectedWidget->render(m_paintAnalyzer->paintDevice());
+  m_paintAnalyzer->endAnalyzePainting();
   m_overlayWidget->show();
-  m_paintBufferModel->setPaintBuffer(buffer);
-  eventuallyUpdatePaintAnalyzer();
-#endif
 }
 
-void WidgetInspectorServer::eventuallyUpdatePaintAnalyzer()
+void WidgetInspectorServer::pickElement(const QPoint& pos)
 {
-#ifdef HAVE_PRIVATE_QT_HEADERS
-  m_paintAnalyzerTimer->start();
-#endif
-}
-
-void WidgetInspectorServer::updatePaintAnalyzer()
-{
-#ifdef HAVE_PRIVATE_QT_HEADERS
-  // didn't manage painting on the widget directly, even with the correct
-  // translation it is always clipping as if the widget was at 0,0 of its parent
-  const QSize sourceSize = m_paintBufferModel->buffer().boundingRect().size().toSize();
-  QPixmap pixmap(sourceSize);
-  QPainter painter(&pixmap);
-  Util::drawTransparencyPattern(&painter, QRect(QPoint(0, 0), sourceSize));
-  int start = m_paintBufferModel->buffer().frameStartIndex(0);
-  // include selected row or paint all if nothing is selected
-  const QModelIndex index = ObjectBroker::selectionModel(m_paintBufferModel)->currentIndex();
-  int end = index.isValid() ? index.row() + 1 : m_paintBufferModel->rowCount();
-  int depth = m_paintBufferModel->buffer().processCommands(&painter, start, start + end);
-  for (; depth > 0; --depth) {
-    painter.restore();
-  }
-  painter.end();
-  emit paintAnalyzed(pixmap);
-#endif
+    if (!m_selectedWidget)
+        return;
+    auto child = m_selectedWidget->window()->childAt(pos);
+    if (!child && m_selectedWidget->window()->rect().contains(pos))
+        widgetSelected(m_selectedWidget->window());
+    else
+        widgetSelected(child);
 }
 
 void WidgetInspectorServer::checkFeatures()
 {
-  emit features(
+    Features f = NoFeature;
 #ifdef HAVE_QT_SVG
-    true,
-#else
-    false,
+    f |= SvgExport;
 #endif
 #ifdef HAVE_QT_PRINTSUPPORT
-    true,
-#else
-    false,
+    f |= PdfExport;
 #endif
 #ifdef HAVE_QT_DESIGNER
-    true,
-#else
-    false,
+    f |= UiExport;
 #endif
-#ifdef HAVE_PRIVATE_QT_HEADERS
-    true
-#else
-    false
+    if (PaintAnalyzer::isAvailable())
+        f |= AnalyzePainting;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    f |= InputRedirection;
 #endif
-  );
+    setFeatures(f);
 }
 
 void WidgetInspectorServer::registerWidgetMetaTypes()
 {
   MetaObject *mo = 0;
+  MO_ADD_METAOBJECT0(QLayoutItem)
+  MO_ADD_PROPERTY   (QLayoutItem, Qt::Alignment, alignment, setAlignment);
+  MO_ADD_PROPERTY_RO(QLayoutItem, QSizePolicy::ControlTypes, controlTypes);
+  MO_ADD_PROPERTY_RO(QLayoutItem, Qt::Orientations, expandingDirections);
+  MO_ADD_PROPERTY_CR(QLayoutItem, QRect, geometry, setGeometry);
+  MO_ADD_PROPERTY_RO(QLayoutItem, bool, hasHeightForWidth);
+  MO_ADD_PROPERTY_RO(QLayoutItem, bool, isEmpty);
+  MO_ADD_PROPERTY_RO(QLayoutItem, QSize, maximumSize);
+  MO_ADD_PROPERTY_RO(QLayoutItem, QSize, minimumSize);
+  MO_ADD_PROPERTY_RO(QLayoutItem, QSize, sizeHint);
+
+  MO_ADD_METAOBJECT2(QLayout, QObject, QLayoutItem);
+  MO_ADD_PROPERTY_CR(QLayout, QMargins, contentsMargins, setContentsMargins);
+  MO_ADD_PROPERTY_RO(QLayout, QRect, contentsRect);
+  MO_ADD_PROPERTY_RO(QLayout, int, count);
+  MO_ADD_PROPERTY   (QLayout, bool, isEnabled, setEnabled);
+  MO_ADD_PROPERTY_RO(QLayout, QWidget*, menuBar);
+  MO_ADD_PROPERTY_RO(QLayout, QWidget*, parentWidget);
+
+  MO_ADD_METAOBJECT1(QGridLayout, QLayout);
+  MO_ADD_PROPERTY_RO(QGridLayout, int, columnCount);
+  MO_ADD_PROPERTY_RO(QGridLayout, int, rowCount);
+
   MO_ADD_METAOBJECT2(QWidget, QObject, QPaintDevice);
   MO_ADD_PROPERTY_RO(QWidget, QWidget*, focusProxy);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+  MO_ADD_PROPERTY_RO(QWidget, QLayout*, layout);
+#endif
 
   MO_ADD_METAOBJECT1(QStyle, QObject);
   MO_ADD_PROPERTY_RO(QStyle, const QStyle*, proxy);
@@ -450,6 +462,9 @@ void WidgetInspectorServer::registerWidgetMetaTypes()
   MO_ADD_PROPERTY_ST(QApplication, QDesktopWidget*, desktop);
   MO_ADD_PROPERTY_ST(QApplication, QWidget*, focusWidget);
   MO_ADD_PROPERTY_ST(QApplication, QStyle*, style);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+  MO_ADD_PROPERTY_ST(QApplication, QWidgetList, topLevelWidgets);
+#endif
 
   MO_ADD_METAOBJECT1(QFrame, QWidget);
   MO_ADD_METAOBJECT1(QAbstractScrollArea, QFrame);
@@ -470,10 +485,8 @@ static QString sizePolicyPolicyToString(QSizePolicy::Policy policy)
 
 static QString sizePolicyToString(const QSizePolicy &policy)
 {
-  return QString::fromLatin1("%1 x %2").
-    arg(sizePolicyPolicyToString(policy.horizontalPolicy())).
-    arg(sizePolicyPolicyToString(policy.verticalPolicy()));
-
+  return sizePolicyPolicyToString(policy.horizontalPolicy()) + " x "
+       + sizePolicyPolicyToString(policy.verticalPolicy());
 }
 
 void WidgetInspectorServer::registerVariantHandlers()

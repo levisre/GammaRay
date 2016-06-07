@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,16 +35,16 @@
 
 using namespace GammaRay;
 
-ProbeABI ProbeABIDetector::abiForExecutable(const QString& path) const
+QString ProbeABIDetector::qtCoreForExecutable(const QString& path) const
 {
   Q_UNUSED(path);
-  return ProbeABI::fromString(GAMMARAY_PROBE_ABI);
+  return QString();
 }
 
-ProbeABI ProbeABIDetector::abiForProcess(qint64 pid) const
+QString ProbeABIDetector::qtCoreForProcess(quint64 pid) const
 {
   Q_UNUSED(pid);
-  return ProbeABI::fromString(GAMMARAY_PROBE_ABI);
+  return QString();
 }
 
 ProbeABI ProbeABIDetector::detectAbiForQtCore(const QString& path) const

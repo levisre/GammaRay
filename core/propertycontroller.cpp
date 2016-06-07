@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -42,6 +42,7 @@ PropertyController::PropertyController(const QString &baseName, QObject *parent)
   m_objectBaseName(baseName)
 {
   s_instances << this;
+  m_extensions.reserve(s_extensionFactories.size());
   foreach (PropertyControllerExtensionFactoryBase *factory, s_extensionFactories) {
     m_extensions << factory->create(this);
   }

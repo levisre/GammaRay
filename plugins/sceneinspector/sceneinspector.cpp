@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -30,25 +30,30 @@
 #include "sceneinspector.h"
 
 #include "scenemodel.h"
+#include "paintanalyzerextension.h"
 
+#include <core/metaenum.h>
 #include <core/metaobject.h>
 #include <core/metaobjectrepository.h>
 #include <core/propertycontroller.h>
 #include <core/varianthandler.h>
-
 #include <core/objecttypefilterproxymodel.h>
 #include <core/probeinterface.h>
 #include <core/singlecolumnobjectproxymodel.h>
 #include <core/remote/server.h>
+#include <core/remote/serverproxymodel.h>
+#include <core/propertycontrollerextension.h>
 
-#include <kde/krecursivefilterproxymodel.h>
 #include <common/objectbroker.h>
 #include <common/endpoint.h>
 #include <common/metatypedeclarations.h>
 #include <common/objectmodel.h>
 
+#include <kde/krecursivefilterproxymodel.h>
+
 #include <QGraphicsEffect>
 #include <QGraphicsItem>
+#include <QGraphicsLayout>
 #include <QGraphicsLayoutItem>
 #include <QGraphicsProxyWidget>
 #include <QGraphicsWidget>
@@ -62,6 +67,8 @@ using namespace std;
 
 Q_DECLARE_METATYPE(QGraphicsEffect *)
 Q_DECLARE_METATYPE(QGraphicsItemGroup *)
+Q_DECLARE_METATYPE(QGraphicsLayoutItem*)
+Q_DECLARE_METATYPE(QGraphicsLayout*)
 Q_DECLARE_METATYPE(QGraphicsObject *)
 Q_DECLARE_METATYPE(QGraphicsWidget *)
 Q_DECLARE_METATYPE(QGraphicsItem::CacheMode)
@@ -71,37 +78,40 @@ Q_DECLARE_METATYPE(QGraphicsPixmapItem::ShapeMode)
 
 SceneInspector::SceneInspector(ProbeInterface *probe, QObject *parent)
   : SceneInspectorInterface(parent),
-    m_propertyController(new PropertyController("com.kdab.GammaRay.SceneInspector", this)),
+    m_propertyController(new PropertyController(QStringLiteral("com.kdab.GammaRay.SceneInspector"), this)),
     m_clientConnected(false)
 {
   Server::instance()->registerMonitorNotifier(Endpoint::instance()->objectAddress(objectName()), this, "clientConnectedChanged");
+
+  PropertyController::registerExtension<PaintAnalyzerExtension>();
 
   registerGraphicsViewMetaTypes();
   registerVariantHandlers();
 
   connect(probe->probe(), SIGNAL(objectSelected(QObject*,QPoint)),
           SLOT(objectSelected(QObject*,QPoint)));
+  connect(probe->probe(), SIGNAL(nonQObjectSelected(void*,QString)),
+          this, SLOT(objectSelected(void*,QString)));
 
   ObjectTypeFilterProxyModel<QGraphicsScene> *sceneFilterProxy =
     new ObjectTypeFilterProxyModel<QGraphicsScene>(this);
   sceneFilterProxy->setSourceModel(probe->objectListModel());
   SingleColumnObjectProxyModel *singleColumnProxy = new SingleColumnObjectProxyModel(this);
   singleColumnProxy->setSourceModel(sceneFilterProxy);
-  probe->registerModel("com.kdab.GammaRay.SceneList", singleColumnProxy);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.SceneList"), singleColumnProxy);
 
   QItemSelectionModel* sceneSelection = ObjectBroker::selectionModel(singleColumnProxy);
   connect(sceneSelection, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           this, SLOT(sceneSelected(QItemSelection)));
 
   m_sceneModel = new SceneModel(this);
-  probe->registerModel("com.kdab.GammaRay.SceneGraphModel", m_sceneModel);
-  m_itemSelectionModel = ObjectBroker::selectionModel(m_sceneModel);
+  auto sceneProxy = new ServerProxyModel<KRecursiveFilterProxyModel>(this);
+  sceneProxy->setSourceModel(m_sceneModel);
+  sceneProxy->addRole(ObjectModel::ObjectIdRole);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.SceneGraphModel"), sceneProxy);
+  m_itemSelectionModel = ObjectBroker::selectionModel(sceneProxy);
   connect(m_itemSelectionModel, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           this, SLOT(sceneItemSelected(QItemSelection)));
-
-  if (singleColumnProxy->rowCount()) {
-    sceneSelection->setCurrentIndex(singleColumnProxy->index(0, 0), QItemSelectionModel::ClearAndSelect);
-  }
 }
 
 void SceneInspector::sceneSelected(const QItemSelection& selection)
@@ -226,15 +236,26 @@ void SceneInspector::objectSelected(QObject *object, const QPoint &pos)
       sceneItemSelected(item);
     }
   }
+
+  if (auto item = qobject_cast<QGraphicsObject*>(object)) {
+      sceneItemSelected(item);
+  }
+}
+
+void SceneInspector::objectSelected(void* obj, const QString& typeName)
+{
+    if (typeName == QLatin1String("QGraphicsItem*")) { // TODO: can we get sub-classes here?
+        sceneItemSelected(reinterpret_cast<QGraphicsItem*>(obj));
+    }
 }
 
 void SceneInspector::sceneItemSelected(QGraphicsItem *item)
 {
-  const QModelIndexList indexList =
-    m_sceneModel->match(m_sceneModel->index(0, 0),
-                 SceneModel::SceneItemRole,
-                 QVariant::fromValue<QGraphicsItem*>(item), 1,
-                 Qt::MatchExactly | Qt::MatchRecursive);
+  const auto indexList = m_itemSelectionModel->model()->match(
+        m_itemSelectionModel->model()->index(0, 0),
+        SceneModel::SceneItemRole,
+        QVariant::fromValue<QGraphicsItem*>(item), 1,
+        Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
   if (indexList.isEmpty()) {
     return;
   }
@@ -251,8 +272,8 @@ void SceneInspector::sceneClicked(const QPointF &pos)
 }
 
 #define QGV_CHECK_TYPE(Class) \
-  if (dynamic_cast<Class*>(item) && MetaObjectRepository::instance()->hasMetaObject(#Class)) \
-    return QLatin1String(#Class)
+  if (dynamic_cast<Class*>(item) && MetaObjectRepository::instance()->hasMetaObject(QStringLiteral(#Class))) \
+    return QStringLiteral(#Class)
 
 QString SceneInspector::findBestType(QGraphicsItem *item)
 {
@@ -268,11 +289,14 @@ QString SceneInspector::findBestType(QGraphicsItem *item)
   QGV_CHECK_TYPE(QGraphicsItemGroup);
   QGV_CHECK_TYPE(QGraphicsPixmapItem);
 
-  return QLatin1String("QGraphicsItem");
+  return QStringLiteral("QGraphicsItem");
 }
 
 void SceneInspector::registerGraphicsViewMetaTypes()
 {
+  qRegisterMetaType<QGraphicsEffect*>();
+  qRegisterMetaType<QGraphicsLayout*>();
+
   MetaObject *mo = 0;
   MO_ADD_METAOBJECT0(QGraphicsItem);
   MO_ADD_PROPERTY   (QGraphicsItem, bool,                             acceptDrops,               setAcceptDrops);
@@ -366,12 +390,29 @@ void SceneInspector::registerGraphicsViewMetaTypes()
   MO_ADD_PROPERTY   (QGraphicsPixmapItem, Qt::TransformationMode, transformationMode, setTransformationMode);
 
   // no extra properties, but we need the inheritance connection for anything above to work
-  MO_ADD_METAOBJECT2(QGraphicsObject, QGraphicsItem, QObject);
+  MO_ADD_METAOBJECT2(QGraphicsObject, QObject, QGraphicsItem);
 
   MO_ADD_METAOBJECT0(QGraphicsLayoutItem);
   MO_ADD_PROPERTY_RO(QGraphicsLayoutItem, QRectF, contentsRect);
+  MO_ADD_PROPERTY_CR(QGraphicsLayoutItem, QRectF, geometry, setGeometry);
+  MO_ADD_PROPERTY_RO(QGraphicsLayoutItem, QGraphicsItem*, graphicsItem);
   MO_ADD_PROPERTY_RO(QGraphicsLayoutItem, bool, isLayout);
+  MO_ADD_PROPERTY   (QGraphicsLayoutItem, qreal, maximumHeight, setMaximumHeight);
+  MO_ADD_PROPERTY_CR(QGraphicsLayoutItem, QSizeF, maximumSize, setMaximumSize);
+  MO_ADD_PROPERTY   (QGraphicsLayoutItem, qreal, maximumWidth, setMaximumWidth);
   MO_ADD_PROPERTY_RO(QGraphicsLayoutItem, bool, ownedByLayout);
+  MO_ADD_PROPERTY   (QGraphicsLayoutItem, qreal, minimumHeight, setMinimumHeight);
+  MO_ADD_PROPERTY_CR(QGraphicsLayoutItem, QSizeF, minimumSize, setMinimumSize);
+  MO_ADD_PROPERTY   (QGraphicsLayoutItem, qreal, minimumWidth, setMinimumWidth);
+  MO_ADD_PROPERTY_RO(QGraphicsLayoutItem, QGraphicsLayoutItem*, parentLayoutItem);
+  MO_ADD_PROPERTY   (QGraphicsLayoutItem, qreal, preferredHeight, setPreferredHeight);
+  MO_ADD_PROPERTY_CR(QGraphicsLayoutItem, QSizeF, preferredSize, setPreferredSize);
+  MO_ADD_PROPERTY   (QGraphicsLayoutItem, qreal, preferredWidth, setPreferredWidth);
+  MO_ADD_PROPERTY_CR(QGraphicsLayoutItem, QSizePolicy, sizePolicy, setSizePolicy);
+
+  MO_ADD_METAOBJECT1(QGraphicsLayout, QGraphicsLayoutItem);
+  MO_ADD_PROPERTY_RO(QGraphicsLayout, int, count);
+  MO_ADD_PROPERTY_RO(QGraphicsLayout, bool, isActivated);
 
   MO_ADD_METAOBJECT2(QGraphicsWidget, QGraphicsObject, QGraphicsLayoutItem);
   MO_ADD_PROPERTY_RO(QGraphicsWidget, QRectF, windowFrameGeometry);
@@ -381,16 +422,81 @@ void SceneInspector::registerGraphicsViewMetaTypes()
   MO_ADD_PROPERTY_RO(QGraphicsProxyWidget, QWidget*, widget);
 }
 
+#define E(x) { QGraphicsItem:: x, #x }
+static const MetaEnum::Value<QGraphicsItem::GraphicsItemFlag> graphics_item_flags_table[] = {
+    E(ItemIsMovable),
+    E(ItemIsSelectable),
+    E(ItemIsFocusable),
+    E(ItemClipsToShape),
+    E(ItemClipsChildrenToShape),
+    E(ItemIgnoresTransformations),
+    E(ItemIgnoresParentOpacity),
+    E(ItemDoesntPropagateOpacityToChildren),
+    E(ItemStacksBehindParent),
+    E(ItemUsesExtendedStyleOption),
+    E(ItemHasNoContents),
+    E(ItemSendsGeometryChanges),
+    E(ItemAcceptsInputMethod),
+    E(ItemNegativeZStacksBehindParent),
+    E(ItemIsPanel),
+    E(ItemIsFocusScope),
+    E(ItemSendsScenePositionChanges),
+    E(ItemStopsClickFocusPropagation),
+    E(ItemStopsFocusHandling),
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+    E(ItemContainsChildrenInShape)
+#endif
+};
+
+static QString graphicsItemFlagsToString(QGraphicsItem::GraphicsItemFlags flags)
+{
+    return MetaEnum::flagsToString(flags, graphics_item_flags_table);
+}
+
+static const MetaEnum::Value<QGraphicsItem::CacheMode> graphics_item_cache_mode_table[] = {
+    E(NoCache),
+    E(ItemCoordinateCache),
+    E(DeviceCoordinateCache)
+};
+
+static QString graphicsItemCacheModeToString(QGraphicsItem::CacheMode mode)
+{
+    return MetaEnum::enumToString(mode, graphics_item_cache_mode_table);
+}
+
+static const MetaEnum::Value<QGraphicsItem::PanelModality> graphics_item_panel_modality_table[] = {
+    E(NonModal),
+    E(PanelModal),
+    E(SceneModal)
+};
+
+static QString graphicsItemPanelModalityToString(QGraphicsItem::PanelModality modality)
+{
+    return MetaEnum::enumToString(modality, graphics_item_panel_modality_table);
+}
+#undef E
+
 void SceneInspector::registerVariantHandlers()
 {
   VariantHandler::registerStringConverter<QGraphicsItem*>(Util::addressToString);
   VariantHandler::registerStringConverter<QGraphicsItemGroup*>(Util::addressToString);
+  VariantHandler::registerStringConverter<QGraphicsLayoutItem*>(Util::addressToString);
+  VariantHandler::registerStringConverter<QGraphicsLayout*>(Util::addressToString);
 
 #if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
   VariantHandler::registerStringConverter<QGraphicsEffect*>(Util::displayString);
   VariantHandler::registerStringConverter<QGraphicsObject*>(Util::displayString);
   VariantHandler::registerStringConverter<QGraphicsWidget*>(Util::displayString);
 #endif
+
+  VariantHandler::registerStringConverter<QGraphicsItem::GraphicsItemFlags>(graphicsItemFlagsToString);
+  VariantHandler::registerStringConverter<QGraphicsItem::CacheMode>(graphicsItemCacheModeToString);
+  VariantHandler::registerStringConverter<QGraphicsItem::PanelModality>(graphicsItemPanelModalityToString);
+}
+
+QString SceneInspectorFactory::name() const
+{
+  return tr("Graphics Scenes");
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

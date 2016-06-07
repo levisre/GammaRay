@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,7 +38,7 @@ public:
         p1(new QObject(this)),
         p2(new QObject(this))
     {
-        c->setObjectName("MovingSubtree");
+        c->setObjectName(QStringLiteral("MovingSubtree"));
 
         auto t = new QTimer(this);
         t->start(10000);
@@ -69,7 +69,7 @@ int main(int argc, char** argv)
     QCoreApplication app(argc, argv);
 
     MyObject obj;
-    obj.setObjectName("MyObject");
+    obj.setObjectName(QStringLiteral("MyObject"));
 
     return app.exec();
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,7 +37,7 @@ using namespace GammaRay;
 
 QStringList AboutData::authors()
 {
-    QFile f(":/gammaray/authors");
+    QFile f(QStringLiteral(":/gammaray/authors"));
     if (f.open(QFile::ReadOnly)) {
       return QString::fromUtf8(f.readAll()).split('\n', QString::SkipEmptyParts);
     } else {
@@ -64,7 +64,7 @@ QStringList AboutData::authorsAsHtml()
 
 QString AboutData::aboutTitle()
 {
-    return QObject::trUtf8("<b>GammaRay %1</b>").arg(GAMMARAY_VERSION_STRING);
+    return QObject::tr("<b>GammaRay %1</b>").arg(QStringLiteral(GAMMARAY_VERSION_STRING));
 }
 
 QString AboutData::aboutBody()
@@ -72,11 +72,15 @@ QString AboutData::aboutBody()
     return QObject::trUtf8(
         "<p>The Qt application inspection and manipulation tool."
         "Learn more at <a href=\"http://www.kdab.com/gammaray\">http://www.kdab.com/gammaray/</a>.</p>"
-        "<p>Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, "
+        "<p>Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, "
         "a KDAB Group company, <a href=\"mailto:info@kdab.com\">info@kdab.com</a></p>"
-        "<p><u>Authors:</u><br>%1<br></p>"
-        "<p>StackWalker code Copyright (c) 2005-2009, Jochen Kalmbach, All rights reserved</p>")
-        .arg(authorsAsHtml().join("<br>"));
+        "<p>StackWalker code Copyright (c) 2005-2009, Jochen Kalmbach, All rights reserved<br>"
+        "lz4 fast LZ compression code Copyright (C) 2011-2015, Yann Collet, All rights reserved</p>"
+        "<p><u>Authors:</u><br>%1</p>"
+        "<p>GammaRay and the GammaRay logo are registered trademarks of Klarälvdalens Datakonsult AB "
+        "in the European Union, the United States and/or other countries.  Other product and "
+        "company names and logos may be trademarks or registered trademarks of their respective companies.</p>"
+        "<br>").arg(authorsAsHtml().join(QStringLiteral("<br>")));
 }
 
 QString AboutData::aboutText()

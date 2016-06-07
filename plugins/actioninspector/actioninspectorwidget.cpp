@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,44 +27,42 @@
 #include "actioninspectorwidget.h"
 #include "actionmodel.h" // for column enum only
 
+#include <ui/deferredtreeview.h>
+#include <ui/searchlinecontroller.h>
 #include <common/objectbroker.h>
 #include <common/endpoint.h>
-
-#include "kde/kfilterproxysearchline.h"
-#include "kde/krecursivefilterproxymodel.h"
 
 #include <QDebug>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QSortFilterProxyModel>
-#include <QTreeView>
+#include <QLineEdit>
 
 using namespace GammaRay;
 
 ActionInspectorWidget::ActionInspectorWidget(QWidget *parent)
   : QWidget(parent)
+  , m_stateManager(this)
 {
-  QAbstractItemModel *actionModel = ObjectBroker::model("com.kdab.GammaRay.ActionModel");
-
-  QSortFilterProxyModel *searchFilterProxy = new KRecursiveFilterProxyModel(this);
-  searchFilterProxy->setSourceModel(actionModel);
-  searchFilterProxy->setDynamicSortFilter(true);
-  m_proxy = searchFilterProxy;
+  setObjectName("ActionInspectorWidget");
+  QAbstractItemModel *actionModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ActionModel"));
 
   QVBoxLayout *vbox = new QVBoxLayout(this);
+  auto actionSearchLine = new QLineEdit(this);
+  new SearchLineController(actionSearchLine, actionModel);
+  vbox->addWidget(actionSearchLine);
 
-  KFilterProxySearchLine *objectSearchLine = new KFilterProxySearchLine(this);
-  objectSearchLine->setProxy(searchFilterProxy);
-  vbox->addWidget(objectSearchLine);
-
-  QTreeView *objectTreeView = new QTreeView(this);
-  objectTreeView->setModel(searchFilterProxy);
-  objectTreeView->setSortingEnabled(true);
+  DeferredTreeView *objectTreeView = new DeferredTreeView(this);
+  objectTreeView->header()->setObjectName("objectTreeViewHeader");
+  objectTreeView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  objectTreeView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+  objectTreeView->setDeferredResizeMode(3, QHeaderView::ResizeToContents);
+  objectTreeView->setDeferredResizeMode(4, QHeaderView::ResizeToContents);
+  objectTreeView->setModel(actionModel);
   objectTreeView->sortByColumn(ActionModel::ShortcutsPropColumn);
-  objectTreeView->setRootIsDecorated(false);
   vbox->addWidget(objectTreeView);
+
+  m_stateManager.setDefaultSizes(objectTreeView->header(), UISizeVector() << -1 << 200 << -1 << -1 << -1 << 200);
   connect(objectTreeView, SIGNAL(doubleClicked(QModelIndex)), SLOT(triggerAction(QModelIndex)));
-  mObjectTreeView = objectTreeView;
 }
 
 ActionInspectorWidget::~ActionInspectorWidget()
@@ -77,9 +75,8 @@ void ActionInspectorWidget::triggerAction(const QModelIndex &index)
     return;
   }
 
-  Q_ASSERT(index.model() == m_proxy);
-  Endpoint::instance()->invokeObject("com.kdab.GammaRay.ActionInspector", "triggerAction",
-                                     QVariantList() << m_proxy->mapToSource(index).row());
+  Endpoint::instance()->invokeObject(QStringLiteral("com.kdab.GammaRay.ActionInspector"), "triggerAction",
+                                     QVariantList() << index.row());
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

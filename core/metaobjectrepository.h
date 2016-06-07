@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,7 +36,9 @@
 #include "gammaray_core_export.h"
 #include <QHash>
 
+QT_BEGIN_NAMESPACE
 class QString;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -75,12 +77,10 @@ class GAMMARAY_CORE_EXPORT MetaObjectRepository
     MetaObjectRepository();
 
   private:
+    Q_DISABLE_COPY(MetaObjectRepository)
     void initBuiltInTypes();
     void initQObjectTypes();
     void initIOTypes();
-    void initNetworkTypes();
-    void initGuiTypes();
-    void initOpenGLTypes();
 
   private:
     QHash<QString, MetaObject*> m_metaObjects;
@@ -90,8 +90,8 @@ class GAMMARAY_CORE_EXPORT MetaObjectRepository
 }
 ///@cond internal
 #define MO_ADD_BASECLASS(Base) \
-  Q_ASSERT(GammaRay::MetaObjectRepository::instance()->hasMetaObject(QLatin1String(#Base))); \
-  mo->addBaseClass(GammaRay::MetaObjectRepository::instance()->metaObject(QLatin1String(#Base)));
+  Q_ASSERT(GammaRay::MetaObjectRepository::instance()->hasMetaObject(QStringLiteral(#Base))); \
+  mo->addBaseClass(GammaRay::MetaObjectRepository::instance()->metaObject(QStringLiteral(#Base)));
 ///@endcond
 
 /** Register @p Class with the MetaObjectRepository.
@@ -99,7 +99,7 @@ class GAMMARAY_CORE_EXPORT MetaObjectRepository
  */
 #define MO_ADD_METAOBJECT0(Class) \
   mo = new GammaRay::MetaObjectImpl<Class>; \
-  mo->setClassName(QLatin1String(#Class)); \
+  mo->setClassName(QStringLiteral(#Class)); \
   GammaRay::MetaObjectRepository::instance()->addMetaObject(mo);
 
 /** Register @p Class with the MetaObjectRepository.
@@ -107,7 +107,7 @@ class GAMMARAY_CORE_EXPORT MetaObjectRepository
  */
 #define MO_ADD_METAOBJECT1(Class, Base1) \
   mo = new GammaRay::MetaObjectImpl<Class, Base1>; \
-  mo->setClassName(QLatin1String(#Class)); \
+  mo->setClassName(QStringLiteral(#Class)); \
   MO_ADD_BASECLASS(Base1) \
   GammaRay::MetaObjectRepository::instance()->addMetaObject(mo);
 
@@ -116,7 +116,7 @@ class GAMMARAY_CORE_EXPORT MetaObjectRepository
  */
 #define MO_ADD_METAOBJECT2(Class, Base1, Base2) \
   mo = new GammaRay::MetaObjectImpl<Class, Base1, Base2>; \
-  mo->setClassName(QLatin1String(#Class)); \
+  mo->setClassName(QStringLiteral(#Class)); \
   MO_ADD_BASECLASS(Base1) \
   MO_ADD_BASECLASS(Base2) \
   GammaRay::MetaObjectRepository::instance()->addMetaObject(mo);
@@ -124,7 +124,7 @@ class GAMMARAY_CORE_EXPORT MetaObjectRepository
 /** Register a read/write property for class @p Class. */
 #define MO_ADD_PROPERTY(Class, Type, Getter, Setter) \
   mo->addProperty(new GammaRay::MetaPropertyImpl<Class, Type>( \
-    QLatin1String(#Getter), \
+    #Getter, \
     &Class::Getter, \
     static_cast<void (Class::*)(Type)>(&Class::Setter)) \
   );
@@ -132,7 +132,7 @@ class GAMMARAY_CORE_EXPORT MetaObjectRepository
 /** Register a read/write property for class @p Class with a type that is passed as const reference. */
 #define MO_ADD_PROPERTY_CR(Class, Type, Getter, Setter) \
   mo->addProperty(new GammaRay::MetaPropertyImpl<Class, Type, const Type&>( \
-    QLatin1String(#Getter), \
+    #Getter, \
     &Class::Getter, \
     static_cast<void (Class::*)(const Type&)>(&Class::Setter)) \
   );
@@ -140,13 +140,13 @@ class GAMMARAY_CORE_EXPORT MetaObjectRepository
 /** Register a read-only property for class @p Class. */
 #define MO_ADD_PROPERTY_RO(Class, Type, Getter) \
   mo->addProperty(new GammaRay::MetaPropertyImpl<Class, Type>( \
-    QLatin1String(#Getter), \
+    #Getter, \
     &Class::Getter));
 
 /** Register a static property for class @p Class. */
 #define MO_ADD_PROPERTY_ST(Class, Type, Getter) \
   mo->addProperty(new GammaRay::MetaStaticPropertyImpl<Class, Type>( \
-    QLatin1String(#Getter), \
+    #Getter, \
     &Class::Getter));
 
 #endif // GAMMARAY_METAOBJECTREPOSITORY_H

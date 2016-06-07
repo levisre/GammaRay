@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,30 +27,31 @@
 */
 
 #include "metatypebrowserwidget.h"
-#include <deferredresizemodesetter.h>
 #include "ui_metatypebrowserwidget.h"
 
+#include <ui/searchlinecontroller.h>
 #include <common/objectbroker.h>
-
-#include <QSortFilterProxyModel>
 
 using namespace GammaRay;
 
 MetaTypeBrowserWidget::MetaTypeBrowserWidget(QWidget *parent)
-  : QWidget(parent),
-    ui(new Ui::MetaTypeBrowserWidget)
+  : QWidget(parent)
+  , ui(new Ui::MetaTypeBrowserWidget)
+  , m_stateManager(this)
 {
   ui->setupUi(this);
 
-  QAbstractItemModel *mtm = ObjectBroker::model("com.kdab.GammaRay.MetaTypeModel");
+  QAbstractItemModel *mtm = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.MetaTypeModel"));
   Q_ASSERT(mtm);
 
-  QSortFilterProxyModel *proxy = new QSortFilterProxyModel(this);
-  proxy->setSourceModel(mtm);
-  ui->metaTypeView->setModel(proxy);
-  new DeferredResizeModeSetter(ui->metaTypeView->header(), 0, QHeaderView::ResizeToContents);
-  ui->metaTypeSearchLine->setProxy(proxy);
-  ui->metaTypeView->header()->setSortIndicator(1, Qt::AscendingOrder); // sort by type id
+  ui->metaTypeView->header()->setObjectName("metaTypeViewHeader");
+  ui->metaTypeView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->metaTypeView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->metaTypeView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+  ui->metaTypeView->setDeferredResizeMode(3, QHeaderView::ResizeToContents);
+  ui->metaTypeView->setModel(mtm);
+  ui->metaTypeView->sortByColumn(1, Qt::AscendingOrder); // sort by type id
+  new SearchLineController(ui->metaTypeSearchLine, mtm);
 }
 
 MetaTypeBrowserWidget::~MetaTypeBrowserWidget()

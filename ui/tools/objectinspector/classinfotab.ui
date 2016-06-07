@@ -10,30 +10,24 @@
     <height>300</height>
    </rect>
   </property>
-      <layout class="QVBoxLayout" name="verticalLayout_4">
-       <item>
-        <widget class="KFilterProxySearchLine" name="classInfoSearchLine"/>
-       </item>
-       <item>
-        <widget class="QTreeView" name="classInfoView">
-         <property name="rootIsDecorated">
-          <bool>false</bool>
-         </property>
-         <property name="sortingEnabled">
-          <bool>true</bool>
-         </property>
-         <property name="allColumnsShowFocus">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
+  <layout class="QVBoxLayout" name="verticalLayout_4">
+   <item>
+    <widget class="QLineEdit" name="classInfoSearchLine"/>
+   </item>
+   <item>
+    <widget class="GammaRay::DeferredTreeView" name="classInfoView">
+     <property name="rootIsDecorated">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>KFilterProxySearchLine</class>
-   <extends>QWidget</extends>
-   <header>kde/kfilterproxysearchline.h</header>
+   <class>GammaRay::DeferredTreeView</class>
+   <extends>QTreeView</extends>
+   <header location="global">ui/deferredtreeview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

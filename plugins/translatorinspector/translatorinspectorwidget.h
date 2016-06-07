@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Jan Dalheimer <jan.dalheimer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,6 +29,7 @@
 #ifndef TRANSLATORINSPECTORWIDGET_H
 #define TRANSLATORINSPECTORWIDGET_H
 
+#include <ui/uistatemanager.h>
 #include <ui/tooluifactory.h>
 #include <QWidget>
 
@@ -64,6 +65,7 @@ class TranslatorInspectorWidget : public QWidget
 
   private:
     QScopedPointer<Ui::TranslatorInspectorWidget> ui;
+    UIStateManager m_stateManager;
     TranslatorInspectorInterface *m_inspector;
 };
 

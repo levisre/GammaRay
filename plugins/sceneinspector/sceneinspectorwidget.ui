@@ -10,50 +10,45 @@
     <height>300</height>
    </rect>
   </property>
-       <layout class="QVBoxLayout" name="verticalLayout_6">
+  <layout class="QVBoxLayout" name="verticalLayout_6">
+   <item>
+    <widget class="QComboBox" name="sceneComboBox"/>
+   </item>
+   <item>
+    <widget class="QSplitter" name="mainSplitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <widget class="QSplitter" name="previewSplitter">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <widget class="QWidget" name="layoutWidget_6">
+       <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
-         <widget class="QComboBox" name="sceneComboBox"/>
+         <widget class="QLineEdit" name="sceneTreeSearchLine"/>
         </item>
         <item>
-         <widget class="QSplitter" name="splitter_6">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
+         <widget class="GammaRay::DeferredTreeView" name="sceneTreeView">
+          <property name="contextMenuPolicy">
+           <enum>Qt::CustomContextMenu</enum>
           </property>
-          <widget class="QSplitter" name="splitter_3">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <widget class="QWidget" name="layoutWidget_6">
-            <layout class="QVBoxLayout" name="verticalLayout_4">
-             <item>
-              <widget class="KFilterProxySearchLine" name="screneTreeSearchLine"/>
-             </item>
-             <item>
-              <widget class="QTreeView" name="sceneTreeView">
-               <property name="indentation">
-                <number>10</number>
-               </property>
-               <attribute name="headerShowSortIndicator" stdset="0">
-                <bool>true</bool>
-               </attribute>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-           <widget class="GammaRay::GraphicsSceneView" name="graphicsSceneView" native="true"/>
-          </widget>
-          <widget class="GammaRay::PropertyWidget" name="scenePropertyWidget" native="true"/>
          </widget>
         </item>
        </layout>
+      </widget>
+      <widget class="GammaRay::GraphicsSceneView" name="graphicsSceneView" native="true"/>
+     </widget>
+     <widget class="GammaRay::PropertyWidget" name="scenePropertyWidget" native="true"/>
+    </widget>
+   </item>
+  </layout>
  </widget>
- <resources/>
- <connections/>
  <customwidgets>
   <customwidget>
-   <class>KFilterProxySearchLine</class>
-   <extends>QWidget</extends>
-   <header location="global">kde/kfilterproxysearchline.h</header>
+   <class>GammaRay::DeferredTreeView</class>
+   <extends>QTreeView</extends>
+   <header location="global">ui/deferredtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>GammaRay::PropertyWidget</class>
@@ -68,4 +63,6 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <resources/>
+ <connections/>
 </ui>

@@ -2,9 +2,8 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
-  Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
   accordance with GammaRay Commercial License Agreement provided with the Software.
@@ -26,95 +25,174 @@
 */
 
 #include "statemachineviewerwidget.h"
-
-#include "gvgraph/gvgraph.h"
-#include "gvgraph/gvgraphitems.h"
+#include "ui_statemachineviewerwidget.h"
 
 #include "statemachineviewerclient.h"
-
-#include <ui/deferredresizemodesetter.h>
-#include <ui/deferredtreeviewconfiguration.h>
-#include <ui_statemachineviewer.h>
+#include "statemodeldelegate.h"
 
 #include <common/objectbroker.h>
+#include <common/objectmodel.h>
+#include <common/probecontrollerinterface.h>
+#include <ui/contextmenuextension.h>
 
+#include <kdstatemachineeditor/core/elementmodel.h>
+#include <kdstatemachineeditor/core/state.h>
+#include <kdstatemachineeditor/core/transition.h>
+#include <kdstatemachineeditor/core/runtimecontroller.h>
+#include <kdstatemachineeditor/view/statemachinescene.h>
+#include <kdstatemachineeditor/view/statemachinetoolbar.h>
+#include <kdstatemachineeditor/view/statemachineview.h>
+
+#include <QDebug>
+#include <QMenu>
+#include <QLayout>
+#include <QScopedValueRollback>
 #include <QScrollBar>
-#include <QGraphicsItem>
-#include <QFileDialog>
 #include <QSettings>
 
-#include <iostream>
-
-enum {
-  KEY_STATETYPE
-};
-
-#include <cmath>
+#define IF_DEBUG(x)
 
 using namespace GammaRay;
-using namespace std;
 
-static QObject* createStateMachineViewerClient(const QString &/*name*/, QObject *parent)
+namespace {
+
+class SelectionModelSyncer : public QObject
+{
+public:
+  SelectionModelSyncer(StateMachineViewerWidget *widget);
+
+private Q_SLOTS:
+  void handle_objectInspector_currentChanged(const QModelIndex &index);
+  void handle_stateMachineView_currentChanged(const QModelIndex &index);
+
+  StateMachineViewerWidget *m_widget;
+  bool m_updatesEnabled;
+};
+
+SelectionModelSyncer::SelectionModelSyncer(StateMachineViewerWidget *widget)
+  : QObject(widget)
+  , m_widget(widget)
+  , m_updatesEnabled(true)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
+  QMetaType::registerComparators<ObjectId>(); // for proper QAIM::match support for ObjectId
+#endif
+
+  connect(widget->objectInspector()->selectionModel(), &QItemSelectionModel::currentChanged,
+          this, &SelectionModelSyncer::handle_objectInspector_currentChanged);
+  connect(widget->stateMachineView()->scene()->selectionModel(), &QItemSelectionModel::currentChanged,
+          this, &SelectionModelSyncer::handle_stateMachineView_currentChanged);
+}
+
+void SelectionModelSyncer::handle_objectInspector_currentChanged(const QModelIndex &index)
+{
+  if (!m_updatesEnabled)
+    return;
+
+  QScopedValueRollback<bool> block(m_updatesEnabled);
+  m_updatesEnabled = false;
+
+  const auto objectId = index.data(ObjectModel::ObjectIdRole).value<ObjectId>();
+  const auto model = m_widget->stateMachineView()->scene()->model();
+  const auto matches = model->match(model->index(0, 0), KDSME::StateModel::InternalIdRole,
+                                    static_cast<quintptr>(objectId.id()), 1,
+                                    Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
+  auto selectionModel = m_widget->stateMachineView()->scene()->selectionModel();
+  selectionModel->setCurrentIndex(matches.value(0), QItemSelectionModel::SelectCurrent);
+}
+
+void SelectionModelSyncer::handle_stateMachineView_currentChanged(const QModelIndex &index)
+{
+  if (!m_updatesEnabled)
+    return;
+
+  QScopedValueRollback<bool> block(m_updatesEnabled);
+  m_updatesEnabled = false;
+
+  const auto internalId = index.data(KDSME::StateModel::InternalIdRole).value<quintptr>();
+  const auto objectId = ObjectId(reinterpret_cast<QObject *>(internalId));
+  const auto model = m_widget->objectInspector()->model();
+  const auto matches = model->match(model->index(0, 0), ObjectModel::ObjectIdRole,
+                                    QVariant::fromValue(objectId), 1,
+                                    Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
+  auto selectionModel = m_widget->objectInspector()->selectionModel();
+  selectionModel->setCurrentIndex(matches.value(0), QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+}
+
+QObject* createStateMachineViewerClient(const QString &/*name*/, QObject *parent)
 {
   return new StateMachineViewerClient(parent);
 }
 
-template<class T>
-static qreal relativePosition(const QList<T>& list, T t)
+KDSME::RuntimeController::Configuration toSmeConfiguration(const StateMachineConfiguration& config,
+                                                                 const QHash<StateId, KDSME::State*>& map)
 {
-  const int index = list.indexOf(t);
-  Q_ASSERT(index != -1);
-  return (index+1.0) / list.size();
+  KDSME::RuntimeController::Configuration result;
+  foreach (const StateId& id, config) {
+    if (auto state = map.value(id)) {
+      result << state;
+    }
+  }
+  return result;
 }
 
-StateMachineViewerWidget::StateMachineViewerWidget(QWidget *parent, Qt::WindowFlags f)
-  : QWidget(parent, f)
-  , m_ui(new Ui::StateMachineViewer)
-  , m_graph(new GVGraph("State Machine"))
-  , m_font(QFont("Helvetica [Cronxy]", 6))
-  , m_interface(0)
-{
-  m_lastConfigurations.resize(5);
+}
 
+StateMachineViewerWidget::StateMachineViewerWidget(QWidget* parent, Qt::WindowFlags f)
+  : QWidget(parent, f)
+  , m_ui(new Ui::StateMachineViewerWidget)
+  , m_stateManager(this)
+  , m_machine(0)
+{
   ObjectBroker::registerClientObjectFactoryCallback<StateMachineViewerInterface*>(createStateMachineViewerClient);
   m_interface = ObjectBroker::object<StateMachineViewerInterface*>();
 
   m_ui->setupUi(this);
 
-  m_graph->setFont(m_font);
+  // set up log expanding widget
+  connect(m_ui->hideLogPushButton, &QPushButton::clicked, this, [this]() { setShowLog(false); });
+  connect(m_ui->showLogPushButton, &QPushButton::clicked, this, [this]() { setShowLog(true); });
+  setShowLog(false);
 
-  m_ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
-  m_ui->graphicsView->setScene(new QGraphicsScene(this));
-  m_ui->graphicsView->setRenderHint(QPainter::Antialiasing);
-
-  QAbstractItemModel *stateMachineModel = ObjectBroker::model("com.kdab.GammaRay.StateMachineModel");
+  QAbstractItemModel *stateMachineModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.StateMachineModel"));
   m_ui->stateMachinesView->setModel(stateMachineModel);
-  m_ui->stateMachinesView->setSelectionModel(ObjectBroker::selectionModel(stateMachineModel));
-  new DeferredResizeModeSetter(m_ui->stateMachinesView->header(), 0, QHeaderView::Stretch);
-  new DeferredResizeModeSetter(m_ui->stateMachinesView->header(), 1, QHeaderView::ResizeToContents);
-  new DeferredTreeViewConfiguration(m_ui->stateMachinesView, false);
+  connect(m_ui->stateMachinesView, SIGNAL(currentIndexChanged(int)), m_interface, SLOT(selectStateMachine(int)));
 
-  QAbstractItemModel *stateModel = ObjectBroker::model("com.kdab.GammaRay.StateModel");
+  QAbstractItemModel *stateModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.StateModel"));
   connect(stateModel, SIGNAL(modelReset()), this, SLOT(stateModelReset()));
 
-  m_ui->singleStateMachineView->setModel(stateModel);
-  m_ui->singleStateMachineView->setSelectionModel(ObjectBroker::selectionModel(stateModel));
+  m_ui->singleStateMachineView->header()->setObjectName("singleStateMachineViewHeader");
+  m_ui->singleStateMachineView->setExpandNewContent(true);
+  m_ui->singleStateMachineView->setDeferredResizeMode(0, QHeaderView::Stretch);
+  m_ui->singleStateMachineView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
   m_ui->singleStateMachineView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-  new DeferredResizeModeSetter(m_ui->singleStateMachineView->header(), 0, QHeaderView::Stretch);
-  new DeferredResizeModeSetter(m_ui->singleStateMachineView->header(), 1, QHeaderView::ResizeToContents);
-  new DeferredTreeViewConfiguration(m_ui->singleStateMachineView, true, false);
+  m_ui->singleStateMachineView->setItemDelegate(new StateModelDelegate(this));
+  m_ui->singleStateMachineView->setModel(stateModel);
+  connect(m_ui->singleStateMachineView, &QWidget::customContextMenuRequested, this, &StateMachineViewerWidget::objectInspectorContextMenu);
 
-  connect(m_ui->depthSpinBox, SIGNAL(valueChanged(int)), m_interface, SLOT(setMaximumDepth(int)));
-  connect(m_ui->startStopButton, SIGNAL(clicked()), m_interface, SLOT(toggleRunning()));
-  connect(m_ui->exportButton, SIGNAL(clicked()), SLOT(exportAsImage()));
+  connect(m_ui->actionStartStopStateMachine, SIGNAL(triggered()), m_interface, SLOT(toggleRunning()));
+  addAction(m_ui->actionStartStopStateMachine);
 
-  m_ui->maxMegaPixelsSpinBox->setValue(maximumMegaPixels());
-  connect(m_ui->maxMegaPixelsSpinBox, SIGNAL(valueChanged(int)), SLOT(setMaximumMegaPixels(int)));
+  auto separatorAction = new QAction(this);
+  separatorAction->setSeparator(true);
+  addAction(separatorAction);
 
-  connect(m_interface, SIGNAL(maximumDepthChanged(int)), m_ui->depthSpinBox, SLOT(setValue(int)));
+  m_stateMachineView = new KDSME::StateMachineView;
+  m_ui->horizontalSplitter->addWidget(m_stateMachineView);
+
+  m_stateMachineView->scene()->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(m_stateMachineView->scene(), &KDSME::StateMachineScene::customContextMenuEvent,
+          this, [this](KDSME::AbstractSceneContextMenuEvent* event) {
+    const auto objectId = ObjectId(reinterpret_cast<QObject*>(event->elementUnderCursor()->internalId()));
+    const auto model = objectInspector()->model();
+    const auto matches = model->match(
+      model->index(0, 0), ObjectModel::ObjectIdRole,
+      QVariant::fromValue(objectId), 1,
+      Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
+    showContextMenuForObject(matches.value(0), event->globalPos());
+  });
+
   connect(m_interface, SIGNAL(message(QString)), this, SLOT(showMessage(QString)));
-  connect(m_interface, SIGNAL(aboutToRepopulateGraph()), this, SLOT(clearGraph()));
-  connect(m_interface, SIGNAL(graphRepopulated()), this, SLOT(repopulateView()));
   connect(m_interface, SIGNAL(stateConfigurationChanged(GammaRay::StateMachineConfiguration)),
           this, SLOT(stateConfigurationChanged(GammaRay::StateMachineConfiguration)));
   connect(m_interface, SIGNAL(stateAdded(GammaRay::StateId,GammaRay::StateId,bool,QString,GammaRay::StateType,bool)),
@@ -125,342 +203,232 @@ StateMachineViewerWidget::StateMachineViewerWidget(QWidget *parent, Qt::WindowFl
   connect(m_interface, SIGNAL(transitionTriggered(GammaRay::TransitionId,QString)),
           this, SLOT(transitionTriggered(GammaRay::TransitionId,QString)));
 
+  connect(m_interface, SIGNAL(aboutToRepopulateGraph()), this, SLOT(clearGraph()));
+  connect(m_interface, SIGNAL(graphRepopulated()), this, SLOT(repopulateView()));
+
+  // append actions for the state machine view
+  KDSME::StateMachineToolBar* toolBar = new KDSME::StateMachineToolBar(m_stateMachineView, this);
+  toolBar->setHidden(true);
+  addActions(toolBar->actions());
+
   m_interface->repopulateGraph();
+
+  // share selection model
+  new SelectionModelSyncer(this);
+
+  m_stateManager.setDefaultSizes(m_ui->verticalSplitter, UISizeVector() << "50%" << "50%");
+  m_stateManager.setDefaultSizes(m_ui->horizontalSplitter, UISizeVector() << "30%" << "70%");
+
+  loadSettings();
 }
 
 StateMachineViewerWidget::~StateMachineViewerWidget()
 {
+  saveSettings();
+}
+
+void StateMachineViewerWidget::showContextMenuForObject(const QModelIndex &index, const QPoint& globalPos)
+{
+  if (!index.isValid())
+    return;
+
+  Q_ASSERT(index.model() == objectInspector()->model());
+
+  const auto objectId = index .data(ObjectModel::ObjectIdRole).value<ObjectId>();
+
+  QMenu menu(tr("Entity @ %1").arg(QLatin1String("0x") + QString::number(objectId.id(), 16)));
+  ContextMenuExtension ext(objectId);
+  ext.setLocation(ContextMenuExtension::Creation, index.data(ObjectModel::CreationLocationRole).value<SourceLocation>());
+  ext.setLocation(ContextMenuExtension::Declaration, index.data(ObjectModel::DeclarationLocationRole).value<SourceLocation>());
+  ext.populateMenu(&menu);
+
+  menu.exec(globalPos);
+}
+
+
+KDSME::StateMachineView *StateMachineViewerWidget::stateMachineView() const
+{
+  return m_stateMachineView;
+}
+
+DeferredTreeView *StateMachineViewerWidget::objectInspector() const
+{
+  return m_ui->singleStateMachineView;
+}
+
+
+void StateMachineViewerWidget::loadSettings()
+{
+  QSettings settings;
+  settings.beginGroup("Plugin_StateMachineViewer");
+  m_stateMachineView->setThemeName(settings.value("ThemeName", "SystemTheme").toString());
+
+  // session-specific settings, we should probably save them on a per-target basis
+  m_stateMachineView->scene()->setMaximumDepth(settings.value("MaximumDepth", 3).toInt());
+
+  settings.endGroup();
+  settings.sync();
+}
+
+void StateMachineViewerWidget::saveSettings()
+{
+  QSettings settings;
+  settings.beginGroup("Plugin_StateMachineViewer");
+  settings.setValue("ThemeName", m_stateMachineView->themeName());
+
+  settings.setValue("MaximumDepth", m_stateMachineView->scene()->maximumDepth());
+
+  settings.endGroup();
+  settings.sync();
+}
+
+void StateMachineViewerWidget::showMessage(const QString& message)
+{
+    // update log
+  auto logTextEdit = m_ui->logTextEdit;
+  logTextEdit->appendPlainText(message);
+
+  // auto-scroll hack
+  QScrollBar *sb = logTextEdit->verticalScrollBar();
+  sb->setValue(sb->maximum());
+}
+
+void StateMachineViewerWidget::stateConfigurationChanged(const StateMachineConfiguration& config)
+{
+  if (m_machine) {
+    m_machine->runtimeController()->setActiveConfiguration(toSmeConfiguration(config, m_idToStateMap));
+  }
+}
+
+void StateMachineViewerWidget::stateAdded(const StateId stateId, const StateId parentId, const bool hasChildren,
+                                            const QString& label, const StateType type, const bool connectToInitial)
+{
+  Q_UNUSED(hasChildren);
+  IF_DEBUG(qDebug() << "stateAdded" << stateId << parentId << label << type);
+
+  if (m_idToStateMap.contains(stateId)) {
+    return;
+  }
+
+  KDSME::State* parentState = m_idToStateMap.value(parentId);
+  KDSME::State* state = 0;
+  if (type == StateMachineState) {
+    state = m_machine = new KDSME::StateMachine;
+  } else if (type == GammaRay::FinalState) {
+    state = new KDSME::FinalState(parentState);
+  } else if (type == GammaRay::ShallowHistoryState) {
+    state = new KDSME::HistoryState(KDSME::HistoryState::ShallowHistory, parentState);
+  } else if (type == GammaRay::DeepHistoryState) {
+    state = new KDSME::HistoryState(KDSME::HistoryState::DeepHistory, parentState);
+  } else {
+    state = new KDSME::State(parentState);
+  }
+
+  if (connectToInitial && parentState) {
+    KDSME::State* initialState = new KDSME::PseudoState(KDSME::PseudoState::InitialState, parentState);
+    initialState->setFlags(KDSME::Element::ElementIsSelectable);
+    KDSME::Transition* transition = new KDSME::Transition(initialState);
+    transition->setTargetState(state);
+    transition->setFlags(KDSME::Element::ElementIsSelectable);
+  }
+
+  Q_ASSERT(state);
+  state->setLabel(label);
+  state->setInternalId(stateId);
+  state->setFlags(KDSME::Element::ElementIsSelectable);
+  m_idToStateMap[stateId] = state;
+}
+
+void StateMachineViewerWidget::transitionAdded(const TransitionId transitionId, const StateId sourceId, const StateId targetId, const QString& label)
+{
+  if (m_idToTransitionMap.contains(transitionId))
+    return;
+
+  IF_DEBUG(qDebug() << "transitionAdded" << transitionId << label << sourceId << targetId);
+
+  KDSME::State* source = m_idToStateMap.value(sourceId);
+  KDSME::State* target = m_idToStateMap.value(targetId);
+  if (!source || !target) {
+    qDebug() << "Null source or target for transition:" <<  transitionId;
+    return;
+  }
+
+  KDSME::Transition* transition = new KDSME::Transition(source);
+  transition->setTargetState(target);
+  transition->setLabel(label);
+  transition->setFlags(KDSME::Element::ElementIsSelectable);
+  m_idToTransitionMap[transitionId] = transition;
 }
 
 void StateMachineViewerWidget::statusChanged(const bool haveStateMachine, const bool running)
 {
+  if (m_machine) {
+    m_machine->runtimeController()->setIsRunning(running);
+  }
+
+  m_ui->actionStartStopStateMachine->setEnabled(haveStateMachine);
   if (!running) {
-    m_ui->startStopButton->setChecked(false);
-    m_ui->startStopButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    m_ui->actionStartStopStateMachine->setText(tr("Start State Machine"));
+    m_ui->actionStartStopStateMachine->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
   } else {
-    m_ui->startStopButton->setChecked(true);
-    m_ui->startStopButton->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
+    m_ui->actionStartStopStateMachine->setText(tr("Stop State Machine"));
+    m_ui->actionStartStopStateMachine->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
   }
-  m_ui->startStopButton->setEnabled(haveStateMachine);
 }
 
-void StateMachineViewerWidget::clearView()
+void StateMachineViewerWidget::transitionTriggered(TransitionId transitionId, const QString& label)
 {
-  m_ui->graphicsView->scene()->clear();
-}
-
-void StateMachineViewerWidget::repopulateView()
-{
-  clearView();
-
-  m_graph->applyLayout();
-
-  QGraphicsScene *scene = m_ui->graphicsView->scene();
-  Q_FOREACH (const GVNodePair &nodePair, m_graph->gvNodes()) {
-    const NodeId &id = nodePair.first;
-    const GVNode &node = nodePair.second;
-    GVNodeItem *item = new GVNodeItem(node);
-    item->setData(KEY_STATETYPE, QVariant::fromValue(m_nodeTypeMap.value(id, OtherState)));
-    scene->addItem(item);
-    m_nodeItemMap.insert(id, item);
+  Q_UNUSED(label);
+  if (m_machine) {
+    m_machine->runtimeController()->setLastTransition(m_idToTransitionMap.value(transitionId));
   }
-
-  Q_FOREACH (const GVEdgePair &edgePair, m_graph->gvEdges()) {
-    const EdgeId &id = edgePair.first;
-    const GVEdge &edge = edgePair.second;
-    GVEdgeItem *item = new GVEdgeItem(edge);
-    scene->addItem(item);
-    m_edgeItemMap.insert(id, item);
-  }
-
-  Q_FOREACH (const GVSubGraphPair &graphPair, m_graph->gvSubGraphs()) {
-    const GraphId &id = graphPair.first;
-    const GVSubGraph &graph = graphPair.second;
-    GVGraphItem *item = new GVGraphItem(graph);
-    scene->addItem(item);
-    m_graphItemMap.insert(id, item);
-  }
-
-  updateStateItems();
-  updateTransitionItems();
-
-  // correctly set the scene rect
-  scene->setSceneRect(scene->itemsBoundingRect());
 }
 
 void StateMachineViewerWidget::clearGraph()
 {
-  m_graph->clear();
+  IF_DEBUG(qDebug() << Q_FUNC_INFO);
 
-  m_graphItemMap.clear();
-  m_nodeItemMap.clear();
-  m_edgeItemMap.clear();
+  m_stateMachineView->scene()->setRootState(0);
 
-  m_stateGraphIdMap.clear();
-  m_stateNodeIdMap.clear();
-  m_transitionEdgeIdMap.clear();
-  m_nodeTypeMap.clear();
-
-  m_lastTransitions.clear();
-  m_lastConfigurations.clear();
+  m_idToStateMap.clear();
+  m_idToTransitionMap.clear();
 }
 
-void StateMachineViewerWidget::transitionTriggered(TransitionId transition, const QString &label)
+void StateMachineViewerWidget::repopulateView()
 {
-  showMessage(tr("Transition triggered: %1").arg(label));
+  IF_DEBUG(qDebug() << Q_FUNC_INFO);
 
-  m_lastTransitions.enqueue(transition);
-  updateTransitionItems();
-}
-
-void StateMachineViewerWidget::showMessage(const QString &message)
-{
-  // update log
-  QPlainTextEdit *plainTextEdit = m_ui->plainTextEdit;
-  plainTextEdit->appendPlainText(message);
-
-  // auto-scroll hack
-  QScrollBar *sb = plainTextEdit->verticalScrollBar();
-  sb->setValue(sb->maximum());
-}
-
-void StateMachineViewerWidget::updateTransitionItems()
-{
-  // restore default color
-  Q_FOREACH (QGraphicsItem *item, m_ui->graphicsView->scene()->items()) {
-    GVEdgeItem *edgeItem = qgraphicsitem_cast<GVEdgeItem*>(item);
-    if (edgeItem) {
-      edgeItem->setPen(QPen());
-    }
-  }
-
-  // set color based on recent usage
-  Q_FOREACH (TransitionId t, m_lastTransitions.entries()) {
-    EdgeId id = m_transitionEdgeIdMap.value(t);
-    GVEdgeItem *edgeItem = m_edgeItemMap.value(id);
-    if (!edgeItem) {
-      continue;
-    }
-
-    QColor color(Qt::red);
-    color.setRedF(relativePosition(m_lastTransitions.entries(), t));
-    QPen pen(Qt::DashLine);
-    pen.setWidth(2);
-    pen.setColor(color);
-    edgeItem->setPen(pen);
-  }
-}
-
-void StateMachineViewerWidget::stateConfigurationChanged(const StateMachineConfiguration &config)
-{
-  if (m_lastConfigurations.size() > 0 && m_lastConfigurations.tail() == config) {
+  m_stateMachineView->scene()->setRootState(m_machine);
+  if (!m_machine)
     return;
-  }
+  m_stateMachineView->scene()->layout();
 
-  m_lastConfigurations.enqueue(config);
-  updateStateItems();
-}
+  IF_DEBUG(m_machine->dumpObjectTree();)
 
-void StateMachineViewerWidget::updateStateItems()
-{
-  // initialize
-  Q_FOREACH (GVNodeItem* item, m_nodeItemMap) {
-    Q_ASSERT(item);
-    QColor color;
-    switch (item->data(KEY_STATETYPE).value<StateType>()) {
-      case FinalState:
-        color = QColor(Qt::black);
-        break;
-      case StateMachineState:
-        color = QColor(Qt::gray);
-        break;
-      default:
-        color = QColor(Qt::white);
-        break;
-    }
-    QBrush brush = item->brush();
-    if (brush.style() == Qt::NoBrush)
-      brush.setStyle(Qt::SolidPattern);
-    brush.setColor(color);
-    item->setBrush(brush);
-  }
-
-  // color recent configurations based on last usage
-  // note that each configuration has the same color saturation atm
-  Q_FOREACH (const StateMachineConfiguration &config, m_lastConfigurations.entries()) {
-    const qreal alpha = relativePosition(m_lastConfigurations.entries(), config);
-    Q_FOREACH (StateId state, config) {
-      NodeId id = m_stateNodeIdMap.value(state);
-      GVNodeItem *nodeItem = m_nodeItemMap.value(id);
-      if (!nodeItem) {
-        continue;
-      }
-
-      QColor color(Qt::red);
-      color.setAlphaF(alpha);
-      QBrush brush = nodeItem->brush();
-      brush.setColor(color);
-      nodeItem->setBrush(brush);
-    }
-  }
-}
-
-void StateMachineViewerWidget::stateAdded(const StateId state, const StateId parent, const bool hasChildren,
-                                          const QString &label, const StateType type, const bool connectToInitial)
-{
-  if (m_stateNodeIdMap.contains(state)) {
-    return;
-  }
-
-  const GraphId parentGraphId = m_stateGraphIdMap.value(parent);
-
-  GraphId graphId = parentGraphId;
-
-  const QString stateId = QString::number(state);
-  if (parent && parentGraphId) {
-    if (hasChildren) {
-      // only create sub-graphs if we have child states
-      graphId = m_graph->addGraph(stateId, parentGraphId);
-      m_graph->setGraphAttr(QLatin1String("label"), label, graphId);
-    }
-  } else {
-    graphId = m_graph->addGraph(stateId);
-    m_graph->setGraphAttr(QLatin1String("label"), label, graphId);
-  }
-  Q_ASSERT(graphId);
-
-  const NodeId nodeId = m_graph->addNode(stateId, graphId);
-  Q_ASSERT(nodeId);
-  m_graph->setNodeAttribute(nodeId, QLatin1String("label"), label);
-  m_nodeTypeMap.insert(nodeId, type);
-
-  switch (type) {
-    case FinalState:
-      m_graph->setNodeAttribute(nodeId, "GammaRayStateType", "final");
-      m_graph->setNodeAttribute(nodeId, "shape", "doublecircle");
-      m_graph->setNodeAttribute(nodeId, "label", "");
-      m_graph->setNodeAttribute(nodeId, "style", "filled");
-      m_graph->setNodeAttribute(nodeId, "fillcolor", "black");
-      m_graph->setNodeAttribute(nodeId, "fixedsize", "true");
-      m_graph->setNodeAttribute(nodeId, "heigh", "0.15");
-      m_graph->setNodeAttribute(nodeId, "width", "0.15");
-      break;
-    case ShallowHistoryState:
-      m_graph->setNodeAttribute(nodeId, "GammaRayStateType", "shallowhistory");
-      m_graph->setNodeAttribute(nodeId, "label", "H");
-      m_graph->setNodeAttribute(nodeId, "shape", "circle");
-      break;
-    case DeepHistoryState:
-      m_graph->setNodeAttribute(nodeId, "GammaRayStateType", "deephistory");
-      m_graph->setNodeAttribute(nodeId, "label", "H*");
-      m_graph->setNodeAttribute(nodeId, "shape", "circle");
-      break;
-    case StateMachineState:
-    case OtherState:
-      m_graph->setNodeAttribute(nodeId, "GammaRayStateType", "other");
-      m_graph->setNodeAttribute(nodeId, "shape", "rectangle");
-      m_graph->setNodeAttribute(nodeId, "style", "rounded");
-      break;
-  }
-
-  if (connectToInitial && parentGraphId) {
-    NodeId initialNode = m_graph->addNode(QString("initial-%1").arg(QString::number(parent)), parentGraphId);
-    m_graph->addEdge(initialNode, nodeId, QString());
-    m_graph->setNodeAttribute(initialNode, "shape", "circle");
-    m_graph->setNodeAttribute(initialNode, "style", "filled");
-    m_graph->setNodeAttribute(initialNode, "fillcolor", "black");
-    m_graph->setNodeAttribute(initialNode, "fixedsize", "true");
-    m_graph->setNodeAttribute(initialNode, "heigh", "0.1");
-    m_graph->setNodeAttribute(initialNode, "width", "0.1");
-    m_graph->setNodeAttribute(initialNode, "label", "");
-  }
-
-  m_stateGraphIdMap.insert(state, graphId);
-  m_stateNodeIdMap.insert(state, nodeId);
-}
-
-void StateMachineViewerWidget::transitionAdded(const TransitionId transition, const StateId source, const StateId target, const QString &label)
-{
-  NodeId sourceStateId = m_stateNodeIdMap.value(source);
-  NodeId targetStateId = m_stateNodeIdMap.value(target);
-  if (!sourceStateId || !targetStateId) {
-    return;
-  }
-
-  EdgeId id = m_graph->addEdge(sourceStateId, targetStateId, QString::number(transition));
-  Q_ASSERT(id);
-
-  if (!label.isEmpty()) {
-    m_graph->setEdgeAttribute(id, QLatin1String("label"), label);
-  }
-
-  m_transitionEdgeIdMap.insert(transition, id);
-}
-
-int StateMachineViewerWidget::maximumMegaPixels() const
-{
-    return QSettings().value("StateMachineViewerServer/maximumMegaPixels", 10).toInt();
-}
-
-void StateMachineViewerWidget::setMaximumMegaPixels(int megaPixels)
-{
-    QSettings().setValue("StateMachineViewerServer/maximumMegaPixels", megaPixels);
-}
-
-void StateMachineViewerWidget::exportAsImage()
-{
-  QSettings settings;
-  const QString key = QLatin1String("StateMachineViewerServer/imageDir");
-  QString lastDir = settings.value(key).toString();
-
-  const QString fileName = QFileDialog::getSaveFileName(this, tr("Save As Image"),
-                                                        lastDir, tr("Images (*.png *.jpg *.jpeg)"));
-  if (fileName.isEmpty()) {
-    return;
-  }
-
-  lastDir = QFileInfo(fileName).absolutePath();
-  settings.setValue(key, lastDir);
-
-  QGraphicsView* view = m_ui->graphicsView;
-  const QRectF sceneRect = view->transform().mapRect(view->sceneRect());
-  QSizeF size(sceneRect.width(), sceneRect.height());
-
-  // limit mega pixels
-  const double maxPixels = maximumMegaPixels() * 1E+6;
-  const double actualMegaPixels = size.width() * size.height();
-  if (actualMegaPixels > maxPixels && actualMegaPixels != 0) {
-    size *= sqrt(maxPixels / actualMegaPixels);
-  }
-
-  int quality = -1;
-  const char* format;
-  if (fileName.endsWith(QLatin1String("jpg"), Qt::CaseInsensitive)
-        || fileName.endsWith(QLatin1String("jpeg"), Qt::CaseInsensitive)) {
-    format = "JPG";
-    quality = 90;
-  } else {
-    format = "PNG";
-  }
-
-  QImage image(size.width() , size.height(), QImage::Format_ARGB32_Premultiplied);
-  image.fill(QColor(Qt::white).rgb());
-
-  QPainter painter(&image);
-  painter.setRenderHint(QPainter::Antialiasing);
-  view->scene()->render(&painter);
-
-  image.save(fileName, format, quality);
+  m_stateMachineView->fitInView();
 }
 
 void StateMachineViewerWidget::stateModelReset()
 {
   m_ui->singleStateMachineView->expandAll();
-  m_lastTransitions.clear();
-  m_lastConfigurations.clear();
+  if (m_machine) {
+    m_machine->runtimeController()->clear();
+  }
 }
 
+void StateMachineViewerWidget::objectInspectorContextMenu(QPoint pos)
+{
+  const auto index = m_ui->singleStateMachineView->indexAt(pos);
+  if (!index.isValid())
+      return;
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(StateMachineViewerUiFactory)
-#endif
+  const auto globalPos = m_ui->singleStateMachineView->viewport()->mapToGlobal(pos);
+  showContextMenuForObject(index, globalPos);
+}
+
+void StateMachineViewerWidget::setShowLog(bool show)
+{
+  m_ui->logExpandingWidget->setVisible(show);
+  m_ui->showLogPushButton->setVisible(!show);
+  m_ui->verticalSplitter->handle(0)->setEnabled(show);
+}

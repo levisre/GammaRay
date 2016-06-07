@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,11 +31,29 @@
 
 #include <QMainWindow>
 
+#include <ui/uistatemanager.h>
+
+QT_BEGIN_NAMESPACE
 class QModelIndex;
+class QSplitter;
+class QHeaderView;
+class QUrl;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
 namespace Ui { class MainWindow; }
+
+class MainWindowUIStateManager : public UIStateManager
+{
+  Q_OBJECT
+
+public:
+  explicit MainWindowUIStateManager(QWidget *widget);
+
+  QList<QSplitter *> splitters() const Q_DECL_OVERRIDE;
+  QList<QHeaderView *> headers() const Q_DECL_OVERRIDE;
+};
 
 class MainWindow : public QMainWindow
 {
@@ -52,18 +70,21 @@ class MainWindow : public QMainWindow
     void aboutPlugins();
     void aboutKDAB();
 
+    void showMessageStatistics();
+
     void toolSelected();
-    void selectInitialTool();
+    bool selectTool(const QString &id);
 
     void quitHost();
     void detachProbe();
-    void navigateToCode(const QString &filePath, int lineNumber, int columnNumber);
+    void navigateToCode(const QUrl &url, int lineNumber, int columnNumber);
     void setCodeNavigationIDE(QAction *action);
 
   private:
     QWidget* createErrorPage(const QModelIndex &index);
 
     QScopedPointer<Ui::MainWindow> ui;
+    MainWindowUIStateManager m_stateManager;
 };
 
 }

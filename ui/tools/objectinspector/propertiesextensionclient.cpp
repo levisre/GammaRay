@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -43,11 +43,6 @@ PropertiesExtensionClient::PropertiesExtensionClient(const QString &name, QObjec
 PropertiesExtensionClient::~PropertiesExtensionClient()
 {
 
-}
-
-void PropertiesExtensionClient::navigateToValue(int modelRow)
-{
-  Endpoint::instance()->invokeObject(name(), "navigateToValue", QVariantList() << QVariant::fromValue(modelRow));
 }
 
 void PropertiesExtensionClient::setProperty(const QString& propertyName, const QVariant& value)

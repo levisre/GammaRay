@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
   Author: Volker Krause <volker.krause@kdab.com>
 
@@ -29,7 +29,6 @@
 #include "objectvisualizermodel.h"
 
 #include "common/objectmodel.h"
-#include "core/util.h"
 
 #include <QAbstractItemModel>
 #include <QDebug>

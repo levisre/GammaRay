@@ -15,7 +15,7 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
-    <widget class="QTreeView" name="timerView">
+    <widget class="GammaRay::DeferredTreeView" name="timerView">
      <property name="alternatingRowColors">
       <bool>true</bool>
      </property>
@@ -25,13 +25,20 @@
      <property name="uniformRowHeights">
       <bool>true</bool>
      </property>
-     <property name="sortingEnabled">
-      <bool>true</bool>
-     </property>
+     <attribute name="headerStretchLastSection">
+      <bool>false</bool>
+     </attribute>
     </widget>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>GammaRay::DeferredTreeView</class>
+   <extends>QTreeView</extends>
+   <header location="global">ui/deferredtreeview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

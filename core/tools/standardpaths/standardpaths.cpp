@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,10 +35,14 @@ StandardPaths::StandardPaths(ProbeInterface *probe, QObject *parent)
   : QObject(parent)
 {
   StandardPathsModel *model = new StandardPathsModel(this);
-  probe->registerModel("com.kdab.GammaRay.StandardPathsModel", model);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.StandardPathsModel"), model);
 }
 
 StandardPaths::~StandardPaths()
 {
 }
 
+QString StandardPathsFactory::name() const
+{
+  return tr("Standard Paths");
+}

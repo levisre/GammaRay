@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,12 +29,11 @@
 #include "metaproperty.h"
 #include "metaobject.h"
 
-#include <QString>
 #include <QVariant>
 
 using namespace GammaRay;
 
-MetaProperty::MetaProperty(const QString& name) : m_class(0), m_name(name)
+MetaProperty::MetaProperty(const char *name) : m_class(0), m_name(name)
 {
 }
 
@@ -42,7 +41,7 @@ MetaProperty::~MetaProperty()
 {
 }
 
-QString MetaProperty::name() const
+const char* MetaProperty::name() const
 {
   return m_name;
 }

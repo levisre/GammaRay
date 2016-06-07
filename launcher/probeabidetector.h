@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -45,7 +45,6 @@ class GAMMARAY_LAUNCHER_EXPORT ProbeABIDetector
 {
 public:
     ProbeABIDetector();
-    ~ProbeABIDetector();
 
     /** Detect the ABI of the executable at @p path. */
     ProbeABI abiForExecutable(const QString &path) const;
@@ -53,7 +52,15 @@ public:
     /** Detect the ABI of the process running with PID @p pid. */
     ProbeABI abiForProcess(qint64 pid) const;
 
-    /** Check if the given line contains a mention of the QtCore library. */
+    /** Returns the full path to QtCore used by the given executable. */
+    QString qtCoreForExecutable(const QString &path) const;
+
+    /** Returns the full path to QtCore used by the process with PID @p pid. */
+    QString qtCoreForProcess(quint64 pid) const;
+
+    /** Check if the given line contains a mention of the QtCore library.
+     *  @internal
+     */
     static bool containsQtCore(const QByteArray &line);
 
 private:

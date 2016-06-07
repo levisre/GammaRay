@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -63,7 +63,7 @@ static void(*gammaray_next_removeObject)(QObject*) = 0;
 extern "C" Q_DECL_EXPORT void gammaray_startup_hook()
 {
   Probe::startupHookReceived();
-  new ProbeCreator(ProbeCreator::CreateOnly);
+  new ProbeCreator(ProbeCreator::Create);
 
   if (gammaray_next_startup_hook)
     gammaray_next_startup_hook();
@@ -83,12 +83,6 @@ extern "C" Q_DECL_EXPORT void gammaray_removeObject(QObject *obj)
 
   if (gammaray_next_removeObject)
     gammaray_next_removeObject(obj);
-}
-
-const char* gammaray_flagLocation(const char* method)
-{
-  SignalSlotsLocationStore::flagLocation(method);
-  return method;
 }
 
 #ifdef GAMMARAY_USE_QHOOKS
@@ -118,25 +112,6 @@ static void overwriteQtFunctions()
   overwriter->overwriteFunction(QLatin1String("qt_startup_hook"), (void*)gammaray_startup_hook);
   overwriter->overwriteFunction(QLatin1String("qt_addObject"), (void*)gammaray_addObject);
   overwriter->overwriteFunction(QLatin1String("qt_removeObject"), (void*)gammaray_removeObject);
-#if defined(Q_OS_WIN)
-#ifdef ARCH_64
-#ifdef __MINGW32__
-  overwriter->overwriteFunction(
-    QLatin1String("_Z13qFlagLocationPKc"), (void*)gammaray_flagLocation);
-#else
-  overwriter->overwriteFunction(
-    QLatin1String("?qFlagLocation@@YAPEBDPEBD@Z"), (void*)gammaray_flagLocation);
-#endif
-#else
-# ifdef __MINGW32__
-  overwriter->overwriteFunction(
-    QLatin1String("_Z13qFlagLocationPKc"), (void*)gammaray_flagLocation);
-# else
-  overwriter->overwriteFunction(
-    QLatin1String("?qFlagLocation@@YAPBDPBD@Z"), (void*)gammaray_flagLocation);
-# endif
-#endif
-#endif
 }
 #endif
 
@@ -169,6 +144,13 @@ extern "C" Q_DECL_EXPORT void gammaray_probe_inject()
     return;
   }
   printf("gammaray_probe_inject()\n");
-  // make it possible to re-attach
-  new ProbeCreator(ProbeCreator::CreateAndFindExisting);
+  new ProbeCreator(ProbeCreator::Create | ProbeCreator::FindExistingObjects);
+}
+
+extern "C" Q_DECL_EXPORT void gammaray_probe_attach()
+{
+  if (!qApp)
+    return;
+  printf("gammaray_probe_attach()\n");
+  new ProbeCreator(ProbeCreator::Create | ProbeCreator::FindExistingObjects | ProbeCreator::ResendServerAddress);
 }

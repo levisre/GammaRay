@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -52,7 +52,6 @@ class PropertiesExtensionInterface : public QObject
     void setHasPropertyValues(bool hasValues);
 
   public slots:
-    virtual void navigateToValue(int modelRow) = 0;
     virtual void setProperty(const QString &name, const QVariant &value) = 0;
 
   signals:
@@ -67,6 +66,8 @@ class PropertiesExtensionInterface : public QObject
 
 }
 
+QT_BEGIN_NAMESPACE
 Q_DECLARE_INTERFACE(GammaRay::PropertiesExtensionInterface, "com.kdab.GammaRay.PropertiesExtensionInterface")
+QT_END_NAMESPACE
 
 #endif // GAMMARAY_PROPERTIESEXTENSIONINTERFACE_H

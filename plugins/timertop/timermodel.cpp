@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Thomas McGuire <thomas.mcguire@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -214,7 +214,6 @@ void TimerModel::preSignalActivate(QObject *caller, int methodIndex)
     return;
   }
 
-  Q_ASSERT(!m_currentSignals.contains(caller));
   m_currentSignals[caller] = timerInfo;
 }
 
@@ -274,6 +273,7 @@ void TimerModel::setProbe(ProbeInterface *probe)
 void TimerModel::setSourceModel(QAbstractItemModel *sourceModel)
 {
   Q_ASSERT(!m_sourceModel);
+  beginResetModel();
   m_sourceModel = sourceModel;
   qApp->installEventFilter(this);
 
@@ -294,7 +294,7 @@ void TimerModel::setSourceModel(QAbstractItemModel *sourceModel)
   connect(m_sourceModel, SIGNAL(layoutChanged()),
           this, SLOT(slotEndReset()));
 
-  reset();
+  endResetModel();
 }
 
 int TimerModel::columnCount(const QModelIndex &parent) const

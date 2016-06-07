@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,6 +32,7 @@
 
 #include <ui/methodinvocationdialog.h>
 #include <ui/propertybinder.h>
+#include <ui/searchlinecontroller.h>
 
 #include "common/objectbroker.h"
 #include "common/metatypedeclarations.h"
@@ -44,11 +45,14 @@
 
 using namespace GammaRay;
 
-MethodsTab::MethodsTab(PropertyWidget *parent) : QWidget(parent),
-  m_ui(new Ui_MethodsTab),
-  m_interface(0)
+MethodsTab::MethodsTab(PropertyWidget *parent)
+  : QWidget(parent)
+  , m_ui(new Ui_MethodsTab)
+  , m_interface(0)
 {
   m_ui->setupUi(this);
+  m_ui->methodView->header()->setObjectName("methodViewHeader");
+  m_ui->methodLog->header()->setObjectName("methodLogHeader");
   setObjectBaseName(parent->objectBaseName());
 }
 
@@ -69,7 +73,7 @@ void MethodsTab::setObjectBaseName(const QString &baseName)
   m_ui->methodView->sortByColumn(0, Qt::AscendingOrder);
   m_ui->methodView->setSelectionModel(ObjectBroker::selectionModel(proxy));
   m_ui->methodView->header()->setResizeMode(QHeaderView::ResizeToContents);
-  m_ui->methodSearchLine->setProxy(proxy);
+  new SearchLineController(m_ui->methodSearchLine, proxy);
   connect(m_ui->methodView, SIGNAL(doubleClicked(QModelIndex)),
           SLOT(methodActivated(QModelIndex)));
   connect(m_ui->methodView, SIGNAL(customContextMenuRequested(QPoint)),

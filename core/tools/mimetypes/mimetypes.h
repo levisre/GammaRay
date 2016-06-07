@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,9 @@
 
 #include "core/toolfactory.h"
 
+QT_BEGIN_NAMESPACE
 class QStandardItemModel;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -41,9 +43,6 @@ class MimeTypes : public QObject
   public:
     explicit MimeTypes(ProbeInterface *probe, QObject *parent = 0);
     ~MimeTypes();
-
-  private:
-    QStandardItemModel *m_model;
 };
 
 class MimeTypesFactory : public QObject, public StandardToolFactory<QObject, MimeTypes>
@@ -55,10 +54,7 @@ class MimeTypesFactory : public QObject, public StandardToolFactory<QObject, Mim
     {
     }
 
-    virtual inline QString name() const
-    {
-      return tr("Mime Types");
-    }
+    QString name() const Q_DECL_OVERRIDE;
 };
 
 }

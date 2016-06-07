@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,11 +28,14 @@
 
 #include "injectorfactory.h"
 
+#include "styleinjector.h"
+#ifdef Q_OS_WIN
+#include "windllinjector.h"
+#else
 #include "gdbinjector.h"
 #include "lldbinjector.h"
 #include "preloadinjector.h"
-#include "styleinjector.h"
-#include "windllinjector.h"
+#endif
 
 #include <launcher/probeabi.h>
 
@@ -42,15 +45,17 @@ namespace GammaRay {
 
 namespace InjectorFactory {
 
-AbstractInjector::Ptr createInjector(const QString &name)
+AbstractInjector::Ptr createInjector(const QString &name, const QString &executableOverride)
 {
 #ifndef Q_OS_WIN
   if (name == QLatin1String("gdb")) {
-    return AbstractInjector::Ptr(new GdbInjector);
+    return AbstractInjector::Ptr(new GdbInjector(executableOverride));
   }
   if (name == QLatin1String("lldb")) {
-    return AbstractInjector::Ptr(new LldbInjector);
+    return AbstractInjector::Ptr(new LldbInjector(executableOverride));
   }
+#else
+  Q_UNUSED(executableOverride);
 #endif
   if (name == QLatin1String("style")) {
     return AbstractInjector::Ptr(new StyleInjector);
@@ -83,25 +88,25 @@ AbstractInjector::Ptr defaultInjectorForLaunch(const ProbeABI &abi)
 {
 #if defined(Q_OS_MAC)
   if (abi.majorQtVersion() >= 5 && abi.minorQtVersion() >= 4)
-    return createInjector(QLatin1String("preload"));
-  return findFirstWorkingInjector(QStringList() << QLatin1String("lldb") << QLatin1String("gdb"));
+    return createInjector(QStringLiteral("preload"));
+  return findFirstWorkingInjector(QStringList() << QStringLiteral("lldb") << QStringLiteral("gdb"));
 #elif defined(Q_OS_UNIX)
   Q_UNUSED(abi);
-  return createInjector(QLatin1String("preload"));
+  return createInjector(QStringLiteral("preload"));
 #else
   Q_UNUSED(abi);
-  return createInjector(QLatin1String("windll"));
+  return createInjector(QStringLiteral("windll"));
 #endif
 }
 
 AbstractInjector::Ptr defaultInjectorForAttach()
 {
 #if defined(Q_OS_MAC)
-  return findFirstWorkingInjector(QStringList() << QLatin1String("lldb") << QLatin1String("gdb"));
+  return findFirstWorkingInjector(QStringList() << QStringLiteral("lldb") << QStringLiteral("gdb"));
 #elif !defined(Q_OS_WIN)
-  return findFirstWorkingInjector(QStringList() << QLatin1String("gdb") << QLatin1String("lldb"));
+  return findFirstWorkingInjector(QStringList() << QStringLiteral("gdb") << QStringLiteral("lldb"));
 #else
-  return createInjector(QLatin1String("windll"));
+  return createInjector(QStringLiteral("windll"));
 #endif
 }
 
@@ -109,11 +114,11 @@ QStringList availableInjectors()
 {
   QStringList types;
 #ifndef Q_OS_WIN
-  types << QLatin1String("preload") << QLatin1String("gdb") << QLatin1String("lldb");
+  types << QStringLiteral("preload") << QStringLiteral("gdb") << QStringLiteral("lldb");
 #else
-  types << QLatin1String("windll");
+  types << QStringLiteral("windll");
 #endif
-  types << QLatin1String("style");
+  types << QStringLiteral("style");
   return types;
 }
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,7 +34,7 @@
 #define NOMINMAX
 #endif
 
-#include <Windows.h>
+#include <qt_windows.h>
 #endif
 
 #include <QCoreApplication>
@@ -81,14 +81,15 @@ void AttachHelper::attach()
   }
   qDebug() << "attaching gammaray";
   QProcess gammaray;
+  gammaray.setProcessChannelMode(QProcess::ForwardedChannels);
   QStringList args;
-  args << "--inprocess" << "-i" << m_injector;
+  args << QStringLiteral("--inprocess") << QStringLiteral("-i") << m_injector;
 #ifdef Q_OS_WIN32
-  args << "-p" << QString::number(m_proc->pid()->dwProcessId);
+  args << QStringLiteral("-p") << QString::number(m_proc->pid()->dwProcessId);
 #else
-  args << "-p" << QString::number(m_proc->pid());
+  args << QStringLiteral("-p") << QString::number(m_proc->pid());
 #endif
-  args << "-nodialogs";
+  args << QStringLiteral("-nodialogs");
   const int ret = gammaray.execute(m_gammaray, args);
   if (ret != 0) {
     m_proc->kill();
@@ -114,6 +115,13 @@ int main(int argc, char **argv) {
   const QString injector = args.takeFirst();
   // app to run
   const QString debuggee = args.takeFirst();
+
+  // run the self-test first, and skip the test if that fails
+  // this prevents failures with Yama ptrace_scope activated for example
+  if (QProcess::execute(gammaray, QStringList() << QStringLiteral("--self-test") << injector) == 1) {
+    qWarning() << "Skipping test due to injector self-test failure!";
+    return 0;
+  }
 
   AttachHelper helper(gammaray, injector, debuggee, args);
 

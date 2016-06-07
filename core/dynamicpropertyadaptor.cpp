@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -72,7 +72,7 @@ PropertyData DynamicPropertyAdaptor::propertyData(int index) const
 
     data.setName(m_propNames.at(index));
     data.setValue(object().qtObject()->property(m_propNames.at(index)));
-    data.setClassName("<dynamic>");
+    data.setClassName(tr("<dynamic>"));
     data.setFlags(PropertyData::Writable | PropertyData::Deletable);
     return data;
 }

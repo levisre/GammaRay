@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -54,6 +54,7 @@ void MetaPropertyAdaptor::doSetObject(const ObjectInstance& oi)
 
     switch (oi.type()) {
         case ObjectInstance::Object:
+        case ObjectInstance::Value:
             m_metaObj = MetaObjectRepository::instance()->metaObject(oi.typeName());
             m_obj = oi.object();
             break;
@@ -110,6 +111,6 @@ void MetaPropertyAdaptor::writeProperty(int index, const QVariant& value)
 
     Q_ASSERT(m_metaObj && m_obj);
     const auto prop = m_metaObj->propertyAt(index);
-    prop->setValue(m_obj, value);
+    prop->setValue(m_metaObj->castForPropertyAt(m_obj, index), value);
     emit propertyChanged(index, index);
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -64,8 +64,8 @@ MaterialExtension::MaterialExtension(PropertyController *controller)
     m_materialPropertyModel(new AggregatedPropertyModel(this)),
     m_shaderModel(new QStandardItemModel(this))
 {
-  controller->registerModel(m_materialPropertyModel, "materialPropertyModel");
-  controller->registerModel(m_shaderModel, "shaderModel");
+  controller->registerModel(m_materialPropertyModel, QStringLiteral("materialPropertyModel"));
+  controller->registerModel(m_shaderModel, QStringLiteral("shaderModel"));
 }
 
 MaterialExtension::~MaterialExtension()
@@ -87,7 +87,7 @@ static const char* typeForMaterial(QSGMaterial *material)
 
 bool MaterialExtension::setObject(void *object, const QString &typeName)
 {
-  if (typeName == "QSGGeometryNode") {
+  if (typeName == QStringLiteral("QSGGeometryNode")) {
     m_node = static_cast<QSGGeometryNode*>(object);
 
     m_materialPropertyModel->setObject(ObjectInstance(m_node->material(), typeForMaterial(m_node->material())));
@@ -97,7 +97,7 @@ bool MaterialExtension::setObject(void *object, const QString &typeName)
     const QHash<QOpenGLShader::ShaderType, QStringList> shaderSources = thief->getShaderSources();
 
     m_shaderModel->clear();
-    m_shaderModel->setHorizontalHeaderLabels(QStringList() << "Shader");
+    m_shaderModel->setHorizontalHeaderLabels(QStringList() << QStringLiteral("Shader"));
     for (auto it = shaderSources.constBegin(); it != shaderSources.constEnd(); ++it) {
       foreach (const QString &source, it.value()) {
         auto *item = new QStandardItem(source);

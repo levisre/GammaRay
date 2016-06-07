@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,10 +40,15 @@
 #include "propertiesextensionclient.h"
 #include "methodsextensionclient.h"
 #include "connectionsextensionclient.h"
+#include "applicationattributetab.h"
 
 #include <common/objectbroker.h>
 
+#include <ui/uistatemanager.h>
+
+QT_BEGIN_NAMESPACE
 class QItemSelection;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -66,26 +71,29 @@ class ObjectInspectorWidget : public QWidget
 
   private slots:
     void objectSelectionChanged(const QItemSelection &selection);
+    void objectContextMenuRequested(const QPoint &pos);
 
   private:
     QScopedPointer<Ui::ObjectInspectorWidget> ui;
+    UIStateManager m_stateManager;
 };
 
 class ObjectInspectorFactory : public ToolUiFactory {
 public:
-  virtual inline QString id() const { return "GammaRay::ObjectInspector"; }
-  virtual inline QWidget *createWidget(QWidget *parentWidget) { return new ObjectInspectorWidget(parentWidget); }
-  virtual inline bool remotingSupported() const { return true; }
-  virtual void initUi()
+  QString id() const Q_DECL_OVERRIDE { return QStringLiteral("GammaRay::ObjectInspector"); }
+  QWidget *createWidget(QWidget *parentWidget) Q_DECL_OVERRIDE { return new ObjectInspectorWidget(parentWidget); }
+  bool remotingSupported() const Q_DECL_OVERRIDE { return true; }
+  void initUi() Q_DECL_OVERRIDE
   {
-    PropertyWidget::registerTab<PropertiesTab>("properties", QObject::tr("Properties"));
+    PropertyWidget::registerTab<PropertiesTab>(QStringLiteral("properties"), QObject::tr("Properties"), PropertyWidgetTabPriority::First);
     ObjectBroker::registerClientObjectFactoryCallback<PropertiesExtensionInterface*>(createExtension<PropertiesExtensionClient>);
-    PropertyWidget::registerTab<MethodsTab>("methods", QObject::tr("Methods"));
+    PropertyWidget::registerTab<MethodsTab>(QStringLiteral("methods"), QObject::tr("Methods"), PropertyWidgetTabPriority::Basic - 1);
     ObjectBroker::registerClientObjectFactoryCallback<MethodsExtensionInterface*>(createExtension<MethodsExtensionClient>);
-    PropertyWidget::registerTab<ConnectionsTab>("connections", QObject::tr("Connections"));
+    PropertyWidget::registerTab<ConnectionsTab>(QStringLiteral("connections"), QObject::tr("Connections"), PropertyWidgetTabPriority::Basic - 1);
     ObjectBroker::registerClientObjectFactoryCallback<ConnectionsExtensionInterface*>(createExtension<ConnectionsExtensionClient>);
-    PropertyWidget::registerTab<EnumsTab>("enums", QObject::tr("Enums"));
-    PropertyWidget::registerTab<ClassInfoTab>("classInfo", QObject::tr("Class Info"));
+    PropertyWidget::registerTab<EnumsTab>(QStringLiteral("enums"), QObject::tr("Enums"), PropertyWidgetTabPriority::Exotic - 1);
+    PropertyWidget::registerTab<ClassInfoTab>(QStringLiteral("classInfo"), QObject::tr("Class Info"), PropertyWidgetTabPriority::Exotic - 1);
+    PropertyWidget::registerTab<ApplicationAttributeTab>(QStringLiteral("applicationAttributes"), QObject::tr("Attributes"), PropertyWidgetTabPriority::Advanced);
   }
 };
 

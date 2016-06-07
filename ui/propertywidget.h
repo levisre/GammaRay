@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,12 +34,14 @@
 #include <QHash>
 
 #include "gammaray_ui_export.h"
-#include <common/enums.h>
 #include "propertywidgettab.h"
 
+QT_BEGIN_NAMESPACE
 class QAbstractItemModel;
 class QAbstractItemView;
 class QModelIndex;
+class QTimer;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -57,28 +59,42 @@ class GAMMARAY_UI_EXPORT PropertyWidget : public QTabWidget
     QString objectBaseName() const;
     void setObjectBaseName(const QString &baseName);
 
-    template<typename T> static void registerTab(const QString &name, const QString &label)
+    /** Register a new tab widget factory.
+     * @tparam T A widget type providing the tab UI
+     * @param name The internal object name of this extension.
+     * @param label The user-visible tab label of this extension.
+     * @param priority This is used to keep tabs in a stable order, tabs are ordered
+     *   left to right with increasing priority.
+     */
+    template<typename T> static void registerTab(const QString &name, const QString &label, int priority = 1000)
     {
-      s_tabFactories << new PropertyWidgetTabFactory<T>(name, label);
-      foreach (PropertyWidget *widget, s_propertyWidgets)
-        widget->createWidgets();
+        registerTab(new PropertyWidgetTabFactory<T>(name, label, priority));
     }
 
+  signals:
+    void tabsUpdated();
+
   private:
+    static void registerTab(PropertyWidgetTabFactoryBase *factory);
     void createWidgets();
     bool extensionAvailable(PropertyWidgetTabFactoryBase *factory) const;
+    bool factoryInUse(PropertyWidgetTabFactoryBase *factory) const;
 
   private slots:
     void updateShownTabs();
-
+    void slotCurrentTabChanged();
 
   private:
     QString m_objectBaseName;
 
-    // Contains all tab widgets we have instantiated and their corresponding factories
-    // order matters, therefore these are two vectors rather than a hash or map
-    QVector<PropertyWidgetTabFactoryBase*> m_usedFactories;
-    QVector<QWidget*> m_tabWidgets;
+    QTimer *m_tabsUpdatedTimer;
+    QWidget *m_lastManuallySelectedWidget;
+
+    struct PageInfo {
+        PropertyWidgetTabFactoryBase *factory;
+        QWidget *widget;
+    };
+    QVector<PageInfo> m_pages;
 
     PropertyControllerInterface *m_controller;
 

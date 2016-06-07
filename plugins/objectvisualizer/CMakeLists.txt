@@ -5,12 +5,13 @@ set(gammaray_objectvisualizer_plugin_srcs
 )
 
 gammaray_add_plugin(gammaray_objectvisualizer_plugin
-  gammaray_objectvisualizer.desktop
-  ${gammaray_objectvisualizer_plugin_srcs}
+  DESKTOP gammaray_objectvisualizer.desktop.in
+  SOURCES ${gammaray_objectvisualizer_plugin_srcs}
 )
 
 target_link_libraries(gammaray_objectvisualizer_plugin
   ${QT_QTCORE_LIBRARIES}
+  gammaray_kitemmodels
   gammaray_core
 )
 
@@ -20,7 +21,7 @@ target_link_libraries(gammaray_objectvisualizer_plugin
 find_path(VTK_DIR VTKConfig.cmake
   /usr/lib64/vtk /usr/lib/vtk /usr/local/lib64/vtk /usr/local/lib/vtk
 )
-find_package(VTK)
+find_package(VTK QUIET)
 set_package_properties(VTK PROPERTIES
   TYPE OPTIONAL
   DESCRIPTION "Visualization Toolkit"
@@ -45,9 +46,7 @@ set(OPTIONAL_VTK_LIBRARIES
 
 add_definitions(-DVTKGUI_ENABLED -DVTK_EXCLUDE_STRSTREAM_HEADERS)
 
-include_directories(
-  ${VTK_INCLUDE_DIRS}
-)
+include_directories(SYSTEM ${VTK_INCLUDE_DIRS})
 
 include(${VTK_USE_FILE})
 
@@ -71,8 +70,8 @@ elseif(${VTK_MAJOR_VERSION} EQUAL 6)
 endif()
 
 gammaray_add_plugin(gammaray_objectvisualizer_ui_plugin
-  gammaray_objectvisualizer_ui.desktop
-  ${gammaray_objectvisualizer_ui_plugin_srcs}
+  DESKTOP gammaray_objectvisualizer_ui.desktop.in
+  SOURCES ${gammaray_objectvisualizer_ui_plugin_srcs}
 )
 
 target_link_libraries(gammaray_objectvisualizer_ui_plugin

@@ -12,21 +12,18 @@
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
    <item row="0" column="0">
-    <widget class="QSplitter" name="splitter">
+    <widget class="QSplitter" name="mainSplitter">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
      <widget class="QWidget" name="layoutWidget_3">
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <widget class="KFilterProxySearchLine" name="modelSearchLine"/>
+        <widget class="QLineEdit" name="modelSearchLine"/>
        </item>
        <item>
-        <widget class="QTreeView" name="modelView">
+        <widget class="GammaRay::DeferredTreeView" name="modelView">
          <property name="uniformRowHeights">
-          <bool>true</bool>
-         </property>
-         <property name="allColumnsShowFocus">
           <bool>true</bool>
          </property>
         </widget>
@@ -39,7 +36,7 @@
       </property>
       <layout class="QGridLayout" name="gridLayout">
        <item row="0" column="0">
-        <widget class="QTreeView" name="modelContentView">
+        <widget class="GammaRay::DeferredTreeView" name="modelContentView">
          <property name="uniformRowHeights">
           <bool>true</bool>
          </property>
@@ -99,14 +96,11 @@
         </layout>
        </item>
        <item>
-        <widget class="QTreeView" name="modelCellView">
+        <widget class="GammaRay::DeferredTreeView" name="modelCellView">
          <property name="rootIsDecorated">
           <bool>false</bool>
          </property>
          <property name="uniformRowHeights">
-          <bool>true</bool>
-         </property>
-         <property name="allColumnsShowFocus">
           <bool>true</bool>
          </property>
         </widget>
@@ -119,9 +113,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>KFilterProxySearchLine</class>
-   <extends>QWidget</extends>
-   <header>kde/kfilterproxysearchline.h</header>
+   <class>GammaRay::DeferredTreeView</class>
+   <extends>QTreeView</extends>
+   <header location="global">ui/deferredtreeview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,16 +32,26 @@
 #include "common/objectbroker.h"
 #include "common/propertycontrollerinterface.h"
 
+#include <QTimer>
+
+#include <algorithm>
+
 using namespace GammaRay;
 
 QVector<PropertyWidgetTabFactoryBase*> PropertyWidget::s_tabFactories = QVector<PropertyWidgetTabFactoryBase*>();
 QVector<PropertyWidget*> PropertyWidget::s_propertyWidgets;
 
-PropertyWidget::PropertyWidget(QWidget *parent)
-  : QTabWidget(parent),
+PropertyWidget::PropertyWidget(QWidget *parent) :
+    QTabWidget(parent),
+    m_tabsUpdatedTimer(new QTimer(this)),
+    m_lastManuallySelectedWidget(Q_NULLPTR),
     m_controller(0)
 {
-  s_propertyWidgets.push_back(this);
+    m_tabsUpdatedTimer->setInterval(100);
+    m_tabsUpdatedTimer->setSingleShot(true);
+    s_propertyWidgets.push_back(this);
+    connect(this, SIGNAL(currentChanged(int)), this, SLOT(slotCurrentTabChanged()));
+    connect(m_tabsUpdatedTimer, SIGNAL(timeout()), this, SIGNAL(tabsUpdated()));
 }
 
 PropertyWidget::~PropertyWidget()
@@ -74,18 +84,29 @@ void PropertyWidget::setObjectBaseName(const QString &baseName)
   updateShownTabs();
 }
 
+void PropertyWidget::registerTab(PropertyWidgetTabFactoryBase* factory)
+{
+    s_tabFactories.push_back(factory);
+    foreach (PropertyWidget *widget, s_propertyWidgets)
+        widget->updateShownTabs();
+}
+
 void PropertyWidget::createWidgets()
 {
   if (m_objectBaseName.isEmpty())
     return;
   foreach (PropertyWidgetTabFactoryBase *factory, s_tabFactories) {
-    if (!m_usedFactories.contains(factory) && extensionAvailable(factory)) {
-      QWidget *widget = factory->createWidget(this);
-      m_usedFactories.push_back(factory);
-      m_tabWidgets.push_back(widget);
-      addTab(widget, factory->label());
+    if (!factoryInUse(factory) && extensionAvailable(factory)) {
+      const PageInfo pi = { factory, factory->createWidget(this) };
+      m_pages.push_back(pi);
     }
   }
+
+  std::sort(m_pages.begin(), m_pages.end(), [](const PageInfo &lhs, const PageInfo &rhs) -> bool {
+      if (lhs.factory->priority() == rhs.factory->priority())
+          return s_tabFactories.indexOf(lhs.factory) < s_tabFactories.indexOf(rhs.factory);
+      return lhs.factory->priority() < rhs.factory->priority();
+  });
 }
 
 void PropertyWidget::updateShownTabs()
@@ -93,23 +114,53 @@ void PropertyWidget::updateShownTabs()
   setUpdatesEnabled(false);
   createWidgets();
 
-  Q_ASSERT(m_tabWidgets.size() == m_usedFactories.size());
-  for (int i = 0; i < m_tabWidgets.size(); ++i) {
-    QWidget *widget = m_tabWidgets.at(i);
-    const int index = indexOf(widget);
-    auto factory = m_usedFactories.at(i);
-    if (extensionAvailable(factory)) {
-      if (index == -1)
-        addTab(widget, factory->label());
-    } else if (index != -1) {
-      removeTab(index);
-    }
-  }
+  // we distinguish between the last selected tab, and the last one that
+  // was explicitly selected. The latter might be temporarily hidden, but
+  // we will try to restore it when it becomes available again.
+  auto prevManuallySelected = m_lastManuallySelectedWidget;
+  auto prevSelectedWidget = currentWidget();
 
-  setUpdatesEnabled(true);
+  int tabIt = 0;
+  foreach (const auto &page, m_pages) {
+      const int index = indexOf(page.widget);
+      if (extensionAvailable(page.factory)) {
+          if (index != tabIt)
+              removeTab(index);
+          insertTab(tabIt, page.widget, page.factory->label());
+          ++tabIt;
+      } else if (index != -1) {
+          removeTab(index);
+      }
+    }
+
+    // try to restore selection
+    if (!prevSelectedWidget) // first time
+        setCurrentIndex(0);
+    else if (indexOf(prevManuallySelected) >= 0)
+        setCurrentWidget(prevManuallySelected);
+    else if (indexOf(prevSelectedWidget) >= 0)
+        setCurrentWidget(prevSelectedWidget);
+
+    // reset to last user selection as this possibly
+    // changed as a result of the reording above
+    m_lastManuallySelectedWidget = prevManuallySelected;
+    setUpdatesEnabled(true);
+    m_tabsUpdatedTimer->start(); // use a timer to group chained registrations.
 }
 
 bool PropertyWidget::extensionAvailable(PropertyWidgetTabFactoryBase* factory) const
 {
   return m_controller->availableExtensions().contains(m_objectBaseName + '.' + factory->name());
+}
+
+bool PropertyWidget::factoryInUse(PropertyWidgetTabFactoryBase* factory) const
+{
+    return std::find_if(m_pages.begin(), m_pages.end(), [factory](const PageInfo &pi) {
+        return pi.factory == factory;
+    }) != m_pages.end();
+}
+
+void PropertyWidget::slotCurrentTabChanged()
+{
+    m_lastManuallySelectedWidget = currentWidget();
 }

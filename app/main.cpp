@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -65,6 +65,8 @@ public:
         QObject(parent)
     {
         m_launcherWindow = new LauncherWindow;
+        // For some reason, Qt4 on OSX does not respect setQuitOnLastWindowClosed(false)
+        m_launcherWindow->setAttribute(Qt::WA_QuitOnClose, false);
         connect(m_launcherWindow, SIGNAL(accepted()), this, SLOT(launcherWindowAccepted()));
         connect(m_launcherWindow, SIGNAL(rejected()), QCoreApplication::instance(), SLOT(quit()));
         m_launcherWindow->show();
@@ -116,7 +118,13 @@ int main(int argc, char** argv)
     QApplication::setQuitOnLastWindowClosed(false);
 
     QApplication app(argc, argv);
-    Paths::setRelativeRootPath(GAMMARAY_INVERSE_BIN_DIR);
+    Paths::setRelativeRootPath(
+#if defined(Q_OS_MACX) && defined(GAMMARAY_INSTALL_QT_LAYOUT)
+        GAMMARAY_INVERSE_BUNDLE_DIR
+#else
+        GAMMARAY_INVERSE_BIN_DIR
+#endif
+    );
     ClientConnectionManager::init();
 
     Orchestrator o;

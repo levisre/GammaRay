@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,7 @@
 
 #include "gammaray_common_export.h"
 
-class QString;
+#include <QString>
 
 namespace GammaRay {
 
@@ -58,7 +58,7 @@ namespace Paths
   /** Returns the probe and plugin base path for the given probe ABI.
    * If @p probeABI is empty, the path containing the probes is returned.
    */
-  GAMMARAY_COMMON_EXPORT QString probePath(const QString& probeABI);
+  GAMMARAY_COMMON_EXPORT QString probePath(const QString& probeABI, const QString &rootPath = Paths::rootPath());
 
   /** Returns the path containing the GammaRay injector executable. */
   GAMMARAY_COMMON_EXPORT QString binPath();

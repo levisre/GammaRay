@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,17 +35,19 @@
 #include <QModelIndex>
 #include <QPair>
 
+#include <limits>
+
 namespace GammaRay {
 
 /** @brief Helper functions and constants defining the communication protocol between client and server. */
 namespace Protocol {
 
 typedef qint32 PayloadSize;
-typedef quint8 ObjectAddress;
+typedef quint16 ObjectAddress;
 typedef quint8 MessageType;
 
 static const ObjectAddress InvalidObjectAddress = 0;
-static const ObjectAddress LauncherAddress = 255;
+static const ObjectAddress LauncherAddress = std::numeric_limits<ObjectAddress>::max();
 static const MessageType InvalidMessageType = 0;
 
 enum BuildInMessageType {
@@ -69,6 +71,7 @@ enum BuildInMessageType {
   ModelSetDataRequest,
   ModelSortRequest,
   ModelSyncBarrier,
+  SelectionModelStateRequest,
 
   // server -> client
   ModelRowColumnCountReply,
@@ -97,10 +100,19 @@ enum BuildInMessageType {
 
   // probe settings provided by the launcher
   ProbeSettings,
-  ServerAddress
+  ServerAddress,
+
+  MESSAGE_TYPE_COUNT // NOTE when changing this enum, also update MessageStatisticsModel!
 };
 
 typedef QVector<QPair<qint32, qint32> > ModelIndex;
+
+/** @brief Protocol representation of an QItemSelectionRange. */
+struct ItemSelectionRange {
+    ModelIndex topLeft;
+    ModelIndex bottomRight;
+};
+typedef QVector<ItemSelectionRange> ItemSelection;
 
 /** Serializes a QModelIndex. */
 GAMMARAY_COMMON_EXPORT ModelIndex fromQModelIndex(const QModelIndex &index);
@@ -117,5 +129,9 @@ GAMMARAY_COMMON_EXPORT qint32 broadcastFormatVersion();
 }
 
 }
+
+QT_BEGIN_NAMESPACE
+Q_DECLARE_TYPEINFO(GammaRay::Protocol::ItemSelectionRange, Q_MOVABLE_TYPE);
+QT_END_NAMESPACE
 
 #endif

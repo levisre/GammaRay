@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,6 +31,7 @@
 #include "util.h"
 #include "common/metatypedeclarations.h"
 #include "varianthandler.h"
+#include "objectdataprovider.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -64,23 +65,23 @@ class ProtectedExposer : public QObject
 QString Util::displayString(const QObject *object)
 {
   if (!object) {
-    return "QObject(0x0)";
+    return QStringLiteral("QObject(0x0)");
   }
-  if (object->objectName().isEmpty()) {
-    return QString::fromLatin1("%1[this=%2]").
-      arg(object->metaObject()->className()).
-      arg(addressToString(object));
+  const auto name = ObjectDataProvider::name(object);
+  if (name.isEmpty()) {
+    return QStringLiteral("%1[this=%2]").arg(object->metaObject()->className(), addressToString(object));
   }
-  return object->objectName();
+  return name;
 }
 
 QString Util::shortDisplayString(const QObject* object)
 {
   if (!object)
-    return "0x0";
-  if (object->objectName().isEmpty())
+    return QStringLiteral("0x0");
+  const auto name = ObjectDataProvider::name(object);
+  if (name.isEmpty())
     return addressToString(object);
-  return object->objectName();
+  return name;
 }
 
 QString Util::addressToString(const void *p)
@@ -135,7 +136,7 @@ QString Util::prettyMethodSignature(const QMetaMethod& method)
       arg += ' ' + paramNames.at(i);
     args.push_back(arg);
   }
-  signature += args.join(", ") + ')';
+  signature += args.join(QStringLiteral(", ")) + ')';
   return signature;
 #endif
 }
@@ -191,10 +192,10 @@ static IconDatabase readIconData()
   if (!qApp->inherits("QGuiApplication") && !qApp->inherits("QApplication"))
     return data;
 
-  const QString basePath = QLatin1String(":/gammaray/classes/");
+  const QString basePath = QStringLiteral(":/gammaray/classes/");
   QDir dir(basePath);
 
-  const QStringList filterList = QStringList() << QLatin1String("*.png");
+  const QStringList filterList = QStringList() << QStringLiteral("*.png");
 
   foreach (const QFileInfo &classEntry, dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
     IconCacheEntry perClassData;
@@ -214,7 +215,7 @@ static IconDatabase readIconData()
       // special property-specific icons with file name format prop1=val;prop2=val.png
       QString propString(iconName);
       propString.chop(4);
-      const QStringList props = propString.split(QLatin1String(";"));
+      const QStringList props = propString.split(';');
       IconCacheEntry::PropertyMap propertyMap;
       foreach (const QString &prop, props) {
         const QStringList keyValue = prop.split(QLatin1Char('='));
@@ -273,12 +274,13 @@ QVariant Util::iconForObject(const QObject *obj)
 
 QString Util::tooltipForObject(const QObject* object)
 {
-  return QObject::tr("<p style='white-space:pre'>Object name: %1\nType: %2\nParent: %3 (Address: %4)\nNumber of children: %5</p>").
-    arg(object->objectName().isEmpty() ? "&lt;Not set&gt;" : object->objectName()).
-    arg(object->metaObject()->className()).
-    arg(object->parent() ? object->parent()->metaObject()->className() : "<No parent>").
-    arg(Util::addressToString(object->parent())).
-    arg(object->children().size());
+  return QObject::tr("<p style='white-space:pre'>Object name: %1\nType: %2\nParent: %3 (Address: %4)\nNumber of children: %5</p>").arg(
+      object->objectName().isEmpty() ? QStringLiteral("&lt;Not set&gt;") : object->objectName(),
+      object->metaObject()->className(),
+      object->parent() ? object->parent()->metaObject()->className() : QStringLiteral("<No parent>"),
+      Util::addressToString(object->parent()),
+      QString::number(object->children().size())
+    );
 }
 
 void Util::drawTransparencyPattern(QPainter *painter, const QRect &rect, int squareSize)

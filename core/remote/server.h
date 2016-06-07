@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,14 +29,16 @@
 #ifndef GAMMARAY_SERVER_H
 #define GAMMARAY_SERVER_H
 
-#include "../gammaray_core_export.h"
+#include "gammaray_core_export.h"
 
 #include <common/endpoint.h>
 #include <common/objectbroker.h>
 
+QT_BEGIN_NAMESPACE
 class QTcpServer;
 class QUdpSocket;
 class QTimer;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 

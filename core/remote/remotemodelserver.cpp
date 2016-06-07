@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,7 +34,6 @@
 #include <common/modelevent.h>
 
 #include <QAbstractItemModel>
-#include <QCoreApplication>
 #include <QSortFilterProxyModel>
 #include <QDataStream>
 #include <QDebug>
@@ -87,10 +86,8 @@ void RemoteModelServer::setModel(QAbstractItemModel *model)
 void RemoteModelServer::connectModel()
 {
   Q_ASSERT(m_model);
-  ModelEvent event(true);
-  QCoreApplication::sendEvent(m_model, &event);
+  Model::used(m_model);
 
-  connect(m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), SLOT(dataChanged(QModelIndex,QModelIndex)));
   connect(m_model, SIGNAL(headerDataChanged(Qt::Orientation,int,int)), SLOT(headerDataChanged(Qt::Orientation,int,int)));
   connect(m_model, SIGNAL(rowsInserted(QModelIndex,int,int)), SLOT(rowsInserted(QModelIndex,int,int)));
   connect(m_model, SIGNAL(rowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)), SLOT(rowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)));
@@ -100,8 +97,10 @@ void RemoteModelServer::connectModel()
   connect(m_model, SIGNAL(columnsMoved(QModelIndex,int,int,QModelIndex,int)), SLOT(columnsMoved(QModelIndex,int,int,QModelIndex,int)));
   connect(m_model, SIGNAL(columnsRemoved(QModelIndex,int,int)), SLOT(columnsRemoved(QModelIndex,int,int)));
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+  connect(m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), SLOT(dataChanged(QModelIndex,QModelIndex)));
   connect(m_model, SIGNAL(layoutChanged()), SLOT(layoutChanged()));
 #else
+  connect(m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)), SLOT(dataChanged(QModelIndex,QModelIndex,QVector<int>)));
   connect(m_model, SIGNAL(layoutChanged(QList<QPersistentModelIndex>,QAbstractItemModel::LayoutChangeHint)),
           this, SLOT(layoutChanged(QList<QPersistentModelIndex>,QAbstractItemModel::LayoutChangeHint)));
 #endif
@@ -112,10 +111,8 @@ void RemoteModelServer::connectModel()
 void RemoteModelServer::disconnectModel()
 {
   Q_ASSERT(m_model);
-  ModelEvent event(false);
-  QCoreApplication::sendEvent(m_model, &event);
+  Model::unused(m_model);
 
-  disconnect(m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(dataChanged(QModelIndex,QModelIndex)));
   disconnect(m_model, SIGNAL(headerDataChanged(Qt::Orientation,int,int)), this, SLOT(headerDataChanged(Qt::Orientation,int,int)));
   disconnect(m_model, SIGNAL(rowsInserted(QModelIndex,int,int)), this, SLOT(rowsInserted(QModelIndex,int,int)));
   disconnect(m_model, SIGNAL(rowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)), this, SLOT(rowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)));
@@ -125,8 +122,10 @@ void RemoteModelServer::disconnectModel()
   disconnect(m_model, SIGNAL(columnsMoved(QModelIndex,int,int,QModelIndex,int)), this, SLOT(columnsMoved(QModelIndex,int,int,QModelIndex,int)));
   disconnect(m_model, SIGNAL(columnsRemoved(QModelIndex,int,int)), this, SLOT(columnsRemoved(QModelIndex,int,int)));
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+  disconnect(m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(dataChanged(QModelIndex,QModelIndex)));
   disconnect(m_model, SIGNAL(layoutChanged()), this, SLOT(layoutChanged()));
 #else
+  disconnect(m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)), this, SLOT(dataChanged(QModelIndex,QModelIndex,QVector<int>)));
   disconnect(m_model, SIGNAL(layoutChanged(QList<QPersistentModelIndex>,QAbstractItemModel::LayoutChangeHint)),
              this, SLOT(layoutChanged(QList<QPersistentModelIndex>,QAbstractItemModel::LayoutChangeHint)));
 #endif
@@ -147,8 +146,14 @@ void RemoteModelServer::newRequest(const GammaRay::Message &msg)
       msg.payload() >> index;
       const QModelIndex qmIndex = Protocol::toQModelIndex(m_model, index);
 
+      qint32 rowCount = -1, columnCount = -1;
+      if (index.isEmpty() || qmIndex.isValid()) {
+        rowCount = m_model->rowCount(qmIndex);
+        columnCount = m_model->columnCount(qmIndex);
+      }
+
       Message msg(m_myAddress, Protocol::ModelRowColumnCountReply);
-      msg.payload() << index << m_model->rowCount(qmIndex) << m_model->columnCount(qmIndex);
+      msg.payload() << index << rowCount << columnCount;
       sendMessage(msg);
       break;
     }
@@ -245,10 +250,6 @@ QMap<int, QVariant> RemoteModelServer::filterItemData(const QMap< int, QVariant 
       if (!icon.isNull())
         it.value() = icon.pixmap(QSize(16, 16));
       ++it;
-    } else if (qstrcmp(it.value().typeName(), "QJSValue") == 0) {
-      // QJSValue tries to serialize nested elements and asserts if that fails
-      // too bad it can contain QObject* as nested element, which obviously can't be serialized...
-      it = itemData.erase(it);
     } else if (canSerialize(it.value())) {
       ++it;
     } else {
@@ -261,12 +262,24 @@ QMap<int, QVariant> RemoteModelServer::filterItemData(const QMap< int, QVariant 
 
 bool RemoteModelServer::canSerialize(const QVariant& value) const
 {
+  if (qstrcmp(value.typeName(), "QJSValue") == 0) {
+    // QJSValue tries to serialize nested elements and asserts if that fails
+    // too bad it can contain QObject* as nested element, which obviously can't be serialized...
+    return false;
+  }
+
   // recurse into containers
 #if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
   if (value.canConvert<QVariantList>()) {
     QSequentialIterable it = value.value<QSequentialIterable>();
     foreach (const QVariant &v, it) {
       if (!canSerialize(v))
+        return false;
+    }
+  } else if (value.canConvert<QVariantMap>()) {
+    auto iterable = value.value<QAssociativeIterable>();
+    for (auto it = iterable.begin(); it != iterable.end(); ++it) {
+      if (!canSerialize(it.value()))
         return false;
     }
   }
@@ -291,13 +304,12 @@ void RemoteModelServer::modelMonitored(bool monitored)
   }
 }
 
-void RemoteModelServer::dataChanged(const QModelIndex& begin, const QModelIndex& end)
+void RemoteModelServer::dataChanged(const QModelIndex& begin, const QModelIndex& end, const QVector<int> &roles)
 {
-  // TODO check if somebody is listening (here or in Server?)
   if (!isConnected())
     return;
   Message msg(m_myAddress, Protocol::ModelContentChanged);
-  msg.payload() << Protocol::fromQModelIndex(begin) << Protocol::fromQModelIndex(end);
+  msg.payload() << Protocol::fromQModelIndex(begin) << Protocol::fromQModelIndex(end) << roles;
   sendMessage(msg);
 }
 

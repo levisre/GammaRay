@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,7 +39,11 @@
 #define GAMMARAY_OBJECTMODELBASE_H
 
 #include "util.h"
+#include "objectdataprovider.h"
+
+#include <common/probecontrollerinterface.h>
 #include <common/objectmodel.h>
+#include <common/sourcelocation.h>
 
 #include <QModelIndex>
 #include <QObject>
@@ -59,6 +63,8 @@ class ObjectModelBase : public Base
      */
     explicit ObjectModelBase<Base>(QObject *parent) : Base(parent)
     {
+      qRegisterMetaType<ObjectId>();
+      qRegisterMetaTypeStreamOperators<ObjectId>();
     }
 
     /**
@@ -88,17 +94,40 @@ class ObjectModelBase : public Base
         if (index.column() == 0) {
           return Util::shortDisplayString(object);
         } else if (index.column() == 1) {
-          return object->metaObject()->className();
+          return ObjectDataProvider::typeName(object);
         }
       } else if (role == ObjectModel::ObjectRole) {
         return QVariant::fromValue(object);
+      } else if (role == ObjectModel::ObjectIdRole) {
+        return QVariant::fromValue(ObjectId(object));
       } else if (role == Qt::ToolTipRole) {
           return Util::tooltipForObject(object);
       } else if (role == Qt::DecorationRole && index.column() == 0) {
         return Util::iconForObject(object);
+      } else if (role == ObjectModel::CreationLocationRole) {
+          const auto loc = ObjectDataProvider::creationLocation(object);
+          if (loc.isValid())
+              return QVariant::fromValue(loc);
+      } else if (role == ObjectModel::DeclarationLocationRole) {
+          const auto loc = ObjectDataProvider::declarationLocation(object);
+          if (loc.isValid())
+              return QVariant::fromValue(loc);
       }
 
       return QVariant();
+    }
+
+    QMap<int, QVariant> itemData(const QModelIndex& index) const
+    {
+      QMap<int, QVariant> map = Base::itemData(index);
+      map.insert(ObjectModel::ObjectIdRole, this->data(index, ObjectModel::ObjectIdRole));
+      auto loc = this->data(index, ObjectModel::CreationLocationRole);
+      if (loc.isValid())
+          map.insert(ObjectModel::CreationLocationRole, loc);
+      loc = this->data(index, ObjectModel::DeclarationLocationRole);
+      if (loc.isValid())
+          map.insert(ObjectModel::DeclarationLocationRole, loc);
+      return map;
     }
 
     /**

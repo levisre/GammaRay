@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,7 +26,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <config-gammaray.h>
 #include "launcher.h"
 #include "probefinder.h"
 #include "probeabi.h"
@@ -36,18 +35,15 @@
 #include "injector/injectorfactory.h"
 
 #include <common/endpoint.h>
-#include <common/sharedmemorylocker.h>
 #include <common/message.h>
 
 #include <QByteArray>
-#include <QBuffer>
 #include <QCoreApplication>
 #include <QDebug>
 #include <QFileInfo>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <QUrl>
-#include <QSharedMemory>
-#include <QSystemSemaphore>
-#include <QThread>
 
 #include <iostream>
 
@@ -65,9 +61,8 @@ struct LauncherPrivate
 {
   LauncherPrivate(const LaunchOptions& options) :
     options(options),
-#ifdef HAVE_SHM
-    shm(0),
-#endif
+    server(Q_NULLPTR),
+    socket(Q_NULLPTR),
     state(Initial),
     exitCode(0)
   {}
@@ -81,16 +76,16 @@ struct LauncherPrivate
         return InjectorFactory::defaultInjectorForLaunch(options.probeABI());
       }
     }
-    return InjectorFactory::createInjector(options.injectorType());
+    return InjectorFactory::createInjector(options.injectorType(), options.injectorTypeExecutableOverride());
   }
 
   LaunchOptions options;
-#ifdef HAVE_SHM
-  QSharedMemory *shm;
-#endif
+  QLocalServer *server;
+  QLocalSocket *socket;
   ClientLauncher client;
   QTimer safetyTimer;
   AbstractInjector::Ptr injector;
+  QUrl serverAddress;
   QString errorMessage;
   int state;
   int exitCode;
@@ -99,28 +94,6 @@ struct LauncherPrivate
 }
 
 using namespace GammaRay;
-
-class SemaphoreWaiter : public QThread
-{
-  Q_OBJECT
-public:
-  explicit SemaphoreWaiter(qint64 id, QObject *parent = 0) : QThread(parent), m_id(id) {}
-  ~SemaphoreWaiter() {}
-  void run()
-  {
-#ifdef HAVE_SHM
-    QSystemSemaphore sem("gammaray-semaphore-" + QString::number(m_id), 0, QSystemSemaphore::Create);
-    sem.acquire();
-    emit semaphoreReleased();
-#endif
-  }
-
-signals:
-  void semaphoreReleased();
-
-private:
-  qint64 m_id;
-};
 
 Launcher::Launcher(const LaunchOptions& options, QObject* parent):
   QObject(parent),
@@ -157,18 +130,14 @@ bool Launcher::start()
 {
   auto probeDll = d->options.probePath();
   if (probeDll.isEmpty()) {
-    probeDll = ProbeFinder::findProbe(QLatin1String(GAMMARAY_PROBE_NAME), d->options.probeABI());
+    probeDll = ProbeFinder::findProbe(d->options.probeABI());
     d->options.setProbePath(QFileInfo(probeDll).absolutePath());
   }
 
   sendLauncherId();
-  sendProbeSettings();
+  setupProbeSettingsServer();
 
   if (d->options.uiMode() != LaunchOptions::InProcessUi) {
-    SemaphoreWaiter *semWaiter = new SemaphoreWaiter(instanceIdentifier(), this);
-    connect(semWaiter, SIGNAL(semaphoreReleased()), this, SLOT(semaphoreReleased()), Qt::QueuedConnection);
-    semWaiter->start();
-
     d->safetyTimer.start();
   }
   d->injector = d->createInjector();
@@ -185,21 +154,25 @@ bool Launcher::start()
     return false;
   }
 
-  connect(d->injector.data(), SIGNAL(started()), this, SIGNAL(started()));
+  connect(d->injector.data(), SIGNAL(started()), this, SLOT(restartTimer()));
   connect(d->injector.data(), SIGNAL(finished()), this, SLOT(injectorFinished()), Qt::QueuedConnection);
-  connect(d->injector.data(), SIGNAL(attached()), this, SIGNAL(attached()), Qt::QueuedConnection);
+  if (d->options.isLaunch())
+      connect(d->injector.data(), SIGNAL(attached()), this, SLOT(injectorFinished()), Qt::QueuedConnection);
+  connect(d->injector.data(), SIGNAL(stderrMessage(QString)), this, SIGNAL(stderrMessage(QString)));
+  connect(d->injector.data(), SIGNAL(stdoutMessage(QString)), this, SIGNAL(stdoutMessage(QString)));
 
   bool success = false;
   if (d->options.isLaunch()) {
-    success = d->injector->launch(d->options.launchArguments(), probeDll, QLatin1String("gammaray_probe_inject"), d->options.processEnvironment());
+    d->injector->setWorkingDirectory(d->options.workingDirectory());
+    success = d->injector->launch(d->options.launchArguments(), probeDll, QStringLiteral("gammaray_probe_inject"), d->options.processEnvironment());
   } else if (d->options.isAttach()) {
-    success = d->injector->attach(d->options.pid(), probeDll, QLatin1String("gammaray_probe_inject"));
+    success = d->injector->attach(d->options.pid(), probeDll, QStringLiteral("gammaray_probe_attach"));
   }
 
   if (!success) {
     QString errorMessage;
     if (d->options.isLaunch())
-      errorMessage = tr("Failed to launch target '%1'.").arg(d->options.launchArguments().join(" "));
+      errorMessage = tr("Failed to launch target '%1'.").arg(d->options.launchArguments().join(QStringLiteral(" ")));
     if (d->options.isAttach())
       errorMessage = tr("Failed to attach to target with PID %1.").arg(d->options.pid());
     if (!d->injector->errorString().isEmpty())
@@ -220,102 +193,28 @@ QString Launcher::errorMessage() const
   return d->errorMessage;
 }
 
+QUrl Launcher::serverAddress() const
+{
+  return d->serverAddress;
+}
+
 void Launcher::sendLauncherId()
 {
   // if we are launching a new process, make sure it knows how to talk to us
   if (d->options.isLaunch()) {
-      d->options.setProbeSetting("LAUNCHER_ID", instanceIdentifier());
+      d->options.setProbeSetting(QStringLiteral("LAUNCHER_ID"), instanceIdentifier());
   }
 }
 
-void Launcher::sendProbeSettings()
+void Launcher::setupProbeSettingsServer()
 {
-#ifdef HAVE_SHM
-  QByteArray ba; // need a full copy of this first, since there's no QIODevice to directly work on void*...
-  QBuffer buffer(&ba);
-  buffer.open(QIODevice::WriteOnly);
-
-  {
-    Message msg(Protocol::LauncherAddress, Protocol::ServerVersion);
-    msg.payload() << Protocol::version();
-    msg.write(&buffer);
-  }
-
-  {
-    Message msg(Protocol::LauncherAddress, Protocol::ProbeSettings);
-    msg.payload() << d->options.probeSettings();
-    msg.write(&buffer);
-  }
-
-  buffer.close();
-
-  d->shm = new QSharedMemory(QLatin1String("gammaray-") + QString::number(instanceIdentifier()), this);
-  if (!d->shm->create(qMax(ba.size(), 1024))) { // make sure we have enough space for the answer
-    qWarning() << Q_FUNC_INFO << "Failed to obtain shared memory for probe settings:" << d->shm->errorString()
-      << "- error code (QSharedMemory::SharedMemoryError):" << d->shm->error();
-    delete d->shm;
-    d->shm = 0;
-    return;
-  }
-
-  SharedMemoryLocker locker(d->shm);
-  qMemCopy(d->shm->data(), ba.constData(), ba.size());
-  if (d->shm->size() > ba.size()) // Windows...
-    qMemSet(static_cast<char*>(d->shm->data()) + ba.size(), 0xff, d->shm->size() - ba.size());
-#endif
-}
-
-void Launcher::semaphoreReleased()
-{
-  d->safetyTimer.stop();
-
-  QUrl serverAddress;
-#ifdef HAVE_SHM
-  {
-    SharedMemoryLocker locker(d->shm);
-    QByteArray ba = QByteArray::fromRawData(static_cast<const char*>(d->shm->data()), d->shm->size());
-    QBuffer buffer(&ba);
-    buffer.open(QIODevice::ReadOnly);
-
-    while (Message::canReadMessage(&buffer)) {
-      const Message msg = Message::readMessage(&buffer);
-      switch (msg.type()) {
-        case Protocol::ServerAddress:
-        {
-          msg.payload() >> serverAddress;
-          break;
-        }
-        default:
-          continue;
-      }
-    }
-  }
-  delete d->shm;
-  d->shm = 0;
-
-  if (serverAddress.isEmpty()) {
-    qWarning() << "Unable to receive server address.";
-    QCoreApplication::exit(1);
-    return;
-  }
-#else
-  serverAddress.setScheme("tcp");
-  serverAddress.setHost("127.0.0.1");
-  serverAddress.setPort(Endpoint::defaultPort());
-#endif
-
-  std::cout << "GammaRay server listening on: " << qPrintable(serverAddress.toString()) << std::endl;
-
-  if (d->options.uiMode() != LaunchOptions::OutOfProcessUi) // inject only, so we are done here
-    return;
-
-  // safer, since we will always be running locally, and the server might give us an external address
-  if (serverAddress.scheme() == "tcp")
-    serverAddress.setHost("127.0.0.1");
-
-  startClient(serverAddress);
-  d->state |= ClientStarted;
-  checkDone();
+    d->server = new QLocalServer(this);
+    d->server->setMaxPendingConnections(1);
+    connect(d->server, SIGNAL(newConnection()), this, SLOT(newConnection()));
+    const QString serverName = QStringLiteral("gammaray-") + QString::number(instanceIdentifier());
+    d->server->removeServer(serverName);
+    if (!d->server->listen(serverName))
+        qWarning() << "Unable to send probe settings:" << d->server->errorString();
 }
 
 void Launcher::startClient(const QUrl& serverAddress)
@@ -362,9 +261,16 @@ void Launcher::timeout()
   checkDone();
 }
 
+void Launcher::restartTimer()
+{
+    d->safetyTimer.stop();
+    d->safetyTimer.start();
+}
+
+
 void Launcher::checkDone()
 {
-  if (d->state == Complete || (d->options.uiMode() != LaunchOptions::OutOfProcessUi && d->state == InjectorFinished)) {
+  if (d->state == Complete || (d->options.uiMode() == LaunchOptions::InProcessUi && d->state == InjectorFinished)) {
     emit finished();
   }
   else if ((d->state & InjectorFailed) != 0) {
@@ -375,4 +281,55 @@ void Launcher::checkDone()
   }
 }
 
-#include "launcher.moc"
+void Launcher::newConnection()
+{
+    if (d->socket)
+        return;
+    d->socket = d->server->nextPendingConnection();
+    connect(d->socket, SIGNAL(readyRead()), this, SLOT(readyRead()));
+
+    {
+        Message msg(Protocol::LauncherAddress, Protocol::ServerVersion);
+        msg.payload() << Protocol::version();
+        msg.write(d->socket);
+    }
+
+    {
+        Message msg(Protocol::LauncherAddress, Protocol::ProbeSettings);
+        msg.payload() << d->options.probeSettings();
+        msg.write(d->socket);
+    }
+}
+
+void Launcher::readyRead()
+{
+    while (Message::canReadMessage(d->socket)) {
+        const auto msg = Message::readMessage(d->socket);
+        switch (msg.type()) {
+            case Protocol::ServerAddress:
+            {
+                msg.payload() >> d->serverAddress;
+                break;
+            }
+            default:
+                continue;
+        }
+    }
+
+    if (d->serverAddress.isEmpty())
+        return;
+
+    d->safetyTimer.stop();
+    std::cout << "GammaRay server listening on: " << qPrintable(d->serverAddress.toString()) << std::endl;
+
+    if (d->options.uiMode() == LaunchOptions::OutOfProcessUi) {
+        startClient(d->serverAddress);
+    }
+
+    if (d->options.isAttach())
+        emit attached();
+
+    d->state |= ClientStarted;
+    checkDone();
+    emit started();
+}

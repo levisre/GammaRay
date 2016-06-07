@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,9 +34,11 @@
 #include "enumsextension.h"
 #include "propertiesextension.h"
 #include "connectionsextension.h"
+#include "applicationattributeextension.h"
 
 #include <common/objectbroker.h>
 #include <common/objectmodel.h>
+#include <remote/serverproxymodel.h>
 
 #include <3rdparty/kde/krecursivefilterproxymodel.h>
 
@@ -50,11 +52,11 @@ ObjectInspector::ObjectInspector(ProbeInterface *probe, QObject *parent)
 {
   registerPCExtensions();
 
-  m_propertyController = new PropertyController("com.kdab.GammaRay.ObjectInspector", this);
+  m_propertyController = new PropertyController(QStringLiteral("com.kdab.GammaRay.ObjectInspector"), this);
 
-  auto proxy = new KRecursiveFilterProxyModel(this);
+  auto proxy = new ServerProxyModel<KRecursiveFilterProxyModel>(this);
   proxy->setSourceModel(probe->objectTreeModel());
-  probe->registerModel("com.kdab.GammaRay.ObjectInspectorTree", proxy);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.ObjectInspectorTree"), proxy);
 
   m_selectionModel = ObjectBroker::selectionModel(proxy);
 
@@ -63,22 +65,6 @@ ObjectInspector::ObjectInspector(ProbeInterface *probe, QObject *parent)
           SLOT(objectSelectionChanged(QItemSelection)));
 
   connect(probe->probe(), SIGNAL(objectSelected(QObject*,QPoint)), SLOT(objectSelected(QObject*)));
-
-  // when we end up here the object model isn't populated yet
-  QMetaObject::invokeMethod(this, "selectDefaultItem", Qt::QueuedConnection);
-}
-
-void ObjectInspector::selectDefaultItem()
-{
-  // select the qApp object (if any) in the object treeView
-  const QAbstractItemModel *viewModel = m_selectionModel->model();
-  const QModelIndexList matches = viewModel->match(viewModel->index(0, 0),
-      ObjectModel::ObjectRole, QVariant::fromValue<QObject*>(qApp), 1,
-      Qt::MatchFlags(Qt::MatchExactly|Qt::MatchRecursive));
-
-  if (!matches.isEmpty()) {
-    m_selectionModel->setCurrentIndex(matches.first(), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-  }
 }
 
 void ObjectInspector::objectSelectionChanged(const QItemSelection& selection)
@@ -106,7 +92,7 @@ void ObjectInspector::objectSelected(QObject *object)
   model->match(model->index(0, 0),
                ObjectModel::ObjectRole,
                QVariant::fromValue<QObject*>(object), 1,
-               Qt::MatchExactly | Qt::MatchRecursive);
+               Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
   if (indexList.isEmpty()) {
     return;
   }
@@ -128,4 +114,15 @@ void ObjectInspector::registerPCExtensions()
   PropertyController::registerExtension<EnumsExtension>();
   PropertyController::registerExtension<PropertiesExtension>();
   PropertyController::registerExtension<ConnectionsExtension>();
+  PropertyController::registerExtension<ApplicationAttributeExtension>();
+}
+
+QString ObjectInspectorFactory::name() const
+{
+  return tr("Objects");
+}
+
+QVector<QByteArray> GammaRay::ObjectInspectorFactory::selectableTypes() const
+{
+    return QVector<QByteArray>() << QObject::staticMetaObject.className();
 }

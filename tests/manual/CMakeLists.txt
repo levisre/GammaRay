@@ -11,6 +11,9 @@ if(Qt5Widgets_FOUND OR QT_QTGUI_FOUND)
     ${QT_QTCORE_LIBRARIES}
     ${QT_QTGUI_LIBRARIES}
   )
+
+  add_executable(modelstest modelstest.cpp)
+  target_link_libraries(modelstest ${QT_QTGUI_LIBRARIES} gammaray_shared_test_data)
 endif()
 
 add_executable(minimalcoreapplication minimalcoreapplication.cpp)
@@ -46,9 +49,12 @@ target_link_libraries(signalmonitortest
   ${QT_QTGUI_LIBRARIES}
 )
 
-if(QNXNTO)
-  target_link_libraries(messagemodeltest cpp)
-endif()
-
 add_executable(objectreparenttest objectreparenttest.cpp)
 target_link_libraries(objectreparenttest ${QT_QTCORE_LIBRARIES})
+
+if(Qt5QuickWidgets_FOUND)
+  set(quickwidgettest_srcs quickwidgettest.cpp)
+  qt4_add_resources(quickwidgettest_srcs quickwidgettest.qrc)
+  add_executable(quickwidgettest ${quickwidgettest_srcs})
+  target_link_libraries(quickwidgettest Qt5::QuickWidgets)
+endif()

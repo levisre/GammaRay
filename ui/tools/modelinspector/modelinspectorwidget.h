@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,10 +29,14 @@
 #ifndef GAMMARAY_MODELINSPECTOR_MODELINSPECTORWIDGET_H
 #define GAMMARAY_MODELINSPECTOR_MODELINSPECTORWIDGET_H
 
+#include <ui/uistatemanager.h>
+
 #include <QWidget>
 
+QT_BEGIN_NAMESPACE
 class QItemSelection;
 class QModelIndex;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -57,6 +61,7 @@ class ModelInspectorWidget : public QWidget
 
   private:
     QScopedPointer<Ui::ModelInspectorWidget> ui;
+    UIStateManager m_stateManager;
     ModelInspectorInterface *m_interface;
 };
 

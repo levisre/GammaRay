@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,13 +29,13 @@
 #ifndef GAMMARAY_SIGNALHISTORYVIEW_H
 #define GAMMARAY_SIGNALHISTORYVIEW_H
 
-#include <QTreeView>
+#include "ui/deferredtreeview.h"
 
 namespace GammaRay {
 
 class SignalHistoryDelegate;
 
-class SignalHistoryView : public QTreeView
+class SignalHistoryView : public DeferredTreeView
 {
   Q_OBJECT
     Q_PROPERTY(QScrollBar *eventScrollBar READ eventScrollBar WRITE setEventScrollBar NOTIFY eventScrollBarChanged)

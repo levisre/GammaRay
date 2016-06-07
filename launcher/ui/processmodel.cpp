@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,6 +32,8 @@
 #include <probefinder.h>
 
 #include <QDebug>
+
+#include <algorithm>
 
 using namespace GammaRay;
 
@@ -66,7 +68,7 @@ void ProcessModel::setProcesses(const ProcDataList &processes)
   beginResetModel();
   m_data = processes;
   // sort for merging to work properly
-  qStableSort(m_data);
+  std::stable_sort(m_data.begin(), m_data.end());
   endResetModel();
 }
 
@@ -74,7 +76,7 @@ void ProcessModel::mergeProcesses(const ProcDataList &processes)
 {
   // sort like m_data
   ProcDataList sortedProcesses = processes;
-  qStableSort(sortedProcesses);
+  std::stable_sort(sortedProcesses.begin(), sortedProcesses.end());
 
   // iterator over m_data
   int i = 0;
@@ -178,12 +180,13 @@ QVariant ProcessModel::data(const QModelIndex &index, int role) const
     }
   } else if (role == Qt::ToolTipRole) {
     const ProbeABI bestABI = ProbeFinder::findBestMatchingABI(data.abi, m_availableABIs);
-    return tr("Name: %1\nPID: %2\nOwner: %3\nQt ABI: %4\nProbe available: %5")
-      .arg(data.image.isEmpty() ? data.name : data.image)
-      .arg(data.ppid)
-      .arg(data.user)
-      .arg(data.abi.displayString())
-      .arg(bestABI.isValid() ? tr("yes") : tr("no"));
+    return tr("Name: %1\nPID: %2\nOwner: %3\nQt ABI: %4\nProbe available: %5").arg(
+      data.image.isEmpty() ? data.name : data.image,
+      data.ppid,
+      data.user,
+      data.abi.displayString(),
+      bestABI.isValid() ? tr("yes") : tr("no")
+    );
   } else if (role == PIDRole) {
     return data.ppid.toInt(); // why is this a QString in the first place!?
   } else if (role == NameRole) {

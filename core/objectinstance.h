@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,8 +35,10 @@
 #include <QPointer>
 #include <QVariant>
 
+QT_BEGIN_NAMESPACE
 class QObject;
 struct QMetaObject;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -51,6 +53,7 @@ public:
         QtGadget,
         QtVariant,
         Object,
+        Value
     };
     ObjectInstance();
     ObjectInstance(QObject *obj); //krazy:exclude=explicit
@@ -59,6 +62,10 @@ public:
     /// use for things that only exist as GammaRay meta objects
     ObjectInstance(void *obj, const char* typeName);
     ObjectInstance(const QVariant &value); //krazy:exclude=explicit
+    ObjectInstance(const ObjectInstance &other);
+
+    ObjectInstance& operator=(const ObjectInstance& other);
+    bool operator==(const ObjectInstance &rhs) const;
 
     Type type() const;
 
@@ -67,7 +74,7 @@ public:
     /// only valid for QtObject, QtGadget and Object
     void* object() const;
     /// only valid for QtVariant
-    QVariant variant() const;
+    const QVariant& variant() const;
 
     /// only valid for QtObject and QtGadget
     const QMetaObject* metaObject() const;
@@ -78,6 +85,9 @@ public:
     bool isValid() const;
 
 private:
+    void copy(const ObjectInstance &other);
+    void unpackVariant();
+
     void *m_obj;
     QPointer<QObject> m_qtObj;
     QVariant m_variant;

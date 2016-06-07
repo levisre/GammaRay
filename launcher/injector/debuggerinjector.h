@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -43,23 +43,32 @@ class DebuggerInjector : public AbstractInjector
   public:
     DebuggerInjector();
     ~DebuggerInjector();
+
+    // The debugger executable location
+    QString filePath() const;
+    void setFilePath(const QString &filePath);
+
     void stop() Q_DECL_OVERRIDE;
 
-    bool selfTest() Q_DECL_OVERRIDE;
-
-    QString errorString() Q_DECL_OVERRIDE;
-    int exitCode() Q_DECL_OVERRIDE;
     QProcess::ExitStatus exitStatus() Q_DECL_OVERRIDE;
     QProcess::ProcessError processError() Q_DECL_OVERRIDE;
+    int exitCode() Q_DECL_OVERRIDE;
+    QString errorString() Q_DECL_OVERRIDE;
+    bool selfTest() Q_DECL_OVERRIDE;
 
   protected:
-    virtual QString debuggerExecutable() const = 0;
     /** Execute a raw command on the debugger. */
-    virtual void execCmd(const QByteArray &cmd, bool waitForWritten = true) = 0;
+    virtual void execCmd(const QByteArray &cmd, bool waitForWritten = true);
+    /** Turn off confirmations */
+    virtual void disableConfirmations() = 0;
     /** Break in the function @p function, specify name without parenthesis. */
     virtual void addFunctionBreakpoint(const QByteArray &function) = 0;
     /** Break in the method @p method, specify name without parenthesis. */
     virtual void addMethodBreakpoint(const QByteArray &method) = 0;
+    /** Clear all breakpoints */
+    virtual void clearBreakpoints() = 0;
+    /** Print current thread backtrace */
+    virtual void printBacktrace() = 0;
     /** Load symbols for the given shared library. */
     virtual void loadSymbols(const QByteArray &library);
 
@@ -82,8 +91,17 @@ class DebuggerInjector : public AbstractInjector
     int mExitCode;
     QProcess::ProcessError mProcessError;
     QProcess::ExitStatus mExitStatus;
+    QString m_filePath;
     QString mErrorString;
     bool mManualError;
+
+  protected:
+    enum Orientation {
+      In,
+      Out
+    };
+
+    void processLog(DebuggerInjector::Orientation orientation, bool isError, const QString &text);
 };
 
 }

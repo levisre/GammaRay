@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,7 @@
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
 #include <private/qguiplatformplugin_p.h>
 #else
-#include <qpa/qplatformtheme.h>           //krazy:exclude=camelcase
+#include <qpa/qplatformtheme.h>
 #include <private/qguiapplication_p.h>
 #endif
 
@@ -66,7 +66,7 @@ QStyle *InjectorStylePlugin::create(const QString &)
 
 QStringList InjectorStylePlugin::keys() const
 {
-  return QStringList() << QLatin1String("gammaray-injector");
+  return QStringList() << QStringLiteral("gammaray-injector");
 }
 
 void InjectorStylePlugin::inject()
@@ -101,4 +101,3 @@ void InjectorStylePlugin::inject()
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
 Q_EXPORT_PLUGIN2(gammaray_injector_style, GammaRay::InjectorStylePlugin)
 #endif
-

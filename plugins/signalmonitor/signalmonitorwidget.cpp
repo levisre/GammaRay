@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -49,6 +49,7 @@ static QObject* signalMonitorClientFactory(const QString&, QObject *parent)
 SignalMonitorWidget::SignalMonitorWidget(QWidget *parent)
   : QWidget(parent)
   , ui(new Ui::SignalMonitorWidget)
+  , m_stateManager(this)
 {
   StreamOperators::registerSignalMonitorStreamOperators();
 
@@ -57,9 +58,10 @@ SignalMonitorWidget::SignalMonitorWidget(QWidget *parent)
   ui->setupUi(this);
   ui->pauseButton->setIcon(qApp->style()->standardIcon(QStyle::SP_MediaPause));
 
-  QAbstractItemModel *const signalHistory = ObjectBroker::model("com.kdab.GammaRay.SignalHistoryModel");
+  QAbstractItemModel *const signalHistory = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SignalHistoryModel"));
   new SearchLineController(ui->objectSearchLine, signalHistory);
 
+  ui->objectTreeView->header()->setObjectName("objectTreeViewHeader");
   ui->objectTreeView->setModel(signalHistory);
   ui->objectTreeView->setEventScrollBar(ui->eventScrollBar);
 
@@ -67,6 +69,8 @@ SignalMonitorWidget::SignalMonitorWidget(QWidget *parent)
   connect(ui->intervalScale, SIGNAL(valueChanged(int)), this, SLOT(intervalScaleValueChanged(int)));
   connect(ui->objectTreeView->eventDelegate(), SIGNAL(isActiveChanged(bool)),  this, SLOT(eventDelegateIsActiveChanged(bool)));
   connect(ui->objectTreeView->header(), SIGNAL(sectionResized(int,int,int)), this, SLOT(adjustEventScrollBarSize()));
+
+  m_stateManager.setDefaultSizes(ui->objectTreeView->header(), UISizeVector() << 200 << 200 << -1);
 }
 
 SignalMonitorWidget::~SignalMonitorWidget()

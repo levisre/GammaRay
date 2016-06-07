@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -45,8 +45,8 @@ QModelIndex toQModelIndex(const QAbstractItemModel* model, const Protocol::Model
 {
   QModelIndex qmi;
 
-  for (int i = 0; i < index.size(); ++i) {
-    qmi = model->index(index.at(i).first, index.at(i).second, qmi);
+  for (Protocol::ModelIndex::ConstIterator it = index.constBegin(), end = index.constEnd(); it != end; ++it) {
+    qmi = model->index(it->first, it->second, qmi);
     if (!qmi.isValid()) {
       return QModelIndex(); // model isn't loaded to the full depth, so don't restart from the top
     }
@@ -57,7 +57,7 @@ QModelIndex toQModelIndex(const QAbstractItemModel* model, const Protocol::Model
 
 qint32 version()
 {
-  return 17;
+  return 26;
 }
 
 qint32 broadcastFormatVersion()

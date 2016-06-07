@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,6 +33,10 @@
 
 #include <QEvent>
 
+QT_BEGIN_NAMESPACE
+class QAbstractItemModel;
+QT_END_NAMESPACE
+
 namespace GammaRay {
 
 /** Custom event to notify models about them being used/unused.
@@ -51,8 +55,18 @@ public:
     static QEvent::Type eventType();
 
 private:
+    Q_DISABLE_COPY(ModelEvent)
     bool m_used;
 };
+
+namespace Model {
+
+/** Convenience function to send a ModelEvent indicating @p model is in use. */
+void GAMMARAY_COMMON_EXPORT used(const QAbstractItemModel* model);
+/** Convenience function to send a ModelEvent indicating nobody is using @p model. */
+void GAMMARAY_COMMON_EXPORT unused(QAbstractItemModel *model);
+
+}
 
 }
 

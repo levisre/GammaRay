@@ -2,7 +2,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2014-2015 Klar?lvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2014-2016 Klar?lvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,6 +27,8 @@
 
 #include "uiintegration.h"
 
+#include <QUrl>
+
 using namespace GammaRay;
 
 UiIntegration* UiIntegration::s_uiIntegrationInstance = 0;
@@ -48,7 +50,8 @@ UiIntegration * UiIntegration::instance()
     return s_uiIntegrationInstance;
 }
 
-void UiIntegration::requestNavigateToCode(const QString& filePath, int lineNumber, int columnNumber)
+void UiIntegration::requestNavigateToCode(const QUrl& url, int lineNumber, int columnNumber)
 {
-    emit UiIntegration::instance()->navigateToCode(filePath, lineNumber, columnNumber);
+    if (UiIntegration::instance())
+        emit UiIntegration::instance()->navigateToCode(url, lineNumber, columnNumber);
 }

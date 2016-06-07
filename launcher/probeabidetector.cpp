@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -42,8 +42,14 @@ ProbeABIDetector::ProbeABIDetector()
 {
 }
 
-ProbeABIDetector::~ProbeABIDetector()
+ProbeABI ProbeABIDetector::abiForExecutable(const QString &path) const
 {
+  return abiForQtCore(qtCoreForExecutable(path));
+}
+
+ProbeABI ProbeABIDetector::abiForProcess(qint64 pid) const
+{
+  return abiForQtCore(qtCoreForProcess(pid));
 }
 
 ProbeABI ProbeABIDetector::abiForQtCore(const QString& path) const
@@ -65,18 +71,18 @@ QString ProbeABIDetector::qtCoreFromLsof(qint64 pid) const
 {
   QString lsofExe;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-  lsofExe = QStandardPaths::findExecutable("lsof");
+  lsofExe = QStandardPaths::findExecutable(QStringLiteral("lsof"));
   // on OSX it's in sbin, which usually but not always is in PATH...
   if (lsofExe.isEmpty())
-    lsofExe = QStandardPaths::findExecutable("lsof", QStringList() << "/usr/sbin" << "/sbin");
+    lsofExe = QStandardPaths::findExecutable(QStringLiteral("lsof"), QStringList() << QStringLiteral("/usr/sbin") << QStringLiteral("/sbin"));
 #endif
   if (lsofExe.isEmpty())
-    lsofExe = "lsof"; // maybe QProcess has more luck
+    lsofExe = QStringLiteral("lsof"); // maybe QProcess has more luck
 
   QProcess proc;
   proc.setProcessChannelMode(QProcess::SeparateChannels);
   proc.setReadChannel(QProcess::StandardOutput);
-  proc.start(lsofExe, QStringList() << "-Fn" << "-n" << "-p" << QString::number(pid));
+  proc.start(lsofExe, QStringList() << QStringLiteral("-Fn") << QStringLiteral("-n") << QStringLiteral("-p") << QString::number(pid));
   proc.waitForFinished();
 
   forever {

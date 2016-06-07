@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,20 +28,26 @@
 #include <config-gammaray.h>
 
 #include "widgetinspectorwidget.h"
-#include "paintbufferviewer.h"
 #include "widgetinspectorinterface.h"
 #include "widgetinspectorclient.h"
 #include "ui_widgetinspectorwidget.h"
+#include "waextension/widgetattributetab.h"
 
 #include "common/objectbroker.h"
 #include "common/objectmodel.h"
 
-#include <ui/deferredresizemodesetter.h>
+#include <ui/contextmenuextension.h>
+#include <ui/paintbufferviewer.h>
+#include <ui/remoteviewwidget.h>
 #include <ui/searchlinecontroller.h>
 
+#include <QComboBox>
 #include <QDebug>
 #include <QFileDialog>
+#include <QLabel>
+#include <QMenu>
 #include <QtPlugin>
+#include <QToolBar>
 
 using namespace GammaRay;
 
@@ -53,7 +59,9 @@ static QObject* createWidgetInspectorClient(const QString &/*name*/, QObject *pa
 WidgetInspectorWidget::WidgetInspectorWidget(QWidget *parent)
   : QWidget(parent)
   , ui(new Ui::WidgetInspectorWidget)
+  , m_stateManager(this)
   , m_inspector(0)
+  , m_remoteView(new RemoteViewWidget(this))
 {
   ObjectBroker::registerClientObjectFactoryCallback<WidgetInspectorInterface*>(createWidgetInspectorClient);
   m_inspector = ObjectBroker::object<WidgetInspectorInterface*>();
@@ -61,61 +69,81 @@ WidgetInspectorWidget::WidgetInspectorWidget(QWidget *parent)
   ui->setupUi(this);
   ui->widgetPropertyWidget->setObjectBaseName(m_inspector->objectName());
 
-  auto widgetModel = ObjectBroker::model("com.kdab.GammaRay.WidgetTree");
+  auto widgetModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.WidgetTree"));
+  ui->widgetTreeView->header()->setObjectName("widgetTreeViewHeader");
+  ui->widgetTreeView->setDeferredResizeMode(0, QHeaderView::Stretch);
+  ui->widgetTreeView->setDeferredResizeMode(1, QHeaderView::Interactive);
   ui->widgetTreeView->setModel(widgetModel);
   ui->widgetTreeView->setSelectionModel(ObjectBroker::selectionModel(widgetModel));
-  new DeferredResizeModeSetter(ui->widgetTreeView->header(), 0, QHeaderView::Stretch);
-  new DeferredResizeModeSetter(ui->widgetTreeView->header(), 1, QHeaderView::Interactive);
   new SearchLineController(ui->widgetSearchLine, widgetModel);
   connect(ui->widgetTreeView->selectionModel(),
           SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
           SLOT(widgetSelected(QItemSelection)));
+  connect(ui->widgetTreeView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(widgetTreeContextMenu(QPoint)));
+
+  m_remoteView->setName(QStringLiteral("com.kdab.GammaRay.WidgetRemoteView"));
+
+  auto layout = new QVBoxLayout;
+  layout->setMargin(0);
+  auto toolbar = new QToolBar(this);
+  toolbar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+  layout->addWidget(toolbar);
+  ui->widgetPreviewContainer->setLayout(layout);
+  layout->addWidget(m_remoteView);
+
+  foreach (auto action, m_remoteView->interactionModeActions()->actions())
+    toolbar->addAction(action);
+  toolbar->addSeparator();
+
+  toolbar->addAction(m_remoteView->zoomOutAction());
+  auto zoom = new QComboBox;
+  zoom->setModel(m_remoteView->zoomLevelModel());
+  toolbar->addWidget(zoom);
+  connect(zoom, SIGNAL(currentIndexChanged(int)), m_remoteView, SLOT(setZoomLevel(int)));
+  connect(m_remoteView, SIGNAL(zoomLevelChanged(int)), zoom, SLOT(setCurrentIndex(int)));
+  zoom->setCurrentIndex(m_remoteView->zoomLevelIndex());
+  toolbar->addAction(m_remoteView->zoomInAction());
 
   connect(ui->actionSaveAsImage, SIGNAL(triggered()), SLOT(saveAsImage()));
   connect(ui->actionSaveAsSvg, SIGNAL(triggered()), SLOT(saveAsSvg()));
   connect(ui->actionSaveAsPdf, SIGNAL(triggered()), SLOT(saveAsPdf()));
   connect(ui->actionSaveAsUiFile, SIGNAL(triggered()), SLOT(saveAsUiFile()));
   connect(ui->actionAnalyzePainting, SIGNAL(triggered()), SLOT(analyzePainting()));
-  connect(m_inspector, SIGNAL(widgetPreviewAvailable(QPixmap)), SLOT(widgetPreviewAvailable(QPixmap)));
 
-  connect(m_inspector, SIGNAL(features(bool,bool,bool,bool)),
-          this, SLOT(setFeatures(bool,bool,bool,bool)));
+  connect(m_inspector, SIGNAL(featuresChanged()), this, SLOT(updateActions()));
 
-  // NOTE: we must add actions in the ctor...
   addAction(ui->actionSaveAsImage);
   addAction(ui->actionSaveAsSvg);
   addAction(ui->actionSaveAsPdf);
   addAction(ui->actionSaveAsUiFile);
   addAction(ui->actionAnalyzePainting);
-  setActionsEnabled(false);
 
-  m_inspector->checkFeatures();
+  updateActions();
+
+  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "50%" << "50%");
+  m_stateManager.setDefaultSizes(ui->previewSplitter, UISizeVector() << "50%" << "50%");
+
+  connect(ui->widgetPropertyWidget, SIGNAL(tabsUpdated()), &m_stateManager, SLOT(reset()));
 }
 
 WidgetInspectorWidget::~WidgetInspectorWidget()
 {
 }
 
-void WidgetInspectorWidget::setFeatures(bool svg, bool print, bool designer, bool privateHeaders)
+void WidgetInspectorWidget::updateActions()
 {
-  if (!svg) {
-    delete ui->actionSaveAsSvg;
-    ui->actionSaveAsSvg = 0;
-  }
-  if (!print) {
-    delete ui->actionSaveAsPdf;
-    ui->actionSaveAsPdf = 0;
-  }
-  if (!designer) {
-    delete ui->actionSaveAsUiFile;
-    ui->actionSaveAsUiFile = 0;
-  }
-  if (!privateHeaders) {
-    delete ui->actionAnalyzePainting;
-    ui->actionAnalyzePainting = 0;
-  }
+    const auto model = ui->widgetTreeView->selectionModel()->selectedRows();
+    const auto selection = !model.isEmpty() && model.first().isValid();
 
-  setActionsEnabled(ui->widgetTreeView->selectionModel()->hasSelection());
+    ui->actionSaveAsSvg->setEnabled(selection && m_inspector->features() & WidgetInspectorInterface::SvgExport);
+    ui->actionSaveAsPdf->setEnabled(selection && m_inspector->features() & WidgetInspectorInterface::PdfExport);
+    ui->actionSaveAsUiFile->setEnabled(selection && m_inspector->features() & WidgetInspectorInterface::UiExport);
+    ui->actionAnalyzePainting->setEnabled(selection && m_inspector->features() & WidgetInspectorInterface::AnalyzePainting);
+
+    auto f = m_remoteView->supportedInteractionModes() & ~ RemoteViewWidget::InputRedirection;
+    if (m_inspector->features() & WidgetInspectorInterface::InputRedirection)
+        f |= RemoteViewWidget::InputRedirection;
+    m_remoteView->setSupportedInteractionModes(f);
 }
 
 void WidgetInspectorWidget::widgetSelected(const QItemSelection& selection)
@@ -125,25 +153,25 @@ void WidgetInspectorWidget::widgetSelected(const QItemSelection& selection)
     index = selection.first().topLeft();
 
   if (index.isValid()) {
-    setActionsEnabled(true);
-
     // in case selection was triggered remotely
     ui->widgetTreeView->scrollTo(index);
-  } else {
-    setActionsEnabled(false);
   }
+
+  updateActions();
 }
 
-void WidgetInspectorWidget::widgetPreviewAvailable(const QPixmap &preview)
+void WidgetInspectorWidget::widgetTreeContextMenu(QPoint pos)
 {
-  ui->widgetPreviewWidget->setPixmap(preview);
-}
+    const auto index = ui->widgetTreeView->indexAt(pos);
+    if (!index.isValid())
+        return;
 
-void WidgetInspectorWidget::setActionsEnabled(bool enabled)
-{
-  foreach (QAction *action, actions()) {
-    action->setEnabled(enabled);
-  }
+    const auto objectId = index.data(ObjectModel::ObjectIdRole).value<ObjectId>();
+    QMenu menu(tr("Widget @ %1").arg(QLatin1String("0x") + QString::number(objectId.id(), 16)));
+    ContextMenuExtension ext(objectId);
+    ext.populateMenu(&menu);
+
+    menu.exec(ui->widgetTreeView->viewport()->mapToGlobal(pos));
 }
 
 void WidgetInspectorWidget::saveAsImage()
@@ -210,11 +238,13 @@ void WidgetInspectorWidget::analyzePainting()
 {
   m_inspector->analyzePainting();
 
-  PaintBufferViewer *viewer = new PaintBufferViewer(this);
-  viewer->setWindowTitle(tr("Analyze Painting"));
-  viewer->setAttribute(Qt::WA_DeleteOnClose);
-  viewer->setModal(true);
+  PaintBufferViewer *viewer = new PaintBufferViewer(QStringLiteral("com.kdab.GammaRay.WidgetPaintAnalyzer"), this);
   viewer->show();
+}
+
+void WidgetInspectorUiFactory::initUi()
+{
+    PropertyWidget::registerTab<WidgetAttributeTab>(QStringLiteral("widgetAttributes"), tr("Attributes"), PropertyWidgetTabPriority::Advanced);
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

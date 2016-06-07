@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,6 +28,7 @@
 
 #include <config-gammaray.h>
 #include "webviewmodel.h"
+#include "webviewmodelroles.h"
 
 #include "common/objectmodel.h"
 
@@ -50,7 +51,7 @@ QVariant WebViewModel::data(const QModelIndex& index, int role) const
   if (!index.isValid())
     return QVariant();
 
-  if ((role != Qt::DisplayRole && role != WebKitVersionRole) || index.column() != 0)
+  if ((role != Qt::DisplayRole && role != WebViewModelRoles::WebKitVersionRole) || index.column() != 0)
     return QSortFilterProxyModel::data(index, role);
 
   const QObject *obj = index.data(ObjectModel::ObjectRole).value<QObject*>();
@@ -62,7 +63,7 @@ QVariant WebViewModel::data(const QModelIndex& index, int role) const
 
   if (role == Qt::DisplayRole)
     return QString(Util::displayString(obj) + (isWk1 ? " [WebKit1]" : " [WebKit2]"));
-  if (role == WebKitVersionRole)
+  if (role == WebViewModelRoles::WebKitVersionRole)
     return isWk1 ? 1 : 2;
 
   Q_ASSERT(!"WTF?");
@@ -72,7 +73,7 @@ QVariant WebViewModel::data(const QModelIndex& index, int role) const
 QMap< int, QVariant > WebViewModel::itemData(const QModelIndex& index) const
 {
   QMap<int, QVariant> d = ObjectFilterProxyModelBase::itemData(index);
-  d.insert(WebKitVersionRole, data(index, WebKitVersionRole));
+  d.insert(WebViewModelRoles::WebKitVersionRole, data(index, WebViewModelRoles::WebKitVersionRole));
   return d;
 }
 

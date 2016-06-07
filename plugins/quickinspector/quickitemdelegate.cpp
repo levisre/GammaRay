@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,15 +28,16 @@
 
 #include "quickitemdelegate.h"
 #include "quickitemmodelroles.h"
+
 #include <QPainter>
 #include <QIcon>
 #include <QVariant>
-#include <QTreeView>
+#include <QAbstractItemView>
 #include <QApplication>
 
 using namespace GammaRay;
 
-QuickItemDelegate::QuickItemDelegate(QTreeView *view)
+QuickItemDelegate::QuickItemDelegate(QAbstractItemView *view)
   : QStyledItemDelegate(view),
     m_view(view)
 {
@@ -45,22 +46,25 @@ QuickItemDelegate::QuickItemDelegate(QTreeView *view)
 void QuickItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
                               const QModelIndex &index) const
 {
+  painter->save();
   int flags = index.data(QuickItemModelRole::ItemFlags).value<int>();
 
   QStyleOptionViewItem opt = option;
   initStyleOption(&opt, index);
 
   // Disable foreground painting so we can do ourself
-  opt.text = "";
+  opt.text.clear();
   opt.icon = QIcon();
 
   QApplication::style()->drawControl(QStyle::CE_ItemViewItem, &opt, painter);
 
   QRect drawRect = option.rect;
+  painter->setClipRect(option.rect);
+  painter->setClipping(true); // avoid the icons leaking into the next column
 
-  QColor base = option.state & QStyle::State_Selected ?
-                  option.palette.highlightedText().color() :
-                  index.data(Qt::ForegroundRole).value<QColor>();
+  const auto foregroundData = index.data(Qt::ForegroundRole);
+  const auto inactiveColor = foregroundData.isNull() ? option.palette.text().color() : foregroundData.value<QColor>();
+  const auto base = option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : inactiveColor;
 
   if (m_colors.contains(index.sibling(index.row(), 0))) {
     QColor blend = m_colors.value(index.sibling(index.row(), 0));
@@ -82,30 +86,36 @@ void QuickItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opt
       icons.push_back(deco.value<QIcon>().pixmap(16, 16));
 
     if ((flags & QuickItemModelRole::OutOfView) && (~flags & QuickItemModelRole::Invisible)) {
-      icons << QIcon(":/gammaray/plugins/quickinspector/warning.png").pixmap(16, 16);
+      icons << QIcon(QStringLiteral(":/gammaray/plugins/quickinspector/warning.png")).pixmap(16, 16);
     }
 
     if (flags & QuickItemModelRole::HasActiveFocus) {
-      icons << QIcon(":/gammaray/plugins/quickinspector/active-focus.png").pixmap(16, 16);
+      icons << QIcon(QStringLiteral(":/gammaray/plugins/quickinspector/active-focus.png")).pixmap(16, 16);
     }
 
     if (flags & QuickItemModelRole::HasFocus && ~flags & QuickItemModelRole::HasActiveFocus) {
-      icons << QIcon(":/gammaray/plugins/quickinspector/focus.png").pixmap(16, 16);
+      icons << QIcon(QStringLiteral(":/gammaray/plugins/quickinspector/focus.png")).pixmap(16, 16);
     }
 
-    for (int i = 0; i < icons.size(); i++) {
+    for (int i = 0; i < icons.size() && drawRect.left() < opt.rect.right(); i++) {
       painter->drawPixmap(drawRect.topLeft(), icons.at(i));
       drawRect.setTopLeft(drawRect.topLeft() + QPoint(20, 0));
     }
   }
 
   painter->drawText(drawRect, Qt::AlignVCenter, index.data(Qt::DisplayRole).toString());
+  painter->restore();
 }
 
 QSize QuickItemDelegate::sizeHint(const QStyleOptionViewItem &option,
                                   const QModelIndex &index) const
 {
   Q_UNUSED(option);
+
+  // this gets us the cached value for empty cells
+  const auto sh = index.data(Qt::SizeHintRole);
+  if (sh.isValid())
+    return sh.toSize();
 
   QSize textSize =
     m_view->fontMetrics().size(Qt::TextSingleLine, index.data(Qt::DisplayRole).toString());
@@ -130,9 +140,8 @@ QSize QuickItemDelegate::sizeHint(const QStyleOptionViewItem &option,
                qMax(textSize.height(), decorationSize.height()));
 }
 
-void QuickItemDelegate::setTextColor(const QVariant &textColor)
+void QuickItemDelegate::setTextColor(const QVariant &textColor, const QPersistentModelIndex &index)
 {
-  const QPersistentModelIndex index = sender()->property("index").value<QPersistentModelIndex>();
   if (!index.isValid()) {
     return;
   }

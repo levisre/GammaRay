@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -44,9 +44,9 @@ struct DebugMessage {
   QTime time;
   Backtrace backtrace;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-  const char *category;
-  const char *file;
-  const char *function;
+  QString category;
+  QString file;
+  QString function;
   int line;
 #endif
 };
@@ -54,7 +54,9 @@ struct DebugMessage {
 }
 
 Q_DECLARE_METATYPE(GammaRay::DebugMessage)
+QT_BEGIN_NAMESPACE
 Q_DECLARE_TYPEINFO(GammaRay::DebugMessage, Q_MOVABLE_TYPE);
+QT_END_NAMESPACE
 
 namespace GammaRay {
 

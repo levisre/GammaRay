@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,15 +30,47 @@
 
 #include <common/objectbroker.h>
 
-using namespace GammaRay;
+#include <QDataStream>
+#include <QMetaType>
+
+namespace GammaRay {
+
+QDataStream &operator<<(QDataStream &out, WidgetInspectorInterface::Features value)
+{
+  out << qint32(value);
+  return out;
+}
+
+QDataStream &operator>>(QDataStream &in, WidgetInspectorInterface::Features &value)
+{
+  qint32 t;
+  in >> t;
+  value = static_cast<WidgetInspectorInterface::Features>(t);
+  return in;
+}
 
 WidgetInspectorInterface::WidgetInspectorInterface(QObject *parent)
   : QObject(parent)
 {
-  ObjectBroker::registerObject<WidgetInspectorInterface*>(this);
+    qRegisterMetaTypeStreamOperators<Features>();
+    ObjectBroker::registerObject<WidgetInspectorInterface*>(this);
 }
 
 WidgetInspectorInterface::~WidgetInspectorInterface()
 {
+}
+
+WidgetInspectorInterface::Features WidgetInspectorInterface::features() const
+{
+    return m_features;
+}
+
+void WidgetInspectorInterface::setFeatures(WidgetInspectorInterface::Features features)
+{
+    if (features == m_features)
+        return;
+    m_features = features;
+    emit featuresChanged();
+}
 
 }

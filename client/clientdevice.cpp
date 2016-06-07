@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -47,9 +47,9 @@ ClientDevice::~ClientDevice()
 ClientDevice* ClientDevice::create(const QUrl& url, QObject *parent)
 {
     ClientDevice* device = 0;
-    if (url.scheme() == "tcp")
+    if (url.scheme() == QLatin1String("tcp"))
         device = new TcpClientDevice(parent);
-    else if (url.scheme() == "local")
+    else if (url.scheme() == QLatin1String("local"))
         device = new LocalClientDevice(parent);
 
     if (!device) {

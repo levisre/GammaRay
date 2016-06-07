@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,8 +32,6 @@
 #include "processinjector.h"
 #include <qglobal.h>
 
-#ifndef Q_OS_WIN
-
 namespace GammaRay {
 
 class PreloadInjector : public ProcessInjector
@@ -48,7 +46,5 @@ class PreloadInjector : public ProcessInjector
 };
 
 }
-
-#endif
 
 #endif // GAMMARAY_PRELOADINJECTOR_H

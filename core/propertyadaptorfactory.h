@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,11 @@
 
 #include "gammaray_core_export.h"
 
+#include <qglobal.h>
+
+QT_BEGIN_NAMESPACE
 class QObject;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -42,10 +46,14 @@ class PropertyAdaptor;
 class GAMMARAY_CORE_EXPORT AbstractPropertyAdaptorFactory
 {
 public:
+    AbstractPropertyAdaptorFactory();
     virtual ~AbstractPropertyAdaptorFactory();
 
     /** Create a custom property adaptor if it can handle @p oi, return @c nullptr otherwise. */
     virtual PropertyAdaptor* create(const ObjectInstance &oi, QObject *parent = 0) const = 0;
+
+private:
+    Q_DISABLE_COPY(AbstractPropertyAdaptorFactory)
 };
 
 /** Factory for property adaptors. */

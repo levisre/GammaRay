@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,6 +26,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config-gammaray.h>
 #include "launchpage.h"
 #include "ui_launchpage.h"
 #include "launchoptions.h"
@@ -71,9 +72,9 @@ LaunchPage::LaunchPage(QWidget *parent)
   ui->probeBox->setModel(m_abiModel);
 
   QSettings settings;
-  ui->progEdit->setText(settings.value(QLatin1String("Launcher/Program")).toString());
-  m_argsModel->setStringList(settings.value(QLatin1String("Launcher/Arguments")).toStringList());
-  ui->accessMode->setCurrentIndex(settings.value(QLatin1String("Launcher/AccessMode")).toInt());
+  ui->progEdit->setText(settings.value(QStringLiteral("Launcher/Program")).toString());
+  m_argsModel->setStringList(settings.value(QStringLiteral("Launcher/Arguments")).toStringList());
+  ui->accessMode->setCurrentIndex(settings.value(QStringLiteral("Launcher/AccessMode")).toInt());
   updateArgumentButtons();
 }
 
@@ -85,9 +86,9 @@ LaunchPage::~LaunchPage()
 void LaunchPage::writeSettings()
 {
   QSettings settings;
-  settings.setValue(QLatin1String("Launcher/Program"), ui->progEdit->text());
-  settings.setValue(QLatin1String("Launcher/Arguments"), notEmptyString(m_argsModel->stringList()));
-  settings.setValue(QLatin1String("Launcher/AccessMode"), ui->accessMode->currentIndex());
+  settings.setValue(QStringLiteral("Launcher/Program"), ui->progEdit->text());
+  settings.setValue(QStringLiteral("Launcher/Arguments"), notEmptyString(m_argsModel->stringList()));
+  settings.setValue(QStringLiteral("Launcher/AccessMode"), ui->accessMode->currentIndex());
 }
 
 QStringList LaunchPage::notEmptyString(const QStringList &list) const
@@ -114,17 +115,17 @@ LaunchOptions LaunchPage::launchOptions() const
 
   switch (ui->accessMode->currentIndex()) {
     case 0: // local, out-of-process
-      opt.setProbeSetting("RemoteAccessEnabled", true);
-      opt.setProbeSetting("ServerAddress", "tcp://127.0.0.1/");
+      opt.setProbeSetting(QStringLiteral("RemoteAccessEnabled"), true);
+      opt.setProbeSetting(QStringLiteral("ServerAddress"), GAMMARAY_DEFAULT_LOCAL_TCP_URL);
       opt.setUiMode(LaunchOptions::OutOfProcessUi);
       break;
     case 1: // remote, out-of-process
-      opt.setProbeSetting("RemoteAccessEnabled", true);
-      opt.setProbeSetting("ServerAddress", "tcp://0.0.0.0/");
+      opt.setProbeSetting(QStringLiteral("RemoteAccessEnabled"), true);
+      opt.setProbeSetting(QStringLiteral("ServerAddress"), GAMMARAY_DEFAULT_ANY_TCP_URL);
       opt.setUiMode(LaunchOptions::OutOfProcessUi);
       break;
     case 2: // in-process
-      opt.setProbeSetting("RemoteAccessEnabled", false);
+      opt.setProbeSetting(QStringLiteral("RemoteAccessEnabled"), false);
       opt.setUiMode(LaunchOptions::InProcessUi);
       break;
   }

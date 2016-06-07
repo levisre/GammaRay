@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Thomas McGuire <thomas.mcguire@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,11 +28,14 @@
 #ifndef GAMMARAY_TIMERTOP_TIMERTOPWIDGET_H
 #define GAMMARAY_TIMERTOP_TIMERTOPWIDGET_H
 
+#include <ui/uistatemanager.h>
 #include <ui/tooluifactory.h>
 
 #include <QWidget>
 
+QT_BEGIN_NAMESPACE
 class QTimer;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -49,6 +52,7 @@ class TimerTopWidget : public QWidget
 
   private:
     QScopedPointer<Ui::TimerTopWidget> ui;
+    UIStateManager m_stateManager;
     QTimer *m_updateTimer;
 };
 

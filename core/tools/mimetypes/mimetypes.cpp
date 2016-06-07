@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,16 +29,24 @@
 #include "mimetypes.h"
 #include "mimetypesmodel.h"
 
+#include <3rdparty/kde/krecursivefilterproxymodel.h>
+
 using namespace GammaRay;
 
 MimeTypes::MimeTypes(ProbeInterface *probe, QObject *parent)
   : QObject(parent)
 {
-  m_model = new MimeTypesModel(this);
-  probe->registerModel("com.kdab.GammaRay.MimeTypeModel", m_model);
+  auto model = new MimeTypesModel(this);
+  auto proxy = new KRecursiveFilterProxyModel(this);
+  proxy->setSourceModel(model);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.MimeTypeModel"), proxy);
 }
 
 MimeTypes::~MimeTypes()
 {
 }
 
+QString MimeTypesFactory::name() const
+{
+  return tr("Mime Types");
+}

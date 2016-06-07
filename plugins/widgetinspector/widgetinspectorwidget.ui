@@ -12,11 +12,11 @@
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
    <item row="0" column="0">
-    <widget class="QSplitter" name="splitter_2">
+    <widget class="QSplitter" name="mainSplitter">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <widget class="QSplitter" name="splitter">
+     <widget class="QSplitter" name="previewSplitter">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
       </property>
@@ -26,20 +26,18 @@
          <widget class="QLineEdit" name="widgetSearchLine"/>
         </item>
         <item>
-         <widget class="QTreeView" name="widgetTreeView"/>
+         <widget class="GammaRay::DeferredTreeView" name="widgetTreeView">
+          <property name="contextMenuPolicy">
+           <enum>Qt::CustomContextMenu</enum>
+          </property>
+          <property name="uniformRowHeights">
+           <bool>true</bool>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
-      <widget class="QGroupBox" name="groupBox">
-       <property name="title">
-        <string>Preview</string>
-       </property>
-       <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="0">
-         <widget class="GammaRay::WidgetPreviewWidget" name="widgetPreviewWidget" native="true"/>
-        </item>
-       </layout>
-      </widget>
+      <widget class="QWidget" name="widgetPreviewContainer" native="true"/>
      </widget>
      <widget class="GammaRay::PropertyWidget" name="widgetPropertyWidget" native="true"/>
     </widget>
@@ -85,15 +83,14 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>GammaRay::PropertyWidget</class>
-   <extends>QWidget</extends>
-   <header>ui/propertywidget.h</header>
-   <container>1</container>
+   <class>GammaRay::DeferredTreeView</class>
+   <extends>QTreeView</extends>
+   <header location="global">ui/deferredtreeview.h</header>
   </customwidget>
   <customwidget>
-   <class>GammaRay::WidgetPreviewWidget</class>
+   <class>GammaRay::PropertyWidget</class>
    <extends>QWidget</extends>
-   <header>widgetpreviewwidget.h</header>
+   <header location="global">ui/propertywidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

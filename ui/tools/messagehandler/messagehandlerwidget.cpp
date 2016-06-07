@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,6 +31,7 @@
 #include "messagehandlerclient.h"
 #include "messagedisplaymodel.h"
 
+#include <ui/contextmenuextension.h>
 #include <ui/searchlinecontroller.h>
 #include <ui/uiintegration.h>
 
@@ -50,6 +51,7 @@
 #include <QApplication>
 #include <QSignalMapper>
 #include <QStringListModel>
+#include <QUrl>
 
 using namespace GammaRay;
 
@@ -59,9 +61,10 @@ static QObject *createClientMessageHandler(const QString &/*name*/, QObject *par
 }
 
 MessageHandlerWidget::MessageHandlerWidget(QWidget *parent)
-  : QWidget(parent),
-    ui(new Ui::MessageHandlerWidget),
-    m_backtraceModel(new QStringListModel(this))
+  : QWidget(parent)
+  , ui(new Ui::MessageHandlerWidget)
+  , m_stateManager(this)
+  , m_backtraceModel(new QStringListModel(this))
 {
   ObjectBroker::registerClientObjectFactoryCallback<MessageHandlerInterface*>(createClientMessageHandler);
   MessageHandlerInterface *handler = ObjectBroker::object<MessageHandlerInterface*>();
@@ -71,7 +74,21 @@ MessageHandlerWidget::MessageHandlerWidget(QWidget *parent)
 
   ui->setupUi(this);
 
-  auto messageModel = ObjectBroker::model("com.kdab.GammaRay.MessageModel");
+  ui->messageView->header()->setObjectName("messageViewHeader");
+  ui->messageView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->messageView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+
+  ui->backtraceView->header()->setObjectName("backtraceViewHeader");
+
+  ui->categoriesView->header()->setObjectName("categoriesViewHeader");
+  ui->categoriesView->setStretchLastSection(false);
+  ui->categoriesView->setDeferredResizeMode(0, QHeaderView::Stretch);
+  ui->categoriesView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+  ui->categoriesView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+  ui->categoriesView->setDeferredResizeMode(3, QHeaderView::ResizeToContents);
+  ui->categoriesView->setDeferredResizeMode(4, QHeaderView::ResizeToContents);
+
+  auto messageModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.MessageModel"));
   auto displayModel = new MessageDisplayModel(this);
   displayModel->setSourceModel(messageModel);
   new SearchLineController(ui->messageSearchLine, messageModel);
@@ -82,6 +99,11 @@ MessageHandlerWidget::MessageHandlerWidget(QWidget *parent)
 
   ui->backtraceView->hide();
   ui->backtraceView->setModel(m_backtraceModel);
+
+  ui->categoriesView->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.LoggingCategoryModel")));
+
+  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "50%" << "50%");
+  m_stateManager.setDefaultSizes(ui->messageView->header(), UISizeVector() << -1 << 300 << -1 << -1 << -1);
 }
 
 MessageHandlerWidget::~MessageHandlerWidget()
@@ -96,7 +118,7 @@ void MessageHandlerWidget::fatalMessageReceived(const QString &app, const QStrin
     return;
   }
   QDialog dlg;
-  dlg.setWindowTitle(tr("QFatal in %1 at %2").arg(app).arg(time.toString()));
+  dlg.setWindowTitle(tr("QFatal in %1 at %2").arg(app, time.toString()));
 
   QGridLayout *layout = new QGridLayout;
 
@@ -126,7 +148,7 @@ void MessageHandlerWidget::fatalMessageReceived(const QString &app, const QStrin
     buttons->addButton(copyBacktraceButton, QDialogButtonBox::ActionRole);
 
     QSignalMapper *mapper = new QSignalMapper(this);
-    mapper->setMapping(copyBacktraceButton, backtrace.join(QLatin1String("\n")));
+    mapper->setMapping(copyBacktraceButton, backtrace.join(QStringLiteral("\n")));
 
     connect(copyBacktraceButton, SIGNAL(clicked()), mapper, SLOT(map()));
     connect(mapper, SIGNAL(mapped(QString)), this, SLOT(copyToClipboard(QString)));
@@ -146,7 +168,9 @@ void MessageHandlerWidget::fatalMessageReceived(const QString &app, const QStrin
 
 void MessageHandlerWidget::copyToClipboard(const QString &message)
 {
+#ifndef QT_NO_CLIPBOARD
     QApplication::clipboard()->setText(message);
+#endif
 }
 
 void MessageHandlerWidget::messageContextMenu(const QPoint &pos)
@@ -164,9 +188,10 @@ void MessageHandlerWidget::messageContextMenu(const QPoint &pos)
   const auto line = index.data(MessageModelRole::Line).toInt();
 
   QMenu contextMenu;
-  contextMenu.addAction(tr("Show source: %1:%2").arg(fileName).arg(line));
-  if (contextMenu.exec(ui->messageView->viewport()->mapToGlobal(pos)))
-    UiIntegration::requestNavigateToCode(fileName, line, 0);
+  ContextMenuExtension cme;
+  cme.setLocation(ContextMenuExtension::ShowSource, SourceLocation(QUrl(fileName), line, 0));
+  cme.populateMenu(&contextMenu);
+  contextMenu.exec(ui->messageView->viewport()->mapToGlobal(pos));
 }
 
 void MessageHandlerWidget::messageSelected(const QItemSelection& selection)

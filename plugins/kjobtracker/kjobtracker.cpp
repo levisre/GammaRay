@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,6 +32,7 @@
 #include <core/probeinterface.h>
 
 #include <QDebug>
+#include <QSortFilterProxyModel>
 #include <QtPlugin>
 
 using namespace GammaRay;
@@ -44,11 +45,19 @@ KJobTracker::KJobTracker(ProbeInterface *probe, QObject *parent)
   connect(probe->probe(), SIGNAL(objectDestroyed(QObject*)),
           m_jobModel, SLOT(objectRemoved(QObject*)));
 
-  probe->registerModel("com.kdab.GammaRay.KJobModel", m_jobModel);
+  auto proxy = new QSortFilterProxyModel(this);
+  proxy->setSourceModel(m_jobModel);
+
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.KJobModel"), proxy);
 }
 
 KJobTracker::~KJobTracker()
 {
+}
+
+QString KJobTrackerFactory::name() const
+{
+  return tr("KJobs");
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)

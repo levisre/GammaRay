@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,6 +31,8 @@
 
 #include "gammaray_core_export.h"
 
+#include <qglobal.h>
+
 namespace GammaRay {
 
 /** Use this inside probe code that might trigger expensive or otherwise problematic side-effects in
@@ -50,11 +52,25 @@ public:
      *  In that case you might want to skip some operations,
      */
     static bool insideProbe();
+protected:
+    ProbeGuard(bool newState);
+    void setInsideProbe(bool inside);
 private:
     Q_DISABLE_COPY(ProbeGuard)
-    void setInsideProbe(bool inside);
     bool m_previousState;
 };
+
+/** This is the inverse of ProbeGuard, use this to temporarily disable the guard when doing
+ *  individual calls to target code that might create objects, while being in a code block
+ *  protected by ProbeGuard.
+ */
+class ProbeGuardSuspender : public ProbeGuard
+{
+public:
+    ProbeGuardSuspender();
+    ~ProbeGuardSuspender();
+};
+
 }
 
 #endif // GAMMARAY_PROBEGUARD_H

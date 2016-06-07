@@ -1,5 +1,0 @@
-[Desktop Entry]
-Name=Timers
-X-GammaRay-Types="QTimer;QQmlTimer;QUnifiedTimer"
-X-GammaRay-ServiceTypes=com.kdab.GammaRay.ToolFactory
-Exec=gammaray_timertop_plugin

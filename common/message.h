@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -76,6 +76,9 @@ class GAMMARAY_COMMON_EXPORT Message
 
     /** Write this message to @p device. */
     void write(QIODevice *device) const;
+
+    /** Size of the uncompressed message payload. */
+    int size() const;
 
   private:
     Message();

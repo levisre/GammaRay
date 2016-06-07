@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,26 +34,29 @@
 #include "signalspycallbackset.h"
 
 #include <QObject>
-#include <QQueue>
+#include <QList>
 #include <QSet>
 #include <QVector>
 
+QT_BEGIN_NAMESPACE
 class QItemSelectionModel;
+class QModelIndex;
 class QThread;
 class QPoint;
 class QTimer;
 class QMutex;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
 class ProbeCreator;
 class MetaObjectTreeModel;
-class ConnectionModel;
 class ObjectListModel;
 class ObjectTreeModel;
 class ToolModel;
 class MainWindow;
 class BenchSuite;
+class Server;
 
 class GAMMARAY_CORE_EXPORT Probe : public QObject, public ProbeInterface
 {
@@ -73,22 +76,17 @@ class GAMMARAY_CORE_EXPORT Probe : public QObject, public ProbeInterface
 
     static void objectAdded(QObject *obj, bool fromCtor = false);
     static void objectRemoved(QObject *obj);
-    static void connectionAdded(QObject *sender, const char *signal,
-                                QObject *receiver, const char *method,
-                                Qt::ConnectionType type);
-    static void connectionRemoved(QObject *sender, const char *signal,
-                                  QObject *receiver, const char *method);
 
     QAbstractItemModel *objectListModel() const Q_DECL_OVERRIDE;
     QAbstractItemModel *objectTreeModel() const Q_DECL_OVERRIDE;
     QAbstractItemModel *metaObjectModel() const;
-    QAbstractItemModel *connectionModel() const Q_DECL_OVERRIDE;
     ToolModel *toolModel() const;
     void registerModel(const QString& objectName, QAbstractItemModel* model) Q_DECL_OVERRIDE;
     void installGlobalEventFilter(QObject* filter) Q_DECL_OVERRIDE;
-    bool hasReliableObjectTracking() const Q_DECL_OVERRIDE;
+    bool needsObjectDiscovery() const Q_DECL_OVERRIDE;
     void discoverObject(QObject* object) Q_DECL_OVERRIDE;
     void selectObject(QObject* object, const QPoint& pos = QPoint()) Q_DECL_OVERRIDE;
+    void selectObject(QObject* object, const QString &toolId, const QPoint& pos = QPoint()) Q_DECL_OVERRIDE;
     void selectObject(void* object, const QString& typeName) Q_DECL_OVERRIDE;
     void registerSignalSpyCallbackSet(const SignalSpyCallbackSet& callbacks) Q_DECL_OVERRIDE;
 
@@ -147,12 +145,12 @@ class GAMMARAY_CORE_EXPORT Probe : public QObject, public ProbeInterface
      * Emitted for destroyed objects.
      *
      * Note:
-     * - This signal is emitted from the thread calling the dtor of @p obj, so make sure to use
-     *   the correct connection type when connecting to it.
+     * - This signal is emitted from the thread the probe exists in.
      * - The signal is emitted from the end of the QObject dtor, dereferencing @p obj is no longer
      *   safe at this point.
-     * - When using a queued connection on this signal (relevant for e.g. models), see isValidObject()
-     *   for a way to check if the object has not yet been deleted when accessing it.
+     * - In a multi-threaded application, this signal might reach you way after @p obj has been
+     *   destroyed, see isValidObject() for a way to check if the object is still valid before accessing it.
+     * - The objectLock() is locked.
      */
     void objectDestroyed(QObject *obj);
     void objectReparented(QObject *obj);
@@ -162,7 +160,7 @@ class GAMMARAY_CORE_EXPORT Probe : public QObject, public ProbeInterface
 
   private slots:
     void delayedInit();
-    void queuedObjectsFullyConstructed();
+    void processQueuedObjectChanges();
     void handleObjectDestroyed(QObject *obj);
     void objectParentChanged();
 
@@ -170,7 +168,22 @@ class GAMMARAY_CORE_EXPORT Probe : public QObject, public ProbeInterface
     friend class ProbeCreator;
     friend class BenchSuite;
 
+    void selectTool(const QModelIndex &toolModelSourceIndex);
+
+    /* Returns @c true if we have working hooks in QtCore, that is we are notified reliably
+     * about every QObject creation/destruction.
+     * @since 2.0
+     */
+    bool hasReliableObjectTracking() const;
+
     void objectFullyConstructed(QObject *obj);
+
+    void queueCreatedObject(QObject *obj);
+    void queueDestroyedObject(QObject *obj);
+    bool isObjectCreationQueued(QObject *obj) const;
+    void purgeChangesForObject(QObject *obj);
+    void notifyQueuedObjectChanges();
+
     void findExistingObjects();
 
     /** Check if we are capable of showing widgets. */
@@ -178,6 +191,7 @@ class GAMMARAY_CORE_EXPORT Probe : public QObject, public ProbeInterface
     void showInProcessUi();
 
     static void createProbe(bool findExisting);
+    void resendServerAddress();
 
     explicit Probe(QObject *parent = 0);
     static QAtomicPointer<Probe> s_instance;
@@ -188,27 +202,27 @@ class GAMMARAY_CORE_EXPORT Probe : public QObject, public ProbeInterface
     ObjectListModel *m_objectListModel;
     ObjectTreeModel *m_objectTreeModel;
     MetaObjectTreeModel *m_metaObjectTreeModel;
-    ConnectionModel *m_connectionModel;
     ToolModel *m_toolModel;
     QItemSelectionModel *m_toolSelectionModel;
     QObject *m_window;
     QSet<QObject*> m_validObjects;
-    QQueue<QObject*> m_queuedObjects;
+
+    // all delayed object changes need to go through a single queue, as the order is crucial
+    struct ObjectChange {
+      QObject *obj;
+      enum Type {
+        Create,
+        Destroy
+      } type;
+    };
+    QVector<ObjectChange> m_queuedObjectChanges;
+
     QList<QObject*> m_pendingReparents;
     QTimer *m_queueTimer;
     QVector<QObject*> m_globalEventFilters;
     QVector<SignalSpyCallbackSet> m_signalSpyCallbacks;
     SignalSpyCallbackSet m_previousSignalSpyCallbackSet;
-};
-
-class GAMMARAY_CORE_EXPORT SignalSlotsLocationStore
-{
-public:
-  /// store the location of @p method
-  static void flagLocation(const char *method);
-
-  /// retrieve the location of @p member
-  static const char *extractLocation(const char *member);
+    Server *m_server;
 };
 
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,14 +39,14 @@ using namespace GammaRay;
 static QString formatTypeToString(int type)
 {
   switch (type) {
-    case QTextFormat::InvalidFormat: return "Invalid";
-    case QTextFormat::BlockFormat: return "Block";
-    case QTextFormat::CharFormat: return "Char";
-    case QTextFormat::ListFormat: return "List";
-    case QTextFormat::FrameFormat: return "Frame";
-    case QTextFormat::UserFormat: return "User";
+    case QTextFormat::InvalidFormat: return QStringLiteral("Invalid");
+    case QTextFormat::BlockFormat: return QStringLiteral("Block");
+    case QTextFormat::CharFormat: return QStringLiteral("Char");
+    case QTextFormat::ListFormat: return QStringLiteral("List");
+    case QTextFormat::FrameFormat: return QStringLiteral("Frame");
+    case QTextFormat::UserFormat: return QStringLiteral("User");
   }
-  return QString("Unknown format: %1").arg(type);
+  return QStringLiteral("Unknown format: %1").arg(type);
 }
 
 TextDocumentModel::TextDocumentModel(QObject *parent)
@@ -144,6 +144,18 @@ void TextDocumentModel::fillBlock(const QTextBlock &block, QStandardItem *parent
     QStandardItem *item = new QStandardItem(tr("Fragment: %1").arg(it.fragment().text()));
     const QRectF b = m_document->documentLayout()->blockBoundingRect(block);
     appendRow(parent, item, it.fragment().charFormat(), b);
+    if (!block.layout())
+      continue;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+    foreach (const auto &range, block.layout()->formats()) {
+      const auto start = std::max(range.start, it.fragment().position() - block.position());
+      const auto end = std::min(range.start + range.length, it.fragment().position() + it.fragment().length() - block.position());
+      if (start >= end)
+        continue;
+      auto child = new QStandardItem(tr("Layout Range: %1").arg(it.fragment().text().mid(start, end-start)));
+      appendRow(item, child, range.format, QRectF());
+    }
+#endif
   }
 }
 

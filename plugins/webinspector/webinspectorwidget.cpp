@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,8 +27,8 @@
 */
 
 #include "webinspectorwidget.h"
-#include "webviewmodel.h"
 #include "ui_webinspectorwidget.h"
+#include "webviewmodelroles.h"
 
 #include <common/objectmodel.h>
 #include <common/objectbroker.h>
@@ -40,7 +40,7 @@ WebInspectorWidget::WebInspectorWidget(QWidget* parent)
   : QWidget(parent), ui(new Ui::WebInspectorWidget)
 {
   ui->setupUi(this);
-  ui->webPageComboBox->setModel(ObjectBroker::model("com.kdab.GammaRay.WebPages"));
+  ui->webPageComboBox->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.WebPages")));
   connect(ui->webPageComboBox, SIGNAL(activated(int)), SLOT(webPageSelected(int)));
 }
 
@@ -63,11 +63,11 @@ void WebInspectorWidget::webPageSelected(int index)
     ui->stack->setCurrentWidget(ui->wk1LocalPage);
   }
 
-  else if (ui->webPageComboBox->itemData(index, WebViewModel::WebKitVersionRole).toInt() == 2) {
+  else if (ui->webPageComboBox->itemData(index, WebViewModelRoles::WebKitVersionRole).toInt() == 2) {
     const QUrl serverUrl = Endpoint::instance()->serverAddress();
     if (serverUrl.scheme() == QLatin1String("tcp")) {
       QUrl inspectorUrl;
-      inspectorUrl.setScheme("http");
+      inspectorUrl.setScheme(QStringLiteral("http"));
       inspectorUrl.setHost(serverUrl.host());
       inspectorUrl.setPort(Endpoint::defaultPort() + 1);
       ui->webView->setUrl(inspectorUrl);

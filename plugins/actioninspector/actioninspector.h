@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -59,10 +59,7 @@ class ActionInspectorFactory : public QObject, public StandardToolFactory<QActio
     {
     }
 
-    virtual inline QString name() const
-    {
-      return tr("Action Inspector");
-    }
+    QString name() const Q_DECL_OVERRIDE;
 };
 
 }

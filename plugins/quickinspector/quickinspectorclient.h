@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,9 @@
 
 #include "quickinspectorinterface.h"
 
+QT_BEGIN_NAMESPACE
 class QEvent;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -46,22 +48,10 @@ public:
 
 public slots:
   void selectWindow(int index) Q_DECL_OVERRIDE;
-  void renderScene() Q_DECL_OVERRIDE;
-
-  void sendKeyEvent(int type, int key, int modifiers, const QString &text,
-                    bool autorep, ushort count) Q_DECL_OVERRIDE;
-
-  void sendMouseEvent(int type, const QPointF &localPos,
-                      int button, int buttons, int modifiers) Q_DECL_OVERRIDE;
-
-  void sendWheelEvent(const QPointF &localPos, QPoint pixelDelta,
-                      QPoint angleDelta, int buttons, int modifiers) Q_DECL_OVERRIDE;
 
   void setCustomRenderMode(GammaRay::QuickInspectorInterface::RenderMode customRenderMode) Q_DECL_OVERRIDE;
 
   void checkFeatures() Q_DECL_OVERRIDE;
-
-  void setSceneViewActive(bool active) Q_DECL_OVERRIDE;
 };
 }
 

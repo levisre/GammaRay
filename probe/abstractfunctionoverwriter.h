@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Andreas Holzammer <andreas.holzammer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -48,6 +48,7 @@ namespace GammaRay {
 class AbstractFunctionOverwriter
 {
   public:
+    AbstractFunctionOverwriter();
     virtual ~AbstractFunctionOverwriter();
 
     /**
@@ -145,6 +146,7 @@ class AbstractFunctionOverwriter
     virtual size_t blocksize();
 
   private:
+    Q_DISABLE_COPY(AbstractFunctionOverwriter)
     void *page_align(void *addr) const;
     size_t roundToNextPage(size_t addr) const;
 

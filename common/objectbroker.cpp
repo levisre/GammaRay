@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -68,6 +68,11 @@ void ObjectBroker::registerObject(const QString &name, QObject *object)
   Endpoint::instance()->registerObject(name, object);
 }
 
+bool ObjectBroker::hasObject(const QString& name)
+{
+  return s_objectBroker()->objects.contains(name);
+}
+
 QObject* ObjectBroker::objectInternal(const QString& name, const QByteArray &type)
 {
   const QHash<QString, QObject*>::const_iterator it = s_objectBroker()->objects.constFind(name);
@@ -81,7 +86,7 @@ QObject* ObjectBroker::objectInternal(const QString& name, const QByteArray &typ
 
   if (!type.isEmpty()) {
     Q_ASSERT(s_objectBroker()->clientObjectFactories.contains(type));
-    obj = s_objectBroker()->clientObjectFactories[type](name, qApp);
+    obj = s_objectBroker()->clientObjectFactories.value(type)(name, qApp);
   } else {
     // fallback
     obj = new QObject(qApp);
@@ -91,7 +96,7 @@ QObject* ObjectBroker::objectInternal(const QString& name, const QByteArray &typ
 
   Q_ASSERT(obj);
   // ensure it was registered
-  Q_ASSERT_X(s_objectBroker()->objects.value(name, 0) == obj, Q_FUNC_INFO, qPrintable(QString("Object %1 was not registered in the broker.").arg(name)));
+  Q_ASSERT_X(s_objectBroker()->objects.value(name, 0) == obj, Q_FUNC_INFO, qPrintable(QStringLiteral("Object %1 was not registered in the broker.").arg(name)));
 
   return obj;
 }

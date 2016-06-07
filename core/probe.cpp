@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
@@ -34,7 +34,6 @@
 #include "objectlistmodel.h"
 #include "objecttreemodel.h"
 #include "metaobjecttreemodel.h"
-#include "connectionmodel.h"
 #include "toolmodel.h"
 #include "probesettings.h"
 #include "probecontroller.h"
@@ -57,8 +56,10 @@
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
 #include <QApplication>
+#else
+#include <QGuiApplication>
+#include <QWindow>
 #endif
-#include <QCoreApplication>
 #include <QDir>
 #include <QLibrary>
 #include <QMouseEvent>
@@ -88,37 +89,18 @@ extern QSignalSpyCallbackSet qt_signal_spy_callback_set;
 
 #define IF_DEBUG(x)
 
+#ifdef ENABLE_EXPENSIVE_ASSERTS
+#define EXPENSIVE_ASSERT(x) Q_ASSERT(x)
+#else
+#define EXPENSIVE_ASSERT(x)
+#endif
+
 using namespace GammaRay;
 using namespace std;
 
 QAtomicPointer<Probe> Probe::s_instance = QAtomicPointer<Probe>(0);
 
 namespace GammaRay {
-
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-
-static bool probeConnectCallback(void ** args)
-{
-  QObject *sender = reinterpret_cast<QObject*>(args[0]);
-  const char *signal = reinterpret_cast<const char*>(args[1]);
-  QObject *receiver = reinterpret_cast<QObject*>(args[2]);
-  const char *method = reinterpret_cast<const char*>(args[3]);
-  const Qt::ConnectionType *type = reinterpret_cast<Qt::ConnectionType*>(args[4]);
-  Probe::connectionAdded(sender, signal, receiver, method, *type);
-  return false;
-}
-
-static bool probeDisconnectCallback(void ** args)
-{
-  QObject *sender = reinterpret_cast<QObject*>(args[0]);
-  const char *signal = reinterpret_cast<const char*>(args[1]);
-  QObject *receiver = reinterpret_cast<QObject*>(args[2]);
-  const char *method = reinterpret_cast<const char*>(args[3]);
-  Probe::connectionRemoved(sender, signal, receiver, method);
-  return false;
-}
-
-#endif // QT_VERSION
 
 static void signal_begin_callback(QObject *caller, int method_index, void **argv)
 {
@@ -232,10 +214,10 @@ Probe::Probe(QObject *parent):
   m_objectListModel(new ObjectListModel(this)),
   m_objectTreeModel(new ObjectTreeModel(this)),
   m_metaObjectTreeModel(new MetaObjectTreeModel(this)),
-  m_connectionModel(new ConnectionModel(this)),
   m_toolModel(0),
   m_window(0),
-  m_queueTimer(new QTimer(this))
+  m_queueTimer(new QTimer(this)),
+  m_server(Q_NULLPTR)
 {
   Q_ASSERT(thread() == qApp->thread());
   IF_DEBUG(cout << "attaching GammaRay probe" << endl;)
@@ -247,43 +229,36 @@ Probe::Probe(QObject *parent):
   sortedToolModel->setDynamicSortFilter(true);
   sortedToolModel->sort(0);
 
-  Server *server = new Server(this);
-  ProbeSettings::sendServerAddress(server->externalAddress());
+  m_server = new Server(this);
+  ProbeSettings::sendServerAddress(m_server->externalAddress());
 
   StreamOperators::registerOperators();
   ObjectBroker::setSelectionModelFactoryCallback(selectionModelFactory);
   ObjectBroker::registerObject<ProbeControllerInterface*>(new ProbeController(this));
 
-  registerModel(QLatin1String("com.kdab.GammaRay.ObjectTree"), m_objectTreeModel);
-  registerModel(QLatin1String("com.kdab.GammaRay.ObjectList"), m_objectListModel);
-  registerModel(QLatin1String("com.kdab.GammaRay.MetaObjectModel"), m_metaObjectTreeModel);
-  registerModel(QLatin1String("com.kdab.GammaRay.ToolModel"), sortedToolModel);
-  registerModel(QLatin1String("com.kdab.GammaRay.ConnectionModel"), m_connectionModel);
+  registerModel(QStringLiteral("com.kdab.GammaRay.ObjectTree"), m_objectTreeModel);
+  registerModel(QStringLiteral("com.kdab.GammaRay.ObjectList"), m_objectListModel);
+  registerModel(QStringLiteral("com.kdab.GammaRay.MetaObjectModel"), m_metaObjectTreeModel);
+  registerModel(QStringLiteral("com.kdab.GammaRay.ToolModel"), sortedToolModel);
 
   m_toolSelectionModel = ObjectBroker::selectionModel(sortedToolModel);
 
   ToolPluginModel *toolPluginModel = new ToolPluginModel(m_toolModel->plugins(), this);
-  registerModel(QLatin1String("com.kdab.GammaRay.ToolPluginModel"), toolPluginModel);
+  registerModel(QStringLiteral("com.kdab.GammaRay.ToolPluginModel"), toolPluginModel);
   ToolPluginErrorModel *toolPluginErrorModel =
     new ToolPluginErrorModel(m_toolModel->pluginErrors(), this);
-  registerModel(QLatin1String("com.kdab.GammaRay.ToolPluginErrorModel"), toolPluginErrorModel);
+  registerModel(QStringLiteral("com.kdab.GammaRay.ToolPluginErrorModel"), toolPluginErrorModel);
 
   if (qgetenv("GAMMARAY_MODELTEST") == "1") {
     new ModelTest(m_objectListModel, m_objectListModel);
     new ModelTest(m_objectTreeModel, m_objectTreeModel);
-    new ModelTest(m_connectionModel, m_connectionModel);
     new ModelTest(m_toolModel, m_toolModel);
   }
-
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-  QInternal::registerCallback(QInternal::ConnectCallback, &GammaRay::probeConnectCallback);
-  QInternal::registerCallback(QInternal::DisconnectCallback, &GammaRay::probeDisconnectCallback);
-#endif
 
   m_queueTimer->setSingleShot(true);
   m_queueTimer->setInterval(0);
   connect(m_queueTimer, SIGNAL(timeout()),
-          this, SLOT(queuedObjectsFullyConstructed()));
+          this, SLOT(processQueuedObjectChanges()));
 
   m_previousSignalSpyCallbackSet.signalBeginCallback = qt_signal_spy_callback_set.signal_begin_callback;
   m_previousSignalSpyCallbackSet.signalEndCallback =qt_signal_spy_callback_set.signal_end_callback;
@@ -303,11 +278,6 @@ Probe::~Probe()
     m_previousSignalSpyCallbackSet.slotEndCallback
   };
   qt_register_signal_spy_callbacks(prevCallbacks);
-
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-  QInternal::unregisterCallback(QInternal::ConnectCallback, &GammaRay::probeConnectCallback);
-  QInternal::unregisterCallback(QInternal::DisconnectCallback, &GammaRay::probeDisconnectCallback);
-#endif
 
   ObjectBroker::clear();
   ProbeSettings::resetLauncherIdentifier();
@@ -399,6 +369,14 @@ void Probe::createProbe(bool findExisting)
   QMetaObject::invokeMethod(probe, "delayedInit", Qt::QueuedConnection);
 }
 
+void Probe::resendServerAddress()
+{
+    Q_ASSERT(isInitialized());
+    Q_ASSERT(m_server);
+    ProbeSettings::receiveSettings();
+    ProbeSettings::sendServerAddress(m_server->externalAddress());
+}
+
 void Probe::startupHookReceived()
 {
 #ifdef Q_OS_ANDROID
@@ -428,7 +406,7 @@ void Probe::delayedInit()
   }
   Server::instance()->setLabel(appName);
 
-  if (ProbeSettings::value("InProcessUi", false).toBool()) {
+  if (ProbeSettings::value(QStringLiteral("InProcessUi"), false).toBool()) {
     showInProcessUi();
   }
 }
@@ -443,11 +421,21 @@ void Probe::showInProcessUi()
   IF_DEBUG(cout << "creating GammaRay::MainWindow" << endl;)
   ProbeGuard guard;
 
-  QString path = Paths::currentProbePath();
+  QString path = Paths::currentPluginsPath();
   if (!path.isEmpty()) {
     path += QDir::separator();
   }
-  path += "gammaray_inprocessui";
+  path += QStringLiteral("gammaray_inprocessui");
+#if defined(GAMMARAY_INSTALL_QT_LAYOUT)
+  path += '-';
+  path += GAMMARAY_PROBE_ABI;
+#else
+#if !defined(Q_OS_MAC)
+#if defined(QT_DEBUG)
+  path += QStringLiteral(GAMMARAY_DEBUG_POSTFIX);
+#endif
+#endif
+#endif
   QLibrary lib;
   lib.setFileName(path);
   if (!lib.load()) {
@@ -521,11 +509,6 @@ QAbstractItemModel *Probe::metaObjectModel() const
   return m_metaObjectTreeModel;
 }
 
-QAbstractItemModel *Probe::connectionModel() const
-{
-  return m_connectionModel;
-}
-
 ToolModel *Probe::toolModel() const
 {
   return m_toolModel;
@@ -539,6 +522,7 @@ QObject *Probe::probe() const
 bool Probe::isValidObject(QObject *obj) const
 {
   ///TODO: can we somehow assert(s_lock().isLocked()) ?!
+  ///  -> Not with a recursive mutex. Make it non-recursive, and you can do Q_ASSERT(!s_lock().tryLock());
   return m_validObjects.contains(obj);
 }
 
@@ -547,6 +531,23 @@ QMutex *Probe::objectLock()
   return s_lock();
 }
 
+/*
+ * We need to handle 4 different cases in here:
+ * (1) our thread, from ctor:
+ * - wait until next event-loop re-entry of our thread
+ * - emit objectCreated if object still valid
+ * (2) our thread, after ctor:
+ * - emit objectCreated right away
+ * (3) other thread, from ctor:
+ * - wait until next event-loop re-entry in other thread (FIXME: we do not currently do this!!)
+ * - post information to our thread
+ * - emit objectCreated right away if object still valid
+ * (4) other thread, after ctor:
+ * - post information to our thread
+ * - emit objectCreated there right away if object still valid
+ *
+ * Pre-conditions: lock may or may not be held already, arbitrary thread
+ */
 void Probe::objectAdded(QObject *obj, bool fromCtor)
 {
   QMutexLocker lock(s_lock());
@@ -555,6 +556,13 @@ void Probe::objectAdded(QObject *obj, bool fromCtor)
   if (fromCtor && ProbeGuard::insideProbe() && obj->thread() == QThread::currentThread()) {
     return;
   }
+
+  // ignore objects created when global statics are already getting destroyed (on exit)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+  if (s_listener.isDestroyed()) {
+      return;
+  }
+#endif
 
   if (!isInitialized()) {
     IF_DEBUG(cout
@@ -600,7 +608,7 @@ void Probe::objectAdded(QObject *obj, bool fromCtor)
             Qt::DirectConnection);
   }
 
-  if (!fromCtor && obj->parent() && instance()->m_queuedObjects.contains(obj->parent())) {
+  if (!fromCtor && obj->parent() && instance()->isObjectCreationQueued(obj->parent())) {
     // when a child event triggers a call to objectAdded while inside the ctor
     // the parent is already tracked but it's call to objectFullyConstructed
     // was delayed. hence we must do the same for the child for integrity
@@ -612,37 +620,36 @@ void Probe::objectAdded(QObject *obj, bool fromCtor)
                 << ", p: " << obj->parent() << endl;)
 
   if (fromCtor) {
-    Q_ASSERT(!instance()->m_queuedObjects.contains(obj));
-    instance()->m_queuedObjects << obj;
-    if (!instance()->m_queueTimer->isActive()) {
-      // timers must not be started from a different thread
-      QMetaObject::invokeMethod(instance()->m_queueTimer, "start", Qt::AutoConnection);
-    }
+    instance()->queueCreatedObject(obj);
   } else {
     instance()->objectFullyConstructed(obj);
   }
 }
 
-void Probe::queuedObjectsFullyConstructed()
+// pre-conditions: lock may or may not be held already, our thread
+void Probe::processQueuedObjectChanges()
 {
   QMutexLocker lock(s_lock());
 
-  IF_DEBUG(cout << Q_FUNC_INFO << " " << m_queuedObjects.size() << endl;)
+  IF_DEBUG(cout << Q_FUNC_INFO << " " << m_queuedObjectChanges.size() << endl;)
 
   // must be called from the main thread via timeout
   Q_ASSERT(QThread::currentThread() == thread());
 
-  // when this is called no object must be in the queue twice
-  // otherwise the cleanup procedures failed
-  Q_ASSERT(m_queuedObjects.size() == m_queuedObjects.toSet().size());
-
-  foreach (QObject *obj, m_queuedObjects) {
-    objectFullyConstructed(obj);
+  foreach (const auto &change, m_queuedObjectChanges) {
+    switch (change.type) {
+      case ObjectChange::Create:
+        objectFullyConstructed(change.obj);
+        break;
+      case ObjectChange::Destroy:
+        emit objectDestroyed(change.obj);
+        break;
+    }
   }
 
   IF_DEBUG(cout << Q_FUNC_INFO << " done" << endl;)
 
-  m_queuedObjects.clear();
+  m_queuedObjectChanges.clear();
 
   foreach (QObject *obj, m_pendingReparents) {
     if (!isValidObject(obj))
@@ -655,8 +662,11 @@ void Probe::queuedObjectsFullyConstructed()
   m_pendingReparents.clear();
 }
 
+// pre-condition: lock is held already, our thread
 void Probe::objectFullyConstructed(QObject *obj)
 {
+  Q_ASSERT(thread() == QThread::currentThread());
+
   if (!m_validObjects.contains(obj)) {
     // deleted already
     IF_DEBUG(cout << "stale fully constructed: " << hex << obj << endl;)
@@ -690,13 +700,20 @@ void Probe::objectFullyConstructed(QObject *obj)
     connect(obj, SIGNAL(parentChanged(QQuickItem*)), this, SLOT(objectParentChanged()));
   }
 
-  m_metaObjectTreeModel->objectAdded(obj);
-
   m_toolModel->objectAdded(obj);
 
   emit objectCreated(obj);
 }
 
+/*
+ * We have two cases to consider here:
+ * (1) our thread:
+ * - emit objectDestroyed() right away
+ * (2) other thread:
+ * - post information to our thread, emit objectDestroyed() there
+ *
+ * pre-conditions: arbitrary thread, lock may or may not be held already
+ */
 void Probe::objectRemoved(QObject *obj)
 {
   QMutexLocker lock(s_lock());
@@ -727,15 +744,18 @@ void Probe::objectRemoved(QObject *obj)
   bool success = instance()->m_validObjects.remove(obj);
   if (!success) {
     // object was not tracked by the probe, probably a gammaray object
+    EXPENSIVE_ASSERT(!instance()->isObjectCreationQueued(obj));
     return;
   }
 
-  instance()->m_queuedObjects.removeOne(obj);
+  instance()->purgeChangesForObject(obj);
+  EXPENSIVE_ASSERT(!instance()->isObjectCreationQueued(obj));
 
-  instance()->connectionRemoved(obj, 0, 0, 0);
-  instance()->connectionRemoved(0, 0, obj, 0);
-
-  emit instance()->objectDestroyed(obj);
+  if (instance()->thread() == QThread::currentThread()) {
+    emit instance()->objectDestroyed(obj);
+  } else {
+    instance()->queueDestroyedObject(obj);
+  }
 }
 
 void Probe::handleObjectDestroyed(QObject *obj)
@@ -750,37 +770,65 @@ void Probe::objectParentChanged()
   }
 }
 
-void Probe::connectionAdded(QObject *sender, const char *signal, QObject *receiver,
-                            const char *method, Qt::ConnectionType type)
+// pre-condition: we have the lock, arbitrary thread
+void Probe::queueCreatedObject(QObject* obj)
 {
-  if (!isInitialized() || !sender || !receiver || ProbeGuard::insideProbe())
-  {
-    return;
-  }
+  EXPENSIVE_ASSERT(!isObjectCreationQueued(obj));
 
-  QMutexLocker lock(s_lock());
-  if (instance()->filterObject(sender) || instance()->filterObject(receiver)) {
-    return;
-  }
-
-  instance()->m_connectionModel->connectionAdded(sender, signal, receiver, method, type);
+  ObjectChange c;
+  c.obj = obj;
+  c.type = ObjectChange::Create;
+  m_queuedObjectChanges.push_back(c);
+  notifyQueuedObjectChanges();
 }
 
-void Probe::connectionRemoved(QObject *sender, const char *signal,
-                              QObject *receiver, const char *method)
+// pre-condition: we have the lock, arbitrary thread
+void Probe::queueDestroyedObject(QObject* obj)
 {
-  if (!isInitialized() || !s_listener() || ProbeGuard::insideProbe())
-  {
-    return;
-  }
+  ObjectChange c;
+  c.obj = obj;
+  c.type = ObjectChange::Destroy;
+  m_queuedObjectChanges.push_back(c);
+  notifyQueuedObjectChanges();
+}
 
-  QMutexLocker lock(s_lock());
-  if ((sender && instance()->filterObject(sender)) ||
-      (receiver && instance()->filterObject(receiver))) {
-    return;
-  }
+// pre-condition: we have the lock, arbitrary thread
+bool Probe::isObjectCreationQueued(QObject* obj) const
+{
+  return std::find_if(m_queuedObjectChanges.begin(), m_queuedObjectChanges.end(), [obj](const ObjectChange &c) {
+      return c.obj == obj && c.type == Probe::ObjectChange::Create;
+    }) != m_queuedObjectChanges.end();
+}
 
-  instance()->m_connectionModel->connectionRemoved(sender, signal, receiver, method);
+// pre-condition: we have the lock, arbitrary thread
+void Probe::purgeChangesForObject(QObject* obj)
+{
+  for (int i = 0; i < m_queuedObjectChanges.size(); ++i) {
+    if (m_queuedObjectChanges.at(i).obj == obj && m_queuedObjectChanges.at(i).type == ObjectChange::Create) {
+      m_queuedObjectChanges.remove(i);
+      return;
+    }
+  }
+}
+
+// pre-condition: we have the lock, arbitrary thread
+void Probe::notifyQueuedObjectChanges()
+{
+  if (m_queueTimer->isActive())
+    return;
+
+  if (thread() == QThread::currentThread()) {
+    m_queueTimer->start();
+  } else {
+    static QMetaMethod m;
+    if (m.methodIndex() < 0) {
+      const auto idx = QTimer::staticMetaObject.indexOfMethod("start()");
+      Q_ASSERT(idx >= 0);
+      m = QTimer::staticMetaObject.method(idx);
+      Q_ASSERT(m.methodIndex() >= 0);
+    }
+    m.invoke(m_queueTimer, Qt::QueuedConnection);
+  }
 }
 
 bool Probe::eventFilter(QObject *receiver, QEvent *event)
@@ -808,7 +856,7 @@ bool Probe::eventFilter(QObject *receiver, QEvent *event)
         // child added events are sent before qt_addObject is called,
         // so we assumes this comes from the ctor
         objectAdded(obj, true);
-      } else if (!m_queuedObjects.contains(obj) && !m_queuedObjects.contains(obj->parent())) {
+      } else if (!isObjectCreationQueued(obj) && !isObjectCreationQueued(obj->parent())) {
         // object is known already, just update the position in the tree
         // BUT: only when we did not queue this item before
         IF_DEBUG(cout << "update pos: " << hex << obj << endl;)
@@ -818,10 +866,7 @@ bool Probe::eventFilter(QObject *receiver, QEvent *event)
     } else if (tracked) {
       if (hasReliableObjectTracking()) { // defer processing this until we know its final location
         m_pendingReparents.push_back(obj);
-        if (!m_queueTimer->isActive()) {
-          // timers must not be started from a different thread
-          QMetaObject::invokeMethod(instance()->m_queueTimer, "start", Qt::AutoConnection);
-        }
+        notifyQueuedObjectChanges();
       } else {
         objectRemoved(obj);
       }
@@ -833,14 +878,14 @@ bool Probe::eventFilter(QObject *receiver, QEvent *event)
     QMutexLocker lock(s_lock());
     const bool tracked = m_validObjects.contains(receiver);
     const bool filtered = filterObject(receiver);
-    if (!filtered && tracked && !m_queuedObjects.contains(receiver) && !m_queuedObjects.contains(receiver->parent())) {
+    if (!filtered && tracked && !isObjectCreationQueued(receiver) && !isObjectCreationQueued(receiver->parent())) {
       m_pendingReparents.removeAll(receiver);
       emit objectReparented(receiver);
     }
   }
 
   // we have no preloading hooks, so recover all objects we see
-  if (!hasReliableObjectTracking() && event->type() != QEvent::ChildAdded &&
+  if (needsObjectDiscovery() && event->type() != QEvent::ChildAdded &&
       event->type() != QEvent::ChildRemoved &&
       event->type() != QEvent::ParentChange && // already handled above
       event->type() != QEvent::Destroy &&
@@ -866,6 +911,13 @@ bool Probe::eventFilter(QObject *receiver, QEvent *event)
 void Probe::findExistingObjects()
 {
   discoverObject(QCoreApplication::instance());
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+  if (auto guiApp = qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
+      foreach (auto window, guiApp->allWindows())
+          discoverObject(window);
+  }
+#endif
 }
 
 void Probe::discoverObject(QObject *obj)
@@ -891,31 +943,53 @@ void Probe::installGlobalEventFilter(QObject *filter)
   m_globalEventFilters.push_back(filter);
 }
 
+bool Probe::needsObjectDiscovery() const
+{
+  return s_listener()->trackDestroyed;
+}
+
 bool Probe::hasReliableObjectTracking() const
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+  return true; // qHooks available, which works independent of the injector used
+#else
   return !s_listener()->trackDestroyed;
+#endif
 }
 
 void Probe::selectObject(QObject *object, const QPoint &pos)
 {
+  const auto srcIdxs = m_toolModel->toolsForObject(object);
+  selectTool(srcIdxs.value(0));
   emit objectSelected(object, pos);
+}
 
-  const auto srcIdx = m_toolModel->toolForObject(object);
-  const auto idx = qobject_cast<const QAbstractProxyModel*>(m_toolSelectionModel->model())->mapFromSource(srcIdx);
+void Probe::selectObject(QObject* object, const QString &toolId, const QPoint &pos)
+{
+  const auto matches = m_toolModel->match(m_toolModel->index(0, 0), ToolModelRole::ToolId, toolId, 1, Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
+  if (matches.isEmpty()) {
+    std::cerr << "Invalid tool id: " << qPrintable(toolId) << std::endl;
+    return;
+  }
 
-  m_toolSelectionModel->select(idx, QItemSelectionModel::Select |
-                               QItemSelectionModel::Clear |
-                               QItemSelectionModel::Rows |
-                               QItemSelectionModel::Current);
+  selectTool(matches.first());
+  emit objectSelected(object, pos);
 }
 
 void Probe::selectObject(void *object, const QString &typeName)
 {
+  const auto srcIdxs = m_toolModel->toolsForObject(object, typeName);
+  selectTool(srcIdxs.value(0));
   emit nonQObjectSelected(object, typeName);
+}
 
-  const auto srcIdx = m_toolModel->toolForObject(object, typeName);
-  const auto idx = qobject_cast<const QAbstractProxyModel*>(m_toolSelectionModel->model())->mapFromSource(srcIdx);
+void Probe::selectTool(const QModelIndex& toolModelSourceIndex)
+{
+  const auto proxy = qobject_cast<const QAbstractProxyModel*>(m_toolSelectionModel->model());
+  if (!proxy->sourceModel()) // still detached, ie. no client connected
+    return;
 
+  const auto idx = proxy->mapFromSource(toolModelSourceIndex);
   m_toolSelectionModel->select(idx, QItemSelectionModel::Select |
                                QItemSelectionModel::Clear |
                                QItemSelectionModel::Rows |
@@ -949,34 +1023,3 @@ void Probe::executeSignalCallback(const Func &func)
                 instance()->m_signalSpyCallbacks.constEnd(),
                 func);
 }
-
-//BEGIN: SignalSlotsLocationStore
-
-// taken from qobject.cpp
-const int gammaray_flagged_locations_count = 2;
-const char *gammaray_flagged_locations[gammaray_flagged_locations_count] = {0};
-
-static int gammaray_idx = 0;
-
-void SignalSlotsLocationStore::flagLocation(const char *method)
-{
-  gammaray_flagged_locations[gammaray_idx] = method;
-  gammaray_idx = (gammaray_idx+1) % gammaray_flagged_locations_count;
-}
-
-const char *SignalSlotsLocationStore::extractLocation(const char *member)
-{
-  for (int i = 0; i < gammaray_flagged_locations_count; ++i) {
-    if (member == gammaray_flagged_locations[i]) {
-      // signature includes location information after the first null-terminator
-      const char *location = member + qstrlen(member) + 1;
-      if (*location != '\0') {
-        return location;
-      }
-      return 0;
-    }
-  }
-  return 0;
-}
-
-//END

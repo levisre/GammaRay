@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,21 +29,30 @@
 #include "selectionmodelinspectorwidget.h"
 #include "ui_selectionmodelinspectorwidget.h"
 
+#include <ui/itemdelegate.h>
+
 #include <common/objectmodel.h>
 #include <common/objectbroker.h>
 
 using namespace GammaRay;
 
 SelectionModelInspectorWidget::SelectionModelInspectorWidget(QWidget *widget)
-  : QWidget(widget), ui(new Ui::SelectionModelInspectorWidget)
+  : QWidget(widget)
+  , ui(new Ui::SelectionModelInspectorWidget)
+  , m_stateManager(this)
 {
   ui->setupUi(this);
 
-  ui->selectionModelView->setModel(ObjectBroker::model("com.kdab.GammaRay.SelectionModelsModel"));
-  ui->selectionModelView->setRootIsDecorated(false);
+  ui->selectionModelView->header()->setObjectName("selectionModelViewHeader");
+  ui->selectionModelView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+  ui->selectionModelView->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SelectionModelsModel")));
   ui->selectionModelView->setSelectionModel(ObjectBroker::selectionModel(ui->selectionModelView->model()));
-  ui->selectionModelVisualizer->setRootIsDecorated(false);
-  ui->selectionModelVisualizer->setModel(ObjectBroker::model("com.kdab.GammaRay.CurrentSelectionModel"));
+
+  ui->selectionModelVisualizer->header()->setObjectName("selectionModelVisualizerHeader");
+  ui->selectionModelVisualizer->setItemDelegate(new ItemDelegate(this));
+  ui->selectionModelVisualizer->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.CurrentSelectionModel")));
+
+  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "65%" << "35%");
 }
 
 SelectionModelInspectorWidget::~SelectionModelInspectorWidget()

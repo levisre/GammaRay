@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,25 +30,20 @@
 
 #include <core/probe.h>
 
-#include <windows.h>
+#include <qt_windows.h>
 
 using namespace GammaRay;
 
 extern "C" BOOL WINAPI DllMain(HINSTANCE/*hInstance*/, DWORD dwReason, LPVOID/*lpvReserved*/)
 {
   switch(dwReason) {
+    case DLL_PROCESS_ATTACH:
     case DLL_THREAD_ATTACH:
     {
       Hooks::installHooks();
       if (!Probe::isInitialized()) {
         gammaray_probe_inject();
       }
-      break;
-    }
-    case DLL_PROCESS_DETACH:
-    {
-      //Unloading does not work, because we overwrite existing code
-      exit(-1);
       break;
     }
   };

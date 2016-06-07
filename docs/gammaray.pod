@@ -36,13 +36,14 @@ Print version information and exit.
 
 Attach to running Qt application with the specified pid.
 
-=item B<-i, --injector <injector>> 
+=item B<-i, --injector <injector>>
 
 Set the specified injection type.
 
 Supported injectors are:
      preload (Linux, Mac OS)
      gdb (Linux. requires gdb to be installed)
+     lldb (Linux. Mac OS, requires lldb to be installed)
      style
      windll (Windows)
 
@@ -60,9 +61,10 @@ on embedded devices.
 =item B<--listen <address>>
 
 Specify on which network address the GammaRay server should listen,
-default is 0.0.0.0 (ie. all of them). This can be used for example
-on Windows to avoid firewall warnings by setting the address to
-127.0.0.1 if you don't need remote access.
+default is GAMMARAY_DEFAULT_ANY_TCP_URL (ie. tcp://0.0.0.0, all of ipv4,
+use tcp://[::] for all ipv6). This can be used for example on Windows to
+avoid firewall warnings by setting the address to 127.0.0.1 if you don't
+need remote access.
 
 =item B<--no-listen>
 
@@ -83,6 +85,13 @@ probe ABI auto-detection is implemented.
 
 Connect to a target with an already injected GammaRay probe. Useful for
 example for remote debugging.
+
+=item B<--self-test [injector]>
+
+Run GammaRay self-tests, if an injector is specified only that specific
+one will be tested.
+
+The exit code is 0 on success, and 1 otherwise.
 
 =back
 
@@ -112,7 +121,7 @@ indicating a problem occurred while launching or attaching an injector.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2010-2015 Klaralvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>
+Copyright (C) 2010-2016 Klaralvdalens Datakonsult AB, a KDAB Group company, <info@kdab.com>
 
 Licensees holding valid commercial KDAB GammaRay licenses may use this file in
 accordance with GammaRay Commercial License Agreement provided with the Software.
@@ -135,12 +144,17 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 StackWalker code Copyright (c) 2005-2009, Jochen Kalmbach, All rights reserved.
 
+lz4 fast LZ compression code Copyright (C) 2011-2015, Yann Collet, All rights reserved.
+
 =head1 AUTHORS
 
  Allen Winter <allen.winter@kdab.com>
  Andreas Holzammer <andreas.holzammer@kdab.com>
  Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
+ BogDan Vatra <bogdan.vatra@kdab.com>
+ Dan Vratil <dvratil@redhat.com>
  David Faure <david.faure@kdab.com>
+ Filipe Azevedo <filipe.azevedo@kdab.com>
  Frank Osterfeld <frank.osterfeld@kdab.com>
  James Turner <james.turner@kdab.com>
  Jan Dalheimer <jan.dalheimer@kdab.com>
@@ -148,12 +162,14 @@ StackWalker code Copyright (c) 2005-2009, Jochen Kalmbach, All rights reserved.
  Laurent Montel <laurent.montel@kdab.com>
  Mathias Hasselmann <mathias.hasselmann@kdab.com>
  Milian Wolff <milian.wolff@kdab.com>
+ Nicolas Arnaud-Cormos <nicolas.arnaud-cormos@kdab.com>
  Patrick Spendrin <patrick.spendrin@kdab.com>
  Peter Kuemmel <syntheticpp@gmx.net>
  Rafael Roquetto <rafael.roquetto@kdab.com>
+ Sergio Martins <sergio.martins@kdab.com>
  Stephen Kelly <stephen.kelly@kdab.com>
  Thomas McGuire <thomas.mcguire@kdab.com>
- Till Adam <till@kdab.com>
+ Till Adam <till.adam@kdab.com>
  Tobias Koenig <tobias.koenig@kdab.com>
  Volker Krause <volker.krause@kdab.com>
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,6 +27,7 @@
 */
 
 #include "plugininfo.h"
+#include "paths.h"
 
 #include <QDebug>
 #include <QDir>
@@ -53,10 +54,13 @@ PluginInfo::PluginInfo(const QString& path) :
     m_remoteSupport(true),
     m_hidden(false)
 {
-    if (QLibrary::isLibrary(path)) {
+    // OSX has broken QLibrary::isLibrary() - QTBUG-50446
+    if (QLibrary::isLibrary(path) || path.endsWith(Paths::pluginExtension(), Qt::CaseInsensitive)) {
         initFromJSON(path);
     } else if (path.endsWith(QLatin1String(".desktop"))) {
         initFromDesktopFile(path);
+    } else {
+        qDebug("%s: %s not a library, nor a .desktop file.", Q_FUNC_INFO, qPrintable(path));
     }
 }
 
@@ -70,7 +74,7 @@ QString PluginInfo::id() const
     return m_id;
 }
 
-QString PluginInfo::interface() const
+QString PluginInfo::interfaceId() const
 {
     return m_interface;
 }
@@ -95,9 +99,14 @@ bool PluginInfo::isHidden() const
     return m_hidden;
 }
 
+QVector<QByteArray> PluginInfo::selectableTypes() const
+{
+    return m_selectableTypes;
+}
+
 bool PluginInfo::isValid() const
 {
-    return !m_path.isEmpty() && !m_interface.isEmpty();
+    return !m_id.isEmpty() && !m_path.isEmpty() && !m_interface.isEmpty();
 }
 
 void PluginInfo::initFromJSON(const QString& path)
@@ -106,18 +115,23 @@ void PluginInfo::initFromJSON(const QString& path)
     const QPluginLoader loader(path);
     const QJsonObject metaData = loader.metaData();
 
-    m_interface = metaData.value("IID").toString();
-    const QJsonObject customData = metaData.value("MetaData").toObject();
+    m_interface = metaData.value(QStringLiteral("IID")).toString();
+    const QJsonObject customData = metaData.value(QStringLiteral("MetaData")).toObject();
 
-    m_id = customData.value("id").toString();
-    m_name = customData.value("name").toString();
-    m_remoteSupport = customData.value("remoteSupport").toBool(true);
-    m_hidden = customData.value("hidden").toBool(false);
+    m_id = customData.value(QStringLiteral("id")).toString();
+    m_name = customData.value(QStringLiteral("name")).toString();
+    m_remoteSupport = customData.value(QStringLiteral("remoteSupport")).toBool(true);
+    m_hidden = customData.value(QStringLiteral("hidden")).toBool(false);
 
-    const QJsonArray types = customData.value("types").toArray();
+    const QJsonArray types = customData.value(QStringLiteral("types")).toArray();
     m_supportedTypes.reserve(types.size());
     for (auto it = types.constBegin(); it != types.constEnd(); ++it)
       m_supportedTypes.push_back((*it).toString());
+
+    const auto selectable = customData.value(QStringLiteral("selectableTypes")).toArray();
+    m_selectableTypes.reserve(selectable.size());
+    for (auto it = selectable.begin(); it != selectable.end(); ++it)
+        m_selectableTypes.push_back((*it).toString().toUtf8());
 
     m_path = path;
 #else
@@ -129,16 +143,21 @@ void PluginInfo::initFromDesktopFile(const QString& path)
 {
     const QFileInfo fi(path);
     QSettings desktopFile(path, QSettings::IniFormat);
-    desktopFile.beginGroup(QLatin1String("Desktop Entry"));
+    desktopFile.beginGroup(QStringLiteral("Desktop Entry"));
 
-    m_id = desktopFile.value("X-GammaRay-Id", fi.baseName()).toString();
-    m_interface = desktopFile.value("X-GammaRay-ServiceTypes", QString()).toString();
-    m_supportedTypes = desktopFile.value(QLatin1String("X-GammaRay-Types")).toString().split(QLatin1Char(';'), QString::SkipEmptyParts);
-    m_name = desktopFile.value(QLatin1String("Name")).toString();
-    m_remoteSupport = desktopFile.value(QLatin1String("X-GammaRay-Remote"), true).toBool();
-    m_hidden = desktopFile.value(QLatin1String("Hidden"), false).toBool();
+    m_id = desktopFile.value(QStringLiteral("X-GammaRay-Id")).toString();
+    m_interface = desktopFile.value(QStringLiteral("X-GammaRay-ServiceTypes"), QString()).toString();
+    m_supportedTypes = desktopFile.value(QStringLiteral("X-GammaRay-Types")).toString().split(QLatin1Char(';'), QString::SkipEmptyParts);
+    m_name = desktopFile.value(QStringLiteral("Name")).toString();
+    m_remoteSupport = desktopFile.value(QStringLiteral("X-GammaRay-Remote"), true).toBool();
+    m_hidden = desktopFile.value(QStringLiteral("Hidden"), false).toBool();
 
-    const QString dllBaseName = desktopFile.value(QLatin1String("Exec")).toString();
+    const auto selectable = desktopFile.value(QStringLiteral("X-GammaRay-SelectableTypes")).toString().split(QLatin1Char(';'), QString::SkipEmptyParts);
+    m_selectableTypes.reserve(selectable.size());
+    foreach (const auto &t, selectable)
+        m_selectableTypes.push_back(t.toUtf8());
+
+    const QString dllBaseName = desktopFile.value(QStringLiteral("Exec")).toString();
     if (dllBaseName.isEmpty())
       return;
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Jan Dalheimer <jan.dalheimer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -76,7 +76,7 @@ class Widget : public QWidget
     }
 
   protected:
-    bool eventFilter(QObject *object, QEvent *event)
+    bool eventFilter(QObject *object, QEvent *event) Q_DECL_OVERRIDE
     {
       if (event->type() == QEvent::LanguageChange) {
         retranslate();
@@ -106,10 +106,10 @@ int main(int argc, char *argv[])
   QApplication app(argc, argv);
 
   loadTranslation(app.applicationDirPath() + "/translation.qm",
-                  "App translator");
+                  QStringLiteral("App translator"));
   loadTranslation(QLibraryInfo::location(QLibraryInfo::TranslationsPath) +
-                  "/qt_sv.qm",
-                  "Qt translator");
+                  QStringLiteral("/qt_sv.qm"),
+                  QStringLiteral("Qt translator"));
 
   Widget widget;
   widget.show();

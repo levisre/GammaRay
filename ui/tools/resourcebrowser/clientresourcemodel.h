@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,8 +29,8 @@
 #ifndef GAMMARAY_CLIENTRESOURCEMODEL_H
 #define GAMMARAY_CLIENTRESOURCEMODEL_H
 
-#include "kde/krecursivefilterproxymodel.h"
 #include <QFileIconProvider>
+#include <QIdentityProxyModel>
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0 ,0)
 #include <QMimeDatabase>
@@ -42,7 +42,7 @@ namespace GammaRay {
  * Adds file icons for the resource model.
  * This can't be done server-side since the icon stuff might not exist in a pure QtCore application.
  */
-class ClientResourceModel : public KRecursiveFilterProxyModel
+class ClientResourceModel : public QIdentityProxyModel
 {
     Q_OBJECT
 public:

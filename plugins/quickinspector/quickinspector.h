@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,6 +36,7 @@
 #include <QQuickWindow>
 #include <QImage>
 
+QT_BEGIN_NAMESPACE
 class QQuickShaderEffectSource;
 class QAbstractItemModel;
 class QItemSelection;
@@ -47,12 +48,14 @@ class QSGNode;
 //class QSGTransformNode;
 //class QSGRootNode;
 //class QSGOpacityNode;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
 class PropertyController;
 class QuickItemModel;
 class QuickSceneGraphModel;
+class RemoteViewServer;
 
 class QuickInspector : public QuickInspectorInterface
 {
@@ -63,35 +66,32 @@ class QuickInspector : public QuickInspectorInterface
     explicit QuickInspector(ProbeInterface *probe, QObject *parent = 0);
     ~QuickInspector();
 
+    typedef bool (*GrabWindowCallback)(QQuickWindow*);
+
   public slots:
     void selectWindow(int index) Q_DECL_OVERRIDE;
-    void renderScene() Q_DECL_OVERRIDE;
-
-    void sendKeyEvent(int type, int key, int modifiers,
-                      const QString &text = QString(), bool autorep = false,
-                      ushort count = 1) Q_DECL_OVERRIDE;
-
-    void sendMouseEvent(int type, const QPointF &localPos,
-                        int button, int buttons, int modifiers) Q_DECL_OVERRIDE;
-
-    void sendWheelEvent(const QPointF &localPos, QPoint pixelDelta,
-                        QPoint angleDelta, int buttons, int modifiers) Q_DECL_OVERRIDE;
 
     void setCustomRenderMode(GammaRay::QuickInspectorInterface::RenderMode customRenderMode) Q_DECL_OVERRIDE;
 
     void checkFeatures() Q_DECL_OVERRIDE;
 
-    void setSceneViewActive(bool active) Q_DECL_OVERRIDE;
+    void pickItemAt(const QPoint& pos);
+
+    /** Allow other plugins to provide specific window grabbing callbacks.
+     *  Needed for QQuickWidget.
+     */
+    void registerGrabWindowCallback(GrabWindowCallback callback);
+
+    void sendRenderedScene(const QImage &currentFrame);
 
   protected:
     bool eventFilter(QObject *receiver, QEvent *event) Q_DECL_OVERRIDE;
 
   private slots:
     void slotSceneChanged();
-    void sendRenderedScene();
+    void slotGrabWindow();
     void itemSelectionChanged(const QItemSelection &selection);
     void sgSelectionChanged(const QItemSelection &selection);
-    void clientConnectedChanged(bool connected);
     void sgNodeDeleted(QSGNode *node);
     void objectSelected(QObject *object);
     void objectSelected(void *object, const QString &typeName);
@@ -104,11 +104,9 @@ class QuickInspector : public QuickInspectorInterface
     void registerVariantHandlers();
     void registerPCExtensions();
     QString findSGNodeType(QSGNode *node) const;
-    void setupPreviewSource();
 
     QQuickItem *recursiveChiltAt(QQuickItem *parent, const QPointF &pos) const;
 
-    QQuickShaderEffectSource *m_source;
     ProbeInterface *m_probe;
     QPointer<QQuickWindow> m_window;
     QPointer<QQuickItem> m_currentItem;
@@ -120,9 +118,10 @@ class QuickInspector : public QuickInspectorInterface
     QItemSelectionModel *m_sgSelectionModel;
     PropertyController *m_itemPropertyController;
     PropertyController *m_sgPropertyController;
+    RemoteViewServer *m_remoteView;
     QImage m_currentFrame;
-    bool m_clientViewActive;
-    bool m_needsNewFrame;
+    QVector<GrabWindowCallback> m_grabWindowCallbacks;
+    bool m_isGrabbingWindow;
 };
 
 class QuickInspectorFactory : public QObject,

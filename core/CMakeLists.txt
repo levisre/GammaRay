@@ -10,17 +10,17 @@ set(gammaray_srcs
   probeguard.cpp
   probesettings.cpp
   probecontroller.cpp
-#  proxydetacher.cpp
   objectlistmodel.cpp
   objectclassinfomodel.cpp
   objectmethodmodel.cpp
   objectenummodel.cpp
   objecttreemodel.cpp
-  connectionmodel.cpp
-  connectionfilterproxymodel.cpp
+  objecttypefilterproxymodel.cpp
   methodargumentmodel.cpp
   multisignalmapper.cpp
   signalspycallbackset.cpp
+  singlecolumnobjectproxymodel.cpp
+  toolfactory.cpp
   toolmodel.cpp
   toolpluginmodel.cpp
   toolpluginerrormodel.cpp
@@ -29,6 +29,8 @@ set(gammaray_srcs
   proxytoolfactory.cpp
   util.cpp
   varianthandler.cpp
+  objectdataprovider.cpp
+  attributemodel.cpp
 
   propertyadaptor.cpp
   propertyaggregator.cpp
@@ -41,6 +43,11 @@ set(gammaray_srcs
   objectinstance.cpp
   propertyadaptorfactory.cpp
 
+  paintbuffermodel.cpp
+  paintanalyzer.cpp
+
+  remoteviewserver.cpp
+
   tools/modelinspector/modeltester.cpp
   tools/modelinspector/modelmodel.cpp
   tools/modelinspector/modelcellmodel.cpp
@@ -52,7 +59,6 @@ set(gammaray_srcs
   tools/textdocumentinspector/textdocumentformatmodel.cpp
   tools/messagehandler/messagehandler.cpp
   tools/messagehandler/messagemodel.cpp
-  tools/connectioninspector/connectioninspector.cpp
   tools/localeinspector/localeinspector.cpp
   tools/metaobjectbrowser/metaobjectbrowser.cpp
   tools/metatypebrowser/metatypebrowser.cpp
@@ -67,6 +73,7 @@ set(gammaray_srcs
   tools/objectinspector/outboundconnectionsmodel.cpp
   tools/objectinspector/enumsextension.cpp
   tools/objectinspector/classinfoextension.cpp
+  tools/objectinspector/applicationattributeextension.cpp
   tools/resourcebrowser/resourcebrowser.cpp
   tools/resourcebrowser/resourcefiltermodel.cpp
   tools/textdocumentinspector/textdocumentinspector.cpp
@@ -83,11 +90,17 @@ set(gammaray_srcs
 if(Qt5Core_FOUND)
   set(gammaray_srcs
     ${gammaray_srcs}
+    tools/messagehandler/loggingcategorymodel.cpp
     tools/mimetypes/mimetypes.cpp
     tools/mimetypes/mimetypesmodel.cpp
     tools/standardpaths/standardpaths.cpp
     tools/standardpaths/standardpathsmodel.cpp
   )
+endif()
+
+if(NOT Qt5Gui_VERSION VERSION_LESS 5.5.0) # QPaintBuffer was removed in 5.5
+  include_directories(${CMAKE_SOURCE_DIR}/3rdparty/qt/5.5/)
+  list(APPEND gammaray_srcs ${CMAKE_SOURCE_DIR}/3rdparty/qt/5.5/private/qpaintbuffer.cpp)
 endif()
 
 if(NOT WIN32)
@@ -103,16 +116,15 @@ endif()
 qt4_wrap_cpp(gammaray_srcs ${CMAKE_SOURCE_DIR}/3rdparty/qt/modeltest.h)
 qt4_add_resources(gammaray_srcs ${CMAKE_SOURCE_DIR}/resources/gammaray.qrc)
 
-add_definitions(-DMAKE_GAMMARAY_CORE_LIB)
-
 # core lib
-add_library(gammaray_core SHARED
-  ${gammaray_srcs}
-)
+add_library(gammaray_core SHARED ${gammaray_srcs})
+generate_export_header(gammaray_core)
 
+gammaray_target_relocatable_interfaces(gammaray_core_ipaths)
+target_include_directories(gammaray_core PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> $<INSTALL_INTERFACE:${gammaray_core_ipaths}>)
 target_link_libraries(gammaray_core
   LINK_PUBLIC gammaray_common
-  LINK_PRIVATE gammaray_common_internal
+  LINK_PRIVATE gammaray_common_internal gammaray_kitemmodels
 )
 set_target_properties(gammaray_core PROPERTIES
   ${GAMMARAY_DEFAULT_LIBRARY_PROPERTIES}
@@ -128,30 +140,37 @@ else()
   )
 endif()
 
-install(TARGETS gammaray_core EXPORT GammaRayTargets ${INSTALL_TARGETS_DEFAULT_ARGS})
+if(NOT GAMMARAY_PROBE_ONLY_BUILD)
+  install(TARGETS gammaray_core EXPORT GammaRayTargets ${INSTALL_TARGETS_DEFAULT_ARGS})
 
-gammaray_install_headers(
-  gammaray_core_export.h
-  metaobject.h
-  metaobjectrepository.h
-  metaproperty.h
-  objectmodelbase.h
-  objecttypefilterproxymodel.h
-  probeinterface.h
-  propertycontroller.h
-  propertycontrollerextension.h
-  signalspycallbackset.h
-  singlecolumnobjectproxymodel.h
-  toolfactory.h
-  util.h
-  varianthandler.h
-)
+  gammaray_install_headers(
+    ${CMAKE_CURRENT_BINARY_DIR}/gammaray_core_export.h
+    metaobject.h
+    metaobjectrepository.h
+    metaproperty.h
+    objectmodelbase.h
+    objectdataprovider.h
+    objecttypefilterproxymodel.h
+    probe.h
+    probeinterface.h
+    probecontroller.h
+    propertycontroller.h
+    propertycontrollerextension.h
+    signalspycallbackset.h
+    singlecolumnobjectproxymodel.h
+    toolfactory.h
+    util.h
+    varianthandler.h
+  )
 
-ecm_generate_pri_file(BASE_NAME GammaRayCore
-                      LIB_NAME gammaray_core-${GAMMARAY_PROBE_ABI}
-                      DEPS "core gui GammaRayCommon"
-                      FILENAME_VAR PRI_FILENAME
-                      INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_DIR}/..
-)
+  ecm_generate_pri_file(BASE_NAME GammaRayCore
+                        LIB_NAME gammaray_core-${GAMMARAY_PROBE_ABI}
+                        DEPS "core gui GammaRayCommon"
+                        FILENAME_VAR PRI_FILENAME
+                        INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_DIR}
+  )
 
-install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
+  install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
+else()
+  install(TARGETS gammaray_core ${INSTALL_TARGETS_DEFAULT_ARGS})
+endif()

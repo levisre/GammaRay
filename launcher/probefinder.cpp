@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,8 +26,10 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config-gammaray.h>
 #include "probefinder.h"
 #include "probeabi.h"
+#include "probeabidetector.h"
 
 #include <common/paths.h>
 
@@ -36,6 +38,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
+#include <QLibrary>
 #include <QString>
 #include <QStringBuilder>
 
@@ -45,23 +48,47 @@ namespace GammaRay {
 
 namespace ProbeFinder {
 
-QString findProbe(const QString &baseName, const ProbeABI &probeAbi)
+static QString findProbeInternal(const ProbeABI &probeAbi, const QString &rootPath)
 {
-  const QString probePath =
-    Paths::probePath(probeAbi.id()) %
+  const QString probePath = Paths::probePath(probeAbi.id(), rootPath) %
     QDir::separator() %
-    baseName %
+    GAMMARAY_PROBE_BASENAME %
+#if defined(GAMMARAY_INSTALL_QT_LAYOUT)
+    QChar('-') %
+    probeAbi.id() %
+#else
+    QChar('*') %
+#endif
     Paths::libraryExtension();
 
-  const QFileInfo fi(probePath);
+  const QFileInfo wildcarded(probePath);
+  const QFileInfo fi = QDir(wildcarded.absolutePath()).entryInfoList(QStringList(wildcarded.fileName())).value(0);
   const QString canonicalPath = fi.canonicalFilePath();
-  if (!fi.isFile() || !fi.isReadable() || canonicalPath.isEmpty()) {
-    qWarning() << "Cannot locate probe" << probePath;
+  if (!fi.isFile() || !fi.isReadable())
+    return QString();
+  return canonicalPath;
+}
+
+QString findProbe(const QString &baseName, const ProbeABI &probeAbi)
+{
+    Q_UNUSED(baseName);
+    return findProbe(probeAbi);
+}
+
+QString findProbe(const ProbeABI &probeAbi, const QStringList &searchRoots)
+{
+    foreach (const auto &searchRoot, searchRoots) {
+        const auto path = findProbeInternal(probeAbi, searchRoot);
+        if (!path.isEmpty())
+            return path;
+    }
+    const auto path = findProbeInternal(probeAbi, Paths::rootPath());
+    if (!path.isEmpty())
+        return path;
+
+    qWarning() << "Cannot locate probe for ABI" << probeAbi.displayString() << " in " << searchRoots << Paths::rootPath();
     qWarning() << "This is likely a setup problem, due to an incomplete or partially moved installation.";
     return QString();
-  }
-
-  return canonicalPath;
 }
 
 ProbeABI findBestMatchingABI(const ProbeABI& targetABI)
@@ -88,11 +115,25 @@ QVector<ProbeABI> listProbeABIs()
 {
   QVector<ProbeABI> abis;
   const QDir dir(Paths::probePath(QString()));
+#if defined(GAMMARAY_INSTALL_QT_LAYOUT)
+  const QString filter = QStringLiteral("*gammaray_probe*");
+  foreach (const QFileInfo &abiId, dir.entryInfoList(QStringList(filter), QDir::Files)) {
+    // OSX has broken QLibrary::isLibrary() - QTBUG-50446
+    if (!QLibrary::isLibrary(abiId.fileName()) &&
+                              !abiId.fileName().endsWith(Paths::libraryExtension(), Qt::CaseInsensitive)) {
+      continue;
+    }
+    const ProbeABI abi = ProbeABI::fromString(abiId.baseName().section(QStringLiteral("-"), 1));
+    if (abi.isValid())
+      abis.push_back(abi);
+  }
+#else
   foreach (const QString &abiId, dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
     const ProbeABI abi = ProbeABI::fromString(abiId);
     if (abi.isValid())
       abis.push_back(abi);
   }
+#endif
   return abis;
 }
 

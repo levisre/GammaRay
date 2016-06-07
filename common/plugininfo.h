@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,6 +31,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QVector>
 
 namespace GammaRay {
 
@@ -45,11 +46,12 @@ public:
 
     QString path() const;
     QString id() const;
-    QString interface() const;
+    QString interfaceId() const;
     QStringList supportedTypes() const;
     QString name() const;
     bool remoteSupport() const;
     bool isHidden() const;
+    QVector<QByteArray> selectableTypes() const;
 
     bool isValid() const;
 
@@ -62,6 +64,7 @@ private:
     QString m_interface;
     QStringList m_supportedTypes;
     QString m_name;
+    QVector<QByteArray> m_selectableTypes;
     bool m_remoteSupport;
     bool m_hidden;
 };

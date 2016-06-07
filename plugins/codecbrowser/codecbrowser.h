@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,8 +31,10 @@
 
 #include <core/toolfactory.h>
 
+QT_BEGIN_NAMESPACE
 class QItemSelection;
 class QItemSelectionModel;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -69,10 +71,7 @@ class CodecBrowserFactory : public QObject, public StandardToolFactory<QObject, 
     {
     }
 
-    virtual inline QString name() const
-    {
-      return tr("Text Codecs");
-    }
+    QString name() const Q_DECL_OVERRIDE;
 };
 
 }

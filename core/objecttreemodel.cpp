@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,6 +33,7 @@
 #include <QEvent>
 #include <QMutex>
 #include <QThread>
+#include <QCoreApplication>
 
 #include <algorithm>
 #include <iostream>
@@ -53,6 +54,12 @@ ObjectTreeModel::ObjectTreeModel(Probe *probe)
           this, SLOT(objectRemoved(QObject*)));
   connect(probe, SIGNAL(objectReparented(QObject*)),
           this, SLOT(objectReparented(QObject*)));
+}
+
+QPair<int, QVariant> ObjectTreeModel::defaultSelectedItem() const
+{
+  // select the qApp object (if any) in the object model
+  return QPair<int, QVariant>(ObjectModel::ObjectRole, QVariant::fromValue<QObject*>(qApp));
 }
 
 static inline QObject *parentObject(QObject *obj)
@@ -103,6 +110,7 @@ void ObjectTreeModel::objectAdded(QObject *obj)
 
   endInsertRows();
 }
+
 
 void ObjectTreeModel::objectRemoved(QObject *obj)
 {

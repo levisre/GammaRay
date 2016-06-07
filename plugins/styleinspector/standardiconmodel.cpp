@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -56,7 +56,7 @@ QVariant StandardIconModel::dataForStandardIcon(QStyle::StandardPixmap stdPix,
 
 #define MAKE_SP(stdPix) \
 if (row == QStyle:: stdPix) \
-  return dataForStandardIcon(QStyle:: stdPix, QLatin1String(#stdPix), column, role)
+  return dataForStandardIcon(QStyle:: stdPix, QStringLiteral(#stdPix), column, role)
 
 QVariant StandardIconModel::doData(int row, int column, int role) const
 {

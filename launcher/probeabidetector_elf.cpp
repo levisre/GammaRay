@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,6 +40,10 @@
 #ifdef HAVE_ELF_H
 #include <elf.h>
 #endif
+// on Linux sys/elf.h is not what we want, on QNX we cannot add "sys" to the include dir without messing other stuff up...
+#if defined(HAVE_SYS_ELF_H) && !defined(HAVE_ELF_H)
+#include <sys/elf.h>
+#endif
 
 using namespace GammaRay;
 
@@ -48,7 +52,7 @@ static QString qtCoreFromLdd(const QString &path)
   QProcess proc;
   proc.setProcessChannelMode(QProcess::SeparateChannels);
   proc.setReadChannel(QProcess::StandardOutput);
-  proc.start("ldd", QStringList() << path);
+  proc.start(QStringLiteral("ldd"), QStringList() << path);
   proc.waitForFinished();
 
   forever {
@@ -68,20 +72,15 @@ static QString qtCoreFromLdd(const QString &path)
   return QString();
 }
 
-ProbeABI ProbeABIDetector::abiForExecutable(const QString& path) const
+QString ProbeABIDetector::qtCoreForExecutable(const QString& path) const
 {
   // TODO: add fast version reading the ELF file directly?
-  const QString qtCorePath = qtCoreFromLdd(path);
-  if (!qtCorePath.isEmpty())
-    return abiForQtCore(qtCorePath);
-
-  return ProbeABI();
+  return qtCoreFromLdd(path);
 }
-
 
 static bool qtCoreFromProc(qint64 pid, QString &path)
 {
-  const QString mapsPath = QString("/proc/%1/maps").arg(pid);
+  const QString mapsPath = QStringLiteral("/proc/%1/maps").arg(pid);
   QFile f(mapsPath);
   if (!f.open(QFile::ReadOnly)) {
     path.clear();
@@ -105,22 +104,20 @@ static bool qtCoreFromProc(qint64 pid, QString &path)
   return true;
 }
 
-ProbeABI ProbeABIDetector::abiForProcess(qint64 pid) const
+QString ProbeABIDetector::qtCoreForProcess(quint64 pid) const
 {
   QString qtCorePath;
   if (!qtCoreFromProc(pid, qtCorePath))
     qtCorePath = qtCoreFromLsof(pid);
-
-  return abiForQtCore(qtCorePath);
+  return qtCorePath;
 }
-
 
 static ProbeABI qtVersionFromFileName(const QString &path)
 {
   ProbeABI abi;
 
   const QStringList parts = path.split('.');
-  if (parts.size() < 4 || parts.at(parts.size() - 4) != "so")
+  if (parts.size() < 4 || parts.at(parts.size() - 4) != QLatin1String("so"))
     return abi;
 
   abi.setQtVersion(parts.at(parts.size() - 3).toInt(), parts.at(parts.size() - 2).toInt());
@@ -148,7 +145,7 @@ static ProbeABI qtVersionFromExec(const QString &path)
   return abi;
 }
 
-#ifdef HAVE_ELF_H
+#ifdef HAVE_ELF
 template <typename ElfEHdr>
 static QString archFromELFHeader(const uchar *data, quint64 size)
 {
@@ -157,11 +154,11 @@ static QString archFromELFHeader(const uchar *data, quint64 size)
   const ElfEHdr *hdr = reinterpret_cast<const ElfEHdr*>(data);
 
   switch (hdr->e_machine) {
-    case EM_386: return "i686";
+    case EM_386: return QStringLiteral("i686");
 #ifdef EM_X86_64
-    case EM_X86_64: return "x86_64";
+    case EM_X86_64: return QStringLiteral("x86_64");
 #endif
-    case EM_ARM: return "arm";
+    case EM_ARM: return QStringLiteral("arm");
   }
 
   qWarning() << "Unsupported ELF machine type:" << hdr->e_machine;
@@ -171,7 +168,7 @@ static QString archFromELFHeader(const uchar *data, quint64 size)
 
 static QString archFromELF(const QString &path)
 {
-#ifdef HAVE_ELF_H
+#ifdef HAVE_ELF
   QFile f(path);
   if (!f.open(QFile::ReadOnly))
     return QString();
@@ -197,6 +194,9 @@ static QString archFromELF(const QString &path)
 
 ProbeABI ProbeABIDetector::detectAbiForQtCore(const QString& path) const
 {
+  if (path.isEmpty())
+    return ProbeABI();
+
   // try to find the version
   ProbeABI abi = qtVersionFromFileName(path);
   if (!abi.hasQtVersion())

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,10 +29,13 @@
 #ifndef GAMMARAY_RESOURCEBROWSER_RESOURCEBROWSERWIDGET_H
 #define GAMMARAY_RESOURCEBROWSER_RESOURCEBROWSERWIDGET_H
 
+#include <ui/uistatemanager.h>
+
 #include <QWidget>
 
-class QTimer;
+QT_BEGIN_NAMESPACE
 class QItemSelection;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -49,20 +52,20 @@ class ResourceBrowserWidget : public QWidget
     explicit ResourceBrowserWidget(QWidget *parent = 0);
     ~ResourceBrowserWidget();
 
+  public slots:
+    void selectResource(const QString &sourceFilePath, int line = -1, int column = -1);
+
   private slots:
-    void rowsInserted();
     void setupLayout();
     void resourceDeselected();
-    void resourceSelected(const QPixmap &pixmap);
-    void resourceSelected(const QByteArray &contents);
-    void resourceDownloaded(const QString &fileName, const QPixmap &pixmap);
+    void resourceSelected(const QByteArray &contents, int line, int column);
     void resourceDownloaded(const QString &fileName, const QByteArray &contents);
 
     void handleCustomContextMenu(const QPoint &pos);
 
   private:
     QScopedPointer<Ui::ResourceBrowserWidget> ui;
-    QTimer *m_timer;
+    UIStateManager m_stateManager;
     ResourceBrowserInterface *m_interface;
 };
 

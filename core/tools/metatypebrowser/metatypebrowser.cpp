@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,7 +29,10 @@
 #include "metatypebrowser.h"
 #include "metatypesmodel.h"
 
-#include "common/objectbroker.h"
+#include <common/objectbroker.h>
+#include <core/remote/serverproxymodel.h>
+
+#include <QSortFilterProxyModel>
 
 using namespace GammaRay;
 
@@ -37,6 +40,12 @@ MetaTypeBrowser::MetaTypeBrowser(ProbeInterface *probe, QObject *parent)
   : QObject(parent)
 {
   MetaTypesModel *mtm = new MetaTypesModel(this);
-  probe->registerModel("com.kdab.GammaRay.MetaTypeModel", mtm);
+  auto proxy = new ServerProxyModel<QSortFilterProxyModel>(this);
+  proxy->setSourceModel(mtm);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.MetaTypeModel"), proxy);
 }
 
+QString MetaTypeBrowserFactory::name() const
+{
+  return tr("Meta Types");
+}

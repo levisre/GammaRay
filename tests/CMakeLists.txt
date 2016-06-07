@@ -13,10 +13,6 @@ if(Qt5Widgets_FOUND OR QT_QTGUI_FOUND)
     gammaray_core
   )
 
-  if(QNXNTO)
-    target_link_libraries(benchsuite cpp)
-  endif()
-
 ### CONNECTIONTEST
 
   add_executable(connectiontest test_connections.cpp)
@@ -27,64 +23,68 @@ if(Qt5Widgets_FOUND OR QT_QTGUI_FOUND)
     ${QT_QTTEST_LIBRARIES}
   )
 
-  if(QNXNTO)
-    target_link_libraries(connectiontest cpp)
-  endif()
 endif()
 
 add_executable(attachhelper attachhelper.cpp)
 
 target_link_libraries(attachhelper ${QT_QTCORE_LIBRARIES})
 
-if(QNXNTO)
-  target_link_libraries(attachhelper cpp)
-endif()
+set(RUN_FILTER_TESTS OFF
+  CACHE BOOL "Run filter tests which fail due to a bug in QSortFilterProxyModel"
+)
 
 if(UNIX)
-  add_test(connectiontest-preload
-    ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray --inprocess -unittest -i preload
-    ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
-  )
-  add_test(connectiontest-style
-    ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray --inprocess -unittest -i style
-    ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
-  )
+  find_program(GDB_EXECUTABLE gdb)
+  find_program(LLDB_EXECUTABLE lldb)
+endif()
 
-  set(RUN_FILTER_TESTS OFF
-    CACHE BOOL "Run filter tests which fail due to a bug in QSortFilterProxyModel"
+set(INJECTOR_TYPES)
+if(UNIX)
+  # OSX+ASAN+Qt4 (triggers a bug in Qt4, see http://stackoverflow.com/questions/22696071/how-to-make-addresssanitizer-not-stop-after-one-error-and-other-issues)
+  string(REGEX MATCH -fsanitize=address ASAN_ENABLED ${CMAKE_CXX_FLAGS})
+  if(APPLE AND ASAN_ENABLED AND NOT Qt5Core_FOUND)
+    set(OSX_ASAN_WORKAROUND ON)
+  endif()
+
+  if(NOT OSX_ASAN_WORKAROUND)
+    list(APPEND INJECTOR_TYPES preload style)
+  endif()
+
+  if(GDB_EXECUTABLE)
+    list(APPEND INJECTOR_TYPES gdb)
+  endif()
+  if(LLDB_EXECUTABLE AND NOT OSX_ASAN_WORKAROUND)
+    list(APPEND INJECTOR_TYPES lldb)
+  endif()
+elseif(WIN32)
+  # MSVC+<Qt5.4: hooks and release builds don't work before 5.4
+  if(NOT (MSVC AND (NOT Qt5Core_FOUND OR Qt5Core_VERSION VERSION_LESS 5.4.0) AND CMAKE_BUILD_TYPE MATCHES "^[Rr]el"))
+    list(APPEND INJECTOR_TYPES windll style)
+  endif()
+endif()
+
+foreach(injectorType ${INJECTOR_TYPES})
+  add_test(connectiontest-${injectorType}
+    ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray --inprocess -unittest -i ${injectorType}
+    ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
   )
   if(RUN_FILTER_TESTS)
-    add_test(connectiontest-preload-filter
-      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray -unittest -filtertest -i preload
-      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
-    )
-    add_test(connectiontest-preload-filter-modeltest
-      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray -unittest -modeltest -filtertest -i preload
-      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
-    )
-    add_test(connectiontest-style-filter
-      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray -unittest -filtertest -i style
+    add_test(connectiontest-${injectorType}-filter
+      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray -unittest -filtertest -i ${injectorType}
       ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
     )
   endif()
+endforeach()
 
-  find_program(GDB_EXECUTABLE gdb)
-  if(GDB_EXECUTABLE)
-    add_test(connectiontest-gdb
-      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray --inprocess -unittest -i gdb
-      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
-    )
-    add_test(attachtest-gdb
-      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/attachhelper ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray gdb
-      ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
-    )
-    if(RUN_FILTER_TESTS)
-      add_test(connectiontest-gdb-filter
-        ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray --inprocess -unittest -filtertest -i gdb
-        ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
-      )
-    endif()
-  endif()
+if(NOT OSX_ASAN_WORKAROUND)
+add_test(NAME attachtest-gdb
+  COMMAND ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/attachhelper ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray gdb
+  ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
+)
+add_test(NAME attachtest-lldb
+  COMMAND ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/attachhelper ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/gammaray lldb
+  ${PROJECT_BINARY_DIR}/${BIN_INSTALL_DIR}/connectiontest
+)
 endif()
 
 ### MultiSignalMapper test
@@ -97,8 +97,15 @@ target_link_libraries(multisignalmappertest
 )
 add_test(multisignalmappertest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/multisignalmappertest)
 
+### source location test
+
+add_executable(sourcelocationtest sourcelocationtest.cpp)
+target_link_libraries(sourcelocationtest ${QT_QTTEST_LIBRARIES} ${QT_QTGUI_LIBRARIES} gammaray_common)
+add_test(NAME sourcelocationtest COMMAND sourcelocationtest)
+
 ### Probe ABI test
 
+if(NOT GAMMARAY_PROBE_ONLY_BUILD)
 add_executable(probeabitest probeabitest.cpp)
 target_link_libraries(probeabitest gammaray_launcher ${QT_QTTEST_LIBRARIES} ${QT_QTGUI_LIBRARIES})
 add_test(probeabitest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/probeabitest)
@@ -106,6 +113,17 @@ add_test(probeabitest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/probeabitest)
 add_executable(probeabidetectortest probeabidetectortest.cpp)
 target_link_libraries(probeabidetectortest gammaray_launcher ${QT_QTTEST_LIBRARIES} ${QT_QTGUI_LIBRARIES})
 add_test(probeabidetectortest ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/probeabidetectortest)
+
+### probe settings test
+add_executable(probesettingsclient probesettingsclient.cpp ${CMAKE_SOURCE_DIR}/core/probesettings.cpp)
+target_compile_definitions(probesettingsclient PRIVATE GAMMARAY_CORE_STATIC_DEFINE)
+target_include_directories(probesettingsclient PRIVATE ${CMAKE_BINARY_DIR}/core)
+target_link_libraries(probesettingsclient gammaray_common ${QT_QTNETWORK_LIBRARIES})
+add_executable(probesettingstest probesettingstest.cpp)
+target_link_libraries(probesettingstest gammaray_launcher gammaray_common ${QT_QTCORE_LIBRARIES} ${QT_QTTEST_LIBRARIES} ${QT_QTGUI_LIBRARIES})
+add_test(NAME probesettingstest COMMAND probesettingstest)
+
+endif()
 
 ### Remote model tests
 
@@ -117,40 +135,77 @@ if(GAMMARAY_BUILD_UI AND NOT GAMMARAY_PROBE_ONLY_BUILD)
   )
   target_link_libraries(remotemodeltest gammaray_core gammaray_client ${QT_QTGUI_LIBRARIES} ${QT_QTTEST_LIBRARIES} ${QT_QTNETWORK_LIBRARIES})
   add_test(NAME remotemodeltest COMMAND remotemodeltest)
+
+  add_executable(networkselectionmodeltest
+    networkselectionmodeltest.cpp
+    ${CMAKE_SOURCE_DIR}/common/networkselectionmodel.cpp
+  )
+  target_link_libraries(networkselectionmodeltest gammaray_common ${QT_QTTEST_LIBRARIES} ${QT_QTGUI_LIBRARIES})
+  add_test(NAME networkselectionmodeltest COMMAND networkselectionmodeltest)
 endif()
 
 ### QSignalSpyCallback tests
 
+if(NOT OSX_ASAN_WORKAROUND)
 add_executable(signalspycallbacktest
   signalspycallbacktest.cpp
   ../probe/probecreator.cpp
 )
 target_link_libraries(signalspycallbacktest gammaray_core ${QT_QTTEST_LIBRARIES})
 add_test(NAME signalspycallbacktest COMMAND signalspycallbacktest)
+endif()
+
+### multi-threading test
+
+if(Qt5Core_FOUND AND NOT Qt5Core_VERSION_MINOR LESS 4) # requires QHooks
+add_executable(multithreadingtest
+  multithreadingtest.cpp
+  ../probe/probecreator.cpp
+  ../probe/hooks.cpp
+)
+target_link_libraries(multithreadingtest gammaray_core ${QT_QTTEST_LIBRARIES})
+add_test(NAME multithreadingtest COMMAND multithreadingtest)
+
+### QTranslator test
+#does not work unless the translations are installed in QT_INSTALL_TRANSLATIONS
+if(EXISTS "${QT_INSTALL_TRANSLATIONS}/qtbase_de.qm")
+  add_executable(translatortest
+    translatortest.cpp
+    ../probe/probecreator.cpp
+    ../probe/hooks.cpp
+    ${CMAKE_SOURCE_DIR}/3rdparty/qt/modeltest.cpp
+  )
+  target_link_libraries(translatortest gammaray_core ${QT_QTTEST_LIBRARIES})
+  add_test(NAME translatortest COMMAND translatortest)
+else()
+  message(STATUS "WARNING: Skipping the translatortest since the translations are not installed.")
+endif()
+
+endif()
 
 ### QWidget test
 
-if(Qt5Core_FOUND AND NOT Qt5Core_VERSION_MINOR LESS 4) # requires QHooks
+if(Qt5Widgets_FOUND AND NOT Qt5Core_VERSION_MINOR LESS 4) # requires QHooks
 add_executable(widgettest
   widgettest.cpp
   ../probe/probecreator.cpp
   ../probe/hooks.cpp
     ${CMAKE_SOURCE_DIR}/3rdparty/qt/modeltest.cpp
 )
-target_link_libraries(widgettest gammaray_core ${QT_QTTEST_LIBRARIES} ${QT_QTGUI_LIBRARIES})
+target_link_libraries(widgettest gammaray_core ${QT_QTTEST_LIBRARIES} ${QT_QTWIDGETS_LIBRARIES})
 
 add_test(NAME widgettest COMMAND widgettest)
 endif()
 
 ### QAction test
 
-if(Qt5Core_FOUND AND NOT Qt5Core_VERSION_MINOR LESS 4) # requires QHooks
+if(Qt5Widgets_FOUND AND NOT Qt5Core_VERSION_MINOR LESS 4) # requires QHooks
 add_executable(actiontest
   actiontest.cpp
   ../probe/probecreator.cpp
   ../probe/hooks.cpp
 )
-target_link_libraries(actiontest gammaray_core ${QT_QTTEST_LIBRARIES} ${QT_QTGUI_LIBRARIES})
+target_link_libraries(actiontest gammaray_core ${QT_QTTEST_LIBRARIES} ${QT_QTWIDGETS_LIBRARIES})
 
 add_test(NAME actiontest COMMAND actiontest)
 endif()
@@ -160,6 +215,12 @@ endif()
 add_executable(metaobjecttest metaobjecttest.cpp)
 target_link_libraries(metaobjecttest gammaray_core ${QT_QTTEST_LIBRARIES})
 add_test(NAME metaobjecttest COMMAND metaobjecttest)
+
+### ObjectInstance test
+
+add_executable(objectinstancetest objectinstancetest.cpp)
+target_link_libraries(objectinstancetest gammaray_core ${QT_QTTEST_LIBRARIES})
+add_test(NAME objectinstancetest COMMAND objectinstancetest)
 
 ### PropertySyncer test
 
@@ -178,7 +239,7 @@ endif()
 ### Property Adaptor test
 
 add_executable(propertyadaptortest propertyadaptortest.cpp)
-target_link_libraries(propertyadaptortest gammaray_core ${QT_QTTEST_LIBRARIES} gammaray_shared_test_data)
+target_link_libraries(propertyadaptortest gammaray_core ${QT_QTTEST_LIBRARIES} ${QT_QTGUI_LIBRARIES} gammaray_shared_test_data)
 add_test(NAME propertyadaptortest COMMAND propertyadaptortest)
 
 ### Property model test
@@ -208,8 +269,9 @@ if(Qt5Quick_FOUND)
     ${CMAKE_SOURCE_DIR}/plugins/qmlsupport/qmllistpropertyadaptor.cpp
     ${CMAKE_SOURCE_DIR}/plugins/qmlsupport/qmlattachedpropertyadaptor.cpp
     ${CMAKE_SOURCE_DIR}/plugins/qmlsupport/qjsvaluepropertyadaptor.cpp
+    ${CMAKE_SOURCE_DIR}/plugins/qmlsupport/qmlcontextpropertyadaptor.cpp
   )
-  include_directories(${Qt5Qml_PRIVATE_INCLUDE_DIRS})
+  include_directories(SYSTEM ${Qt5Qml_PRIVATE_INCLUDE_DIRS})
   target_link_libraries(qmlsupporttest gammaray_core Qt5::Quick Qt5::Test)
   add_test(NAME qmlsupporttest COMMAND qmlsupporttest)
 endif()
@@ -222,7 +284,7 @@ set(quickinspectortest_srcs
   ../probe/probecreator.cpp
   ../probe/hooks.cpp
   ../plugins/quickinspector/quickinspectorinterface.cpp
-  ../plugins/quickinspector/transferimage.cpp
+  ../plugins/quickinspector/quickitemgeometry.cpp
     ${CMAKE_SOURCE_DIR}/3rdparty/qt/modeltest.cpp
 )
 qt4_add_resources(quickinspectortest_srcs quickinspectortest.qrc)
@@ -230,6 +292,5 @@ add_executable(quickinspectortest ${quickinspectortest_srcs})
 target_link_libraries(quickinspectortest gammaray_core Qt5::Test Qt5::Quick)
 add_test(NAME quickinspectortest COMMAND quickinspectortest)
 endif()
-
 
 add_subdirectory(manual)

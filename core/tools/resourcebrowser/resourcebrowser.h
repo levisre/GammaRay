@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,9 +30,11 @@
 #define GAMMARAY_RESOURCEBROWSER_RESOURCEBROWSER_H
 
 #include "toolfactory.h"
-#include <common/resourcebrowserinterface.h>
+#include <common/tools/resourcebrowser/resourcebrowserinterface.h>
 
+QT_BEGIN_NAMESPACE
 class QModelIndex;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -45,9 +47,10 @@ class ResourceBrowser : public ResourceBrowserInterface
 
   public slots:
     void downloadResource(const QString &sourceFilePath, const QString &targetFilePath) Q_DECL_OVERRIDE;
+    void selectResource(const QString &sourceFilePath, int line = -1, int column = -1) Q_DECL_OVERRIDE;
 
   private slots:
-    void currentChanged(const QModelIndex &current);
+    void currentChanged(const QModelIndex &current, int line = -1, int column = -1);
 };
 
 class ResourceBrowserFactory : public QObject, public StandardToolFactory<QObject, ResourceBrowser>
@@ -59,10 +62,7 @@ class ResourceBrowserFactory : public QObject, public StandardToolFactory<QObjec
     {
     }
 
-    inline QString name() const
-    {
-      return tr("Resources");
-    }
+    QString name() const Q_DECL_OVERRIDE;
 };
 
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,21 +31,30 @@
 
 #include "gammaray_launcher_export.h"
 
+#include <QStringList>
 #include <QVector>
 
+QT_BEGIN_NAMESPACE
 class QString;
-class QStringList;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
 class ProbeABI;
 
+/** @brief Functions to locate a suitable probe. */
 namespace ProbeFinder {
 
   /**
    * Attempts to find the full path of the probe DLL.
    */
-  GAMMARAY_LAUNCHER_EXPORT QString findProbe(const QString& baseName, const ProbeABI& probeAbi);
+  GAMMARAY_LAUNCHER_DEPRECATED_EXPORT QString findProbe(const QString& baseName, const ProbeABI& probeAbi);
+
+  /**
+   * Attempts to find the full path of the probe DLL with ABI @p probeAbi, considering
+   * the additional search paths @p searchRoots.
+   */
+  GAMMARAY_LAUNCHER_EXPORT QString findProbe(const ProbeABI &probeAbi, const QStringList &searchRoots = QStringList());
 
   /**
    * Find the best matching probe for the given @p targetABI.

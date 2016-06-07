@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,11 +32,14 @@
 #include "gammaray_common_export.h"
 #include "protocol.h"
 
+#include <QMetaMethod>
 #include <QObject>
 #include <QPointer>
 
+QT_BEGIN_NAMESPACE
 class QIODevice;
 class QUrl;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -161,6 +164,9 @@ protected:
   /** Calls the message handler registered for the receiver of @p msg. */
   void dispatchMessage(const GammaRay::Message& msg);
 
+  /** Sends a given message. */
+  virtual void doSendMessage(const Message &msg);
+
   /** All current object name/address pairs. */
   QVector<QPair<Protocol::ObjectAddress, QString> > objectAddresses() const;
 
@@ -198,7 +204,7 @@ private:
 
     // custom message handling support
     QObject *receiver;
-    QByteArray messageHandler;
+    QMetaMethod messageHandler;
   };
 
   /** Inserts @p oi into all maps. */

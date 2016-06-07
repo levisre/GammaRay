@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,6 +29,7 @@
 #include "kjobtrackerwidget.h"
 #include "ui_kjobtrackerwidget.h"
 
+#include <ui/searchlinecontroller.h>
 #include <common/objectbroker.h>
 
 using namespace GammaRay;
@@ -40,14 +41,16 @@ using namespace GammaRay;
 using namespace GammaRay;
 
 KJobTrackerWidget::KJobTrackerWidget(QWidget *parent)
-  : QWidget(parent), ui(new Ui::KJobTrackerWidget)
+  : QWidget(parent)
+  , ui(new Ui::KJobTrackerWidget)
+  , m_stateManager(this)
 {
   ui->setupUi(this);
 
-  QSortFilterProxyModel *filter = new QSortFilterProxyModel(this);
-  filter->setSourceModel(ObjectBroker::model("com.kdab.GammaRay.KJobModel"));
-  ui->searchLine->setProxy(filter);
-  ui->jobView->setModel(filter);
+  auto model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.KJobModel"));
+  new SearchLineController(ui->searchLine, model);
+  ui->jobView->header()->setObjectName("jobViewHeader");
+  ui->jobView->setModel(model);
 }
 
 KJobTrackerWidget::~KJobTrackerWidget()

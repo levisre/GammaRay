@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,8 +31,10 @@
 
 #include <QApplication>
 #include <QDebug>
+#include <QMatrix>
 #include <QMatrix4x4>
 #include <QPainter>
+#include <QQuaternion>
 #include <QVector2D>
 #include <QVector3D>
 #include <QVector4D>
@@ -41,10 +43,47 @@ using namespace GammaRay;
 
 namespace {
 template <typename T> struct matrix_trait {};
+template <> struct matrix_trait<QMatrix> {
+    static const int rows = 3;
+    static const int columns = 2;
+    static qreal value(const QMatrix &matrix, int r, int c) {
+        switch (r << 4 | c) {
+            case 0x00: return matrix.m11();
+            case 0x01: return matrix.m12();
+            case 0x10: return matrix.m21();
+            case 0x11: return matrix.m22();
+            case 0x20: return matrix.dx();
+            case 0x21: return matrix.dy();
+        }
+        Q_ASSERT(false);
+        return 0.0;
+    }
+};
+
 template <> struct matrix_trait<QMatrix4x4> {
     static const int rows = 4;
     static const int columns = 4;
     static qreal value(const QMatrix4x4 &matrix, int r, int c) { return matrix(r, c); }
+};
+
+template <> struct matrix_trait<QTransform> {
+    static const int rows = 3;
+    static const int columns = 3;
+    static qreal value(const QTransform &matrix, int r, int c) {
+        switch (r << 4 | c) {
+            case 0x00: return matrix.m11();
+            case 0x01: return matrix.m12();
+            case 0x02: return matrix.m13();
+            case 0x10: return matrix.m21();
+            case 0x11: return matrix.m22();
+            case 0x12: return matrix.m23();
+            case 0x20: return matrix.m31();
+            case 0x21: return matrix.m32();
+            case 0x22: return matrix.m33();
+        }
+        Q_ASSERT(false);
+        return 0.0;
+    }
 };
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
@@ -67,9 +106,35 @@ template <> struct matrix_trait<QVector4D> {
 };
 #endif
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+template <> struct matrix_trait<QQuaternion> {
+  static const int rows = 3;
+  static const int columns = 1;
+  static qreal value(const QQuaternion &quaternion, int r, int) {
+    float pitch, yaw, roll;
+    quaternion.getEulerAngles(&pitch, &yaw, &roll);
+
+    switch (r) {
+      case 0: return pitch;
+      case 1: return yaw;
+      case 2: return roll;
+    }
+    Q_ASSERT(false);
+    return 0.0;
+  }
+};
+#endif
+
 }
 
-PropertyEditorDelegate::PropertyEditorDelegate(QObject* parent): QStyledItemDelegate(parent)
+PropertyEditorDelegate::PropertyEditorDelegate(QObject* parent)
+    : QStyledItemDelegate(parent), ItemDelegateInterface(QString())
+{
+    setItemEditorFactory(PropertyEditorFactory::instance());
+}
+
+PropertyEditorDelegate::PropertyEditorDelegate(const QString &placeholderText, QObject *parent)
+    : QStyledItemDelegate(parent), ItemDelegateInterface(placeholderText)
 {
     setItemEditorFactory(PropertyEditorFactory::instance());
 }
@@ -89,6 +154,10 @@ void PropertyEditorDelegate::paint(QPainter* painter, const QStyleOptionViewItem
     const QVariant value = index.data(Qt::EditRole);
     if (value.canConvert<QMatrix4x4>()) {
         paint(painter, option, index, value.value<QMatrix4x4>());
+    } else if (value.canConvert<QMatrix>()) {
+        paint(painter, option, index, value.value<QMatrix>());
+    } else if (value.type() == QVariant::Transform) {
+        paint(painter, option, index, value.value<QTransform>());
 #if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
     } else if (value.canConvert<QVector2D>()) {
         paint(painter, option, index, value.value<QVector2D>());
@@ -97,8 +166,28 @@ void PropertyEditorDelegate::paint(QPainter* painter, const QStyleOptionViewItem
     } else if (value.canConvert<QVector4D>()) {
       paint(painter, option, index, value.value<QVector4D>());
 #endif
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+    } else if (value.type() == QVariant::Quaternion) {
+        paint(painter, option, index, value.value<QQuaternion>());
+#endif
     } else {
-        QStyledItemDelegate::paint(painter, option, index);
+        if (placeholderText().isEmpty()) {
+            QStyledItemDelegate::paint(painter, option, index);
+        }
+        else {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
+            QStyleOptionViewItem opt = option;
+#else
+            QStyleOptionViewItemV4 opt = *qstyleoption_cast<const QStyleOptionViewItemV4*>(&option);
+#endif
+
+            opt.text = defaultDisplayText(index);
+            initStyleOption(&opt, index);
+
+            const QWidget *widget = this->widget(option);
+            QStyle *style = this->style(option);
+            style->drawControl(QStyle::CE_ItemViewItem, &opt, painter, widget);
+        }
     }
 }
 
@@ -107,6 +196,10 @@ QSize PropertyEditorDelegate::sizeHint(const QStyleOptionViewItem& option, const
     const QVariant value = index.data(Qt::EditRole);
     if (value.canConvert<QMatrix4x4>()) {
         return sizeHint(option, index, value.value<QMatrix4x4>());
+    } else if (value.canConvert<QMatrix>()) {
+        return sizeHint(option, index, value.value<QMatrix>());
+    } else if (value.type() == QVariant::Transform) {
+        return sizeHint(option, index, value.value<QTransform>());
 #if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
     } else if (value.canConvert<QVector2D>()) {
         return sizeHint(option, index, value.value<QVector2D>());
@@ -115,7 +208,30 @@ QSize PropertyEditorDelegate::sizeHint(const QStyleOptionViewItem& option, const
     } else if (value.canConvert<QVector4D>()) {
       return sizeHint(option, index, value.value<QVector4D>());
 #endif
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+    } else if (value.type() == QVariant::Quaternion) {
+        return sizeHint(option, index, value.value<QQuaternion>());
+#endif
     }
+
+    // We don't want multiline texts for String values
+    if (value.type() == QVariant::String) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
+        QStyleOptionViewItem opt = option;
+#else
+        QStyleOptionViewItemV4 opt = *qstyleoption_cast<const QStyleOptionViewItemV4*>(&option);
+#endif
+
+        if (opt.text.isEmpty() && !placeholderText().isEmpty()) {
+            opt.text = defaultDisplayText(index);
+        }
+
+        QSize sh = QStyledItemDelegate::sizeHint(opt, index);
+
+        initStyleOption(&opt, index);
+        return sh.boundedTo(QSize(sh.width(), opt.fontMetrics.height()));
+    }
+
     return QStyledItemDelegate::sizeHint(option, index);
 }
 
@@ -137,7 +253,7 @@ void PropertyEditorDelegate::paint(QPainter* painter, const QStyleOptionViewItem
     textRect = textRect.adjusted(textHMargin, textVMargin, -textHMargin, -textVMargin);
 
     static const int parenthesisLineWidth = 1;
-    const int matrixSpacing = opt.fontMetrics.width("x");
+    const int matrixSpacing = opt.fontMetrics.width(QStringLiteral("x"));
     const int matrixHMargin = matrixSpacing / 2;
     const int parenthesisWidth = qMax(matrixHMargin, 3);
 
@@ -182,7 +298,7 @@ QSize PropertyEditorDelegate::sizeHint(const QStyleOptionViewItem& option, const
     int width = 0;
     for (int col = 0; col < matrix_trait<Matrix>::columns; ++col)
         width += columnWidth(opt, matrix, col);
-    width += opt.fontMetrics.width("x") * matrix_trait<Matrix>::columns + 2 * parenthesisLineWidth + 2 * textHMargin;
+    width += opt.fontMetrics.width(QStringLiteral("x")) * matrix_trait<Matrix>::columns + 2 * parenthesisLineWidth + 2 * textHMargin;
 
     const int height = opt.fontMetrics.lineSpacing() * matrix_trait<Matrix>::rows + 2* textVMargin;
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,12 +30,20 @@
 #include "qmllistpropertyadaptor.h"
 #include "qmlattachedpropertyadaptor.h"
 #include "qjsvaluepropertyadaptor.h"
+#include "qmlcontextpropertyadaptor.h"
+#include "qmlcontextextension.h"
+#include "qmltypeextension.h"
 
 #include <core/metaobject.h>
 #include <core/metaobjectrepository.h>
 #include <core/varianthandler.h>
 #include <core/util.h>
 #include <core/propertyadaptorfactory.h>
+#include <core/propertycontroller.h>
+#include <core/objectdataprovider.h>
+
+#include <common/metatypedeclarations.h>
+#include <common/sourcelocation.h>
 
 #include <QDateTime>
 #include <QDebug>
@@ -45,13 +53,52 @@
 #include <QQmlError>
 #include <QQmlListProperty>
 
+#include <private/qjsvalue_p.h>
+#include <private/qqmlmetatype_p.h>
+#include <private/qqmldata_p.h>
+#include <private/qqmlcompiler_p.h>
+#include <private/qqmlcontext_p.h>
+#include <private/qqmlscriptstring_p.h>
+#include <private/qv8engine_p.h>
+#include <private/qv4qobjectwrapper_p.h>
+
 Q_DECLARE_METATYPE(QQmlError)
 
 using namespace GammaRay;
 
+#if defined(QT_DEPRECATED) && QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+static QString metaMethodToString(const QObject *object, const QMetaMethod &method)
+{
+  return QStringLiteral("%1 bound on %2").arg(method.methodSignature(), Util::displayString(object));
+}
+#endif
+
+static QString callableQjsValueToString(const QJSValue &v)
+{
+#if defined(QT_DEPRECATED) && QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+  // note: QJSValue::engine() is deprecated
+  // note: QJSValuePrivate::convertedToValue got introduced in Qt 5.5.0
+  QV4::ExecutionEngine *jsEngine = QV8Engine::getV4(v.engine());
+  QV4::Scope scope(jsEngine);
+
+  QV4::Scoped<QV4::QObjectMethod> qobjectMethod(scope, QJSValuePrivate::convertedToValue(jsEngine, v));
+  if (!qobjectMethod) {
+    return QStringLiteral("<callable>");
+  }
+
+  QObject *sender = qobjectMethod->object();
+  Q_ASSERT(sender);
+  QMetaMethod metaMethod = sender->metaObject()->method(qobjectMethod->methodIndex());
+  return metaMethodToString(sender, metaMethod);
+#else
+  Q_UNUSED(v);
+  return QStringLiteral("<callable>");
+#endif
+}
+
 static QString qmlErrorToString(const QQmlError &error)
 {
-  return QString::fromLatin1("%1:%2:%3: %4")
+  return QStringLiteral("%1:%2:%3: %4")
     .arg(error.url().toString())
     .arg(error.line())
     .arg(error.column())
@@ -74,34 +121,134 @@ static QString qmlListPropertyToString(const QVariant &value, bool *ok)
 static QString qjsValueToString(const QJSValue &v)
 {
   if (v.isArray()) {
-    return "<array>";
+    return QStringLiteral("<array>");
   } else if (v.isBool()) {
-    return v.toBool() ? "true" : "false";
+    return v.toBool() ? QStringLiteral("true") : QStringLiteral("false");
   } else if (v.isCallable()) {
-    return "<callable>";
+    return callableQjsValueToString(v);
   } else if (v.isDate()) {
     return v.toDateTime().toString();
   } else if (v.isError()) {
-    return "<error>";
+    return QStringLiteral("<error>");
   } else if (v.isNull()) {
-    return "<null>";
+    return QStringLiteral("<null>");
   } else if (v.isNumber()) {
     return QString::number(v.toNumber());
   } else if (v.isObject()) {
-    return "<object>";
+    return QStringLiteral("<object>");
   } else if (v.isQObject()) {
     return Util::displayString(v.toQObject());
   } else if (v.isRegExp()) {
-    return "<regexp>";
+    return QStringLiteral("<regexp>");
   } else if (v.isString()) {
     return v.toString();
   } else if (v.isUndefined()) {
-    return "<undefined>";
+    return QStringLiteral("<undefined>");
   } else if (v.isVariant()) {
     return VariantHandler::displayString(v.toVariant());
   }
-  return "<unknown QJSValue>";
+  return QStringLiteral("<unknown QJSValue>");
 }
+
+static QString qqmlScriptStringToString(const QQmlScriptString &v)
+{
+    // QQmlScriptStringPrivate::get is not guaranteed to be exported, inline
+    auto scriptStringPriv = reinterpret_cast<const QSharedDataPointer<QQmlScriptStringPrivate> *>(&v)->constData();
+    return scriptStringPriv->script;
+}
+
+namespace GammaRay {
+class QmlObjectDataProvider : public AbstractObjectDataProvider
+{
+public:
+    QString name(const QObject* obj) const Q_DECL_OVERRIDE;
+    QString typeName(QObject *obj) const Q_DECL_OVERRIDE;
+    SourceLocation creationLocation(QObject* obj) const Q_DECL_OVERRIDE;
+    SourceLocation declarationLocation(QObject *obj) const Q_DECL_OVERRIDE;
+};
+}
+
+QString QmlObjectDataProvider::name(const QObject *obj) const
+{
+    QQmlContext *ctx = QQmlEngine::contextForObject(obj);
+    if (!ctx || !ctx->engine())
+        return QString(); // nameForObject crashes for contexts that have no engine (yet)
+    return ctx->nameForObject(const_cast<QObject*>(obj));
+}
+
+QString QmlObjectDataProvider::typeName(QObject* obj) const
+{
+    Q_ASSERT(obj);
+
+    // C++ QML type
+    auto qmlType = QQmlMetaType::qmlType(obj->metaObject());
+    if (qmlType)
+        return qmlType->qmlTypeName();
+
+    // QML defined type
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+    auto data = QQmlData::get(obj);
+    if (!data || !data->compiledData)
+        return QString();
+
+    qmlType = QQmlMetaType::qmlType(data->compiledData->url());
+    if (qmlType) {
+        // we get the same type for top-level types and inline types, with no known way to tell those apart...
+        if (QString::fromLatin1(obj->metaObject()->className()).startsWith(qmlType->qmlTypeName() + QStringLiteral("_QMLTYPE_")))
+            return qmlType->qmlTypeName();
+    }
+#endif
+    return QString();
+}
+
+SourceLocation QmlObjectDataProvider::creationLocation(QObject *obj) const
+{
+    SourceLocation loc;
+
+    auto objectData = QQmlData::get(obj);
+    if (!objectData) {
+        if (auto context = qobject_cast<QQmlContext*>(obj))
+            loc.setUrl(context->baseUrl());
+        return loc;
+    }
+
+    auto context = objectData->outerContext;
+    if (!context)
+        return loc;
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+    loc.setUrl(context->url());
+#else
+    loc.setUrl(context->url);
+#endif
+
+    loc.setLine(objectData->lineNumber);
+    loc.setColumn(objectData->columnNumber);
+    return loc;
+}
+
+SourceLocation QmlObjectDataProvider::declarationLocation(QObject* obj) const
+{
+    Q_ASSERT(obj);
+
+    // C++ QML type
+    auto qmlType = QQmlMetaType::qmlType(obj->metaObject());
+    if (qmlType)
+        return SourceLocation(qmlType->sourceUrl());
+
+    // QML-defined type
+#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
+    auto data = QQmlData::get(obj);
+    if (!data || !data->compiledData)
+        return SourceLocation();
+
+    qmlType = QQmlMetaType::qmlType(data->compiledData->url());
+    if (qmlType)
+        return SourceLocation(qmlType->sourceUrl());
+#endif
+    return SourceLocation();
+}
+
 
 QmlSupport::QmlSupport(GammaRay::ProbeInterface* probe, QObject* parent) :
   QObject(parent)
@@ -130,13 +277,45 @@ QmlSupport::QmlSupport(GammaRay::ProbeInterface* probe, QObject* parent) :
   MO_ADD_PROPERTY_CR(QQmlEngine, QStringList, pluginPathList, setPluginPathList);
   MO_ADD_PROPERTY_RO(QQmlEngine, QQmlContext*, rootContext);
 
+  MO_ADD_METAOBJECT0(QQmlType);
+  MO_ADD_PROPERTY_RO(QQmlType, QByteArray, typeName);
+  MO_ADD_PROPERTY_RO(QQmlType, const QString&, qmlTypeName);
+  MO_ADD_PROPERTY_RO(QQmlType, const QString&, elementName);
+  MO_ADD_PROPERTY_RO(QQmlType, int, majorVersion);
+  MO_ADD_PROPERTY_RO(QQmlType, int, minorVersion);
+  MO_ADD_PROPERTY_RO(QQmlType, int, createSize);
+  MO_ADD_PROPERTY_RO(QQmlType, bool, isCreatable);
+  MO_ADD_PROPERTY_RO(QQmlType, bool, isExtendedType);
+  MO_ADD_PROPERTY_RO(QQmlType, bool, isSingleton);
+  MO_ADD_PROPERTY_RO(QQmlType, bool, isInterface);
+  MO_ADD_PROPERTY_RO(QQmlType, bool, isComposite);
+  MO_ADD_PROPERTY_RO(QQmlType, bool, isCompositeSingleton);
+  MO_ADD_PROPERTY_RO(QQmlType, QString, noCreationReason);
+  MO_ADD_PROPERTY_RO(QQmlType, int, typeId);
+  MO_ADD_PROPERTY_RO(QQmlType, int, qListTypeId);
+  MO_ADD_PROPERTY_RO(QQmlType, int, metaObjectRevision);
+  MO_ADD_PROPERTY_RO(QQmlType, bool, containsRevisionedAttributes);
+//   MO_ADD_PROPERTY_RO(QQmlType, const char*, interfaceIId);
+  MO_ADD_PROPERTY_RO(QQmlType, int, index);
+  MO_ADD_PROPERTY_RO(QQmlType, const QMetaObject*, metaObject);
+  MO_ADD_PROPERTY_RO(QQmlType, const QMetaObject*, baseMetaObject);
+  MO_ADD_PROPERTY_RO(QQmlType, QUrl, sourceUrl);
+
   VariantHandler::registerStringConverter<QJSValue>(qjsValueToString);
+  VariantHandler::registerStringConverter<QQmlScriptString>(qqmlScriptStringToString);
   VariantHandler::registerStringConverter<QQmlError>(qmlErrorToString);
   VariantHandler::registerGenericStringConverter(qmlListPropertyToString);
 
   PropertyAdaptorFactory::registerFactory(QmlListPropertyAdaptorFactory::instance());
   PropertyAdaptorFactory::registerFactory(QmlAttachedPropertyAdaptorFactory::instance());
   PropertyAdaptorFactory::registerFactory(QJSValuePropertyAdaptorFactory::instance());
+  PropertyAdaptorFactory::registerFactory(QmlContextPropertyAdaptorFactory::instance());
+
+  PropertyController::registerExtension<QmlContextExtension>();
+  PropertyController::registerExtension<QmlTypeExtension>();
+
+  static auto dataProvider = new QmlObjectDataProvider;
+  ObjectDataProvider::registerProvider(dataProvider);
 }
 
 QString QmlSupportFactory::name() const

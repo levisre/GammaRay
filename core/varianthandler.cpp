@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -76,9 +76,9 @@ static QString displayMatrix4x4(const QMatrix4x4 &matrix)
     for (int j = 0; j < 4; ++j) {
       cols.push_back(QString::number(matrix(i, j)));
     }
-    rows.push_back(cols.join(" "));
+    rows.push_back(cols.join(QStringLiteral(" ")));
   }
-  return '[' + rows.join(", ") + ']';
+  return '[' + rows.join(QStringLiteral(", ")) + ']';
 }
 
 static QString displayMatrix4x4(const QMatrix4x4 *matrix)
@@ -86,7 +86,7 @@ static QString displayMatrix4x4(const QMatrix4x4 *matrix)
   if (matrix) {
     return displayMatrix4x4(*matrix);
   }
-  return "<null>";
+  return QStringLiteral("<null>");
 }
 
 template <int Dim, typename T>
@@ -95,29 +95,8 @@ static QString displayVector(const T &vector)
   QStringList v;
   for (int i = 0; i < Dim; ++i)
     v.push_back(QString::number(vector[i]));
-  return '[' + v.join(", ") + ']';
+  return '[' + v.join(QStringLiteral(", ")) + ']';
 }
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-static QString displayShaderType(const QOpenGLShader::ShaderType type)
-{
-  QStringList types;
-#define ST(t) if (type & QOpenGLShader::t) types.push_back(#t);
-  ST(Vertex)
-  ST(Fragment)
-#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
-  ST(Geometry)
-  ST(TessellationControl)
-  ST(TessellationEvaluation)
-  ST(Compute)
-#endif
-#undef ST
-
-  if (types.isEmpty())
-    return "<none>";
-  return types.join(" | ");
-}
-#endif
 
 }
 
@@ -142,41 +121,59 @@ QString VariantHandler::displayString(const QVariant &value)
     const auto sizes = icon.availableSizes();
     QStringList l;
     l.reserve(sizes.size());
-    foreach (const QSize &size, sizes) {
+    foreach (QSize size, sizes) {
       l.push_back(displayString(size));
     }
-    return l.join(QLatin1String(", "));
+    return l.join(QStringLiteral(", "));
   }
   case QVariant::Line:
     return
-      QString::fromUtf8("%1, %2 → %3, %4").
+      QStringLiteral("%1, %2 → %3, %4").
         arg(value.toLine().x1()).arg(value.toLine().y1()).
         arg(value.toLine().x2()).arg(value.toLine().y2());
 
   case QVariant::LineF:
     return
-      QString::fromUtf8("%1, %2 → %3, %4").
+      QStringLiteral("%1, %2 → %3, %4").
         arg(value.toLineF().x1()).arg(value.toLineF().y1()).
         arg(value.toLineF().x2()).arg(value.toLineF().y2());
 
   case QVariant::Locale:
     return value.toLocale().name();
 
+  case QVariant::Pen:
+  {
+    const auto pen = value.value<QPen>();
+    switch (pen.style()) {
+      case Qt::NoPen: return QStringLiteral("NoPen");
+      case Qt::SolidLine: return QStringLiteral("SolidLine");
+      case Qt::DashLine: return QStringLiteral("DashLine");
+      case Qt::DotLine: return QStringLiteral("DotLine");
+      case Qt::DashDotLine: return QStringLiteral("DashDotLine");
+      case Qt::DashDotDotLine: return QStringLiteral("DashDotDotLine");
+      case Qt::CustomDashLine: return QStringLiteral("CustomDashLine");
+#if !defined(Q_MOC_RUN)
+    case Qt::MPenStyle:
+        return QString();
+#endif
+    }
+  }
+
   case QVariant::Point:
     return
-      QString::fromLatin1("%1, %2").
+      QStringLiteral("%1, %2").
         arg(value.toPoint().x()).
         arg(value.toPoint().y());
 
   case QVariant::PointF:
     return
-      QString::fromLatin1("%1, %2").
+      QStringLiteral("%1, %2").
         arg(value.toPointF().x()).
         arg(value.toPointF().y());
 
   case QVariant::Rect:
     return
-      QString::fromLatin1("%1, %2 %3 x %4").
+      QStringLiteral("%1, %2 %3 x %4").
         arg(value.toRect().x()).
         arg(value.toRect().y()).
         arg(value.toRect().width()).
@@ -184,7 +181,7 @@ QString VariantHandler::displayString(const QVariant &value)
 
   case QVariant::RectF:
     return
-      QString::fromLatin1("%1, %2 %3 x %4").
+      QStringLiteral("%1, %2 %3 x %4").
         arg(value.toRectF().x()).
         arg(value.toRectF().y()).
         arg(value.toRectF().width()).
@@ -194,12 +191,12 @@ QString VariantHandler::displayString(const QVariant &value)
   {
     const QRegion region = value.value<QRegion>();
     if (region.isEmpty()) {
-      return QLatin1String("<empty>");
+      return QStringLiteral("<empty>");
     }
     if (region.rectCount() == 1) {
       return displayString(region.rects().at(0));
     } else {
-      return QString::fromLatin1("<%1 rects>").arg(region.rectCount());
+      return QStringLiteral("<%1 rects>").arg(region.rectCount());
     }
   }
 
@@ -207,20 +204,20 @@ QString VariantHandler::displayString(const QVariant &value)
   {
     const QPalette pal = value.value<QPalette>();
     if (pal == qApp->palette()) {
-      return QLatin1String("<inherited>");
+      return QStringLiteral("<inherited>");
     }
-    return QLatin1String("<custom>");
+    return QStringLiteral("<custom>");
   }
 
   case QVariant::Size:
     return
-      QString::fromLatin1("%1 x %2").
+      QStringLiteral("%1 x %2").
         arg(value.toSize().width()).
         arg(value.toSize().height());
 
   case QVariant::SizeF:
     return
-      QString::fromLatin1("%1 x %2").
+      QStringLiteral("%1 x %2").
         arg(value.toSizeF().width()).
         arg(value.toSizeF().height());
 
@@ -229,10 +226,10 @@ QString VariantHandler::displayString(const QVariant &value)
     const auto l = value.toStringList();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
     if (l.isEmpty())
-      return QLatin1String("<empty>");
+      return QStringLiteral("<empty>");
     if (l.size() == 1)
       return l.at(0);
-    return QString::fromLatin1("<%1 entries>").arg(l.size());
+    return QStringLiteral("<%1 entries>").arg(l.size());
 #else
     return l.join(", ");
 #endif
@@ -242,7 +239,7 @@ QString VariantHandler::displayString(const QVariant &value)
   {
     const QTransform t = value.value<QTransform>();
     return
-      QString::fromLatin1("[%1 %2 %3, %4 %5 %6, %7 %8 %9]").
+      QStringLiteral("[%1 %2 %3, %4 %5 %6, %7 %8 %9]").
         arg(t.m11()).arg(t.m12()).arg(t.m13()).
         arg(t.m21()).arg(t.m22()).arg(t.m23()).
         arg(t.m31()).arg(t.m32()).arg(t.m33());
@@ -266,7 +263,7 @@ QString VariantHandler::displayString(const QVariant &value)
       typeStr = QObject::tr("percentage");
       break;
     }
-    return QString::fromLatin1("%1 (%2)").arg(l.rawValue()).arg(typeStr);
+    return QStringLiteral("%1 (%2)").arg(l.rawValue()).arg(typeStr);
   }
 
   if (value.userType() == qMetaTypeId<QPainterPath>()) {
@@ -288,6 +285,13 @@ QString VariantHandler::displayString(const QVariant &value)
     return Util::displayString(value.value<QObject*>());
   }
 
+  if (value.userType() == qMetaTypeId<const QMetaObject*>()) {
+      const auto mo = value.value<const QMetaObject*>();
+      if (!mo)
+          return QStringLiteral("0x0");
+      return mo->className();
+  }
+
   if (value.userType() == qMetaTypeId<QMatrix4x4>()) {
     return displayMatrix4x4(value.value<QMatrix4x4>());
   }
@@ -303,6 +307,9 @@ QString VariantHandler::displayString(const QVariant &value)
     return displayVector<3>(value.value<QVector3D>());
   if (value.userType() == qMetaTypeId<QVector4D>())
     return displayVector<4>(value.value<QVector4D>());
+
+  if (value.userType() == qMetaTypeId<QTimeZone>())
+      return value.value<QTimeZone>().id();
 #endif
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
@@ -313,93 +320,8 @@ QString VariantHandler::displayString(const QVariant &value)
     foreach (const QByteArray &b, set) {
       l.push_back(QString::fromUtf8(b));
     }
-    return l.join(", ");
+    return l.join(QStringLiteral(", "));
   }
-
-  if (value.userType() == qMetaTypeId<QSurfaceFormat>()) {
-    const QSurfaceFormat format = value.value<QSurfaceFormat>();
-    QString s;
-    switch (format.renderableType()) {
-    case QSurfaceFormat::DefaultRenderableType:
-      s += "Default";
-      break;
-    case QSurfaceFormat::OpenGL:
-      s += "OpenGL";
-      break;
-    case QSurfaceFormat::OpenGLES:
-      s += "OpenGL ES";
-      break;
-    case QSurfaceFormat::OpenVG:
-      s += "OpenVG";
-      break;
-    }
-
-    s += " (" + QString::number(format.majorVersion()) +
-         '.' + QString::number(format.minorVersion());
-    switch (format.profile()) {
-    case QSurfaceFormat::CoreProfile:
-      s += " core";
-      break;
-    case QSurfaceFormat::CompatibilityProfile:
-      s += " compat";
-      break;
-    case QSurfaceFormat::NoProfile:
-      break;
-    }
-    s += ')';
-
-    s += " RGBA: " + QString::number(format.redBufferSize()) +
-         '/' + QString::number(format.greenBufferSize()) +
-         '/' + QString::number(format.blueBufferSize()) +
-         '/' + QString::number(format.alphaBufferSize());
-
-    s += " Depth: " + QString::number(format.depthBufferSize());
-    s += " Stencil: " + QString::number(format.stencilBufferSize());
-
-    s += " Buffer: ";
-    switch (format.swapBehavior()) {
-    case QSurfaceFormat::DefaultSwapBehavior:
-      s += "default";
-      break;
-    case QSurfaceFormat::SingleBuffer:
-      s += "single";
-      break;
-    case QSurfaceFormat::DoubleBuffer:
-      s += "double";
-      break;
-    case QSurfaceFormat::TripleBuffer:
-      s += "triple";
-      break;
-    default:
-      s += "unknown";
-    }
-
-    return s;
-  }
-
-  if (value.userType() == qMetaTypeId<QSurface::SurfaceClass>()) {
-    const QSurface::SurfaceClass sc = value.value<QSurface::SurfaceClass>();
-    switch (sc) {
-      case QSurface::Window: return QObject::tr("Window");
-#if QT_VERSION > QT_VERSION_CHECK(5, 1, 0)
-      case QSurface::Offscreen: return QObject::tr("Offscreen");
-#endif
-      default: return QObject::tr("Unknown Surface Class");
-    }
-  }
-
-  if (value.userType() == qMetaTypeId<QSurface::SurfaceType>()) {
-    const QSurface::SurfaceType type = value.value<QSurface::SurfaceType>();
-    switch (type) {
-      case QSurface::RasterSurface: return QObject::tr("Raster");
-      case QSurface::OpenGLSurface: return QObject::tr("OpenGL");
-      default: return QObject::tr("Unknown Surface Type");
-    }
-  }
-
-  if (value.userType() == qMetaTypeId<QOpenGLShader::ShaderType>())
-    return displayShaderType(value.value<QOpenGLShader::ShaderType>());
-
 #endif // Qt5
 
   // enums
@@ -419,17 +341,17 @@ QString VariantHandler::displayString(const QVariant &value)
   if (value.canConvert<QVariantList>()) {
     QSequentialIterable it = value.value<QSequentialIterable>();
     if (it.size() == 0) {
-      return QLatin1String("<empty>");
+      return QStringLiteral("<empty>");
     } else {
-      return QString::fromLatin1("<%1 entries>").arg(it.size());
+      return QStringLiteral("<%1 entries>").arg(it.size());
     }
   }
   if (value.canConvert<QVariantHash>()) {
     auto it = value.value<QAssociativeIterable>();
     if (it.size() == 0) {
-      return QLatin1String("<empty>");
+      return QStringLiteral("<empty>");
     } else {
-      return QString::fromLatin1("<%1 entries>").arg(it.size());
+      return QStringLiteral("<%1 entries>").arg(it.size());
     }
   }
 #endif
@@ -437,7 +359,7 @@ QString VariantHandler::displayString(const QVariant &value)
   // generic converters
   QVector<VariantHandler::GenericStringConverter> genStrConverters =
     s_variantHandlerRepository()->genericStringConverters;
-  foreach (const GenericStringConverter &converter, genStrConverters) {
+  foreach (auto converter, genStrConverters) {
     bool ok = false;
     const QString s = converter(value, &ok);
     if (ok) {
@@ -470,6 +392,7 @@ QVariant VariantHandler::decoration(const QVariant &value)
     if (c.isValid()) {
       QPixmap p(16, 16);
       QPainter painter(&p);
+      Util::drawTransparencyPattern(&painter, p.rect(), 4);
       painter.setBrush(QBrush(c));
       painter.drawRect(0, 0, p.width() - 1, p.height() - 1);
       return p;
@@ -495,11 +418,14 @@ QVariant VariantHandler::decoration(const QVariant &value)
     const QPen pen = value.value<QPen>();
     if (pen.style() != Qt::NoPen) {
       QPixmap p(16, 16);
-      p.fill(QColor(0, 0, 0, 0));
       QPainter painter(&p);
+      Util::drawTransparencyPattern(&painter, p.rect(), 4);
+      painter.save();
       painter.setPen(pen);
       painter.translate(0, 8 - pen.width() / 2);
       painter.drawLine(0, 0, p.width(), 0);
+      painter.restore();
+      painter.drawRect(0, 0, p.width() - 1, p.height() - 1);
       return p;
     }
     break;

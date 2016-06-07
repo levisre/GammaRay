@@ -9,7 +9,7 @@
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   This program is free software; you can redistribute it and/or modify
@@ -30,8 +30,10 @@
 
 #include <core/objectmodelbase.h>
 
+QT_BEGIN_NAMESPACE
 class QAbstractTransition;
 class QStateMachine;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -57,6 +59,7 @@ class StateModel : public ObjectModelBase<QAbstractItemModel>
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
     QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
     QModelIndex parent(const QModelIndex &index) const Q_DECL_OVERRIDE;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
 
   protected:
     Q_DECLARE_PRIVATE(StateModel)

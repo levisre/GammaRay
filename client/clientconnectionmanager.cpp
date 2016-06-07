@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,6 +33,8 @@
 #include "selectionmodelclient.h"
 #include "propertycontrollerclient.h"
 #include "probecontrollerclient.h"
+#include "paintanalyzerclient.h"
+#include "remoteviewclient.h"
 
 #include <common/objectbroker.h>
 #include <common/streamoperators.h>
@@ -68,12 +70,25 @@ static QObject* createProbeController(const QString &name, QObject *parent)
   return o;
 }
 
+static QObject* createPaintAnalyzerClient(const QString &name, QObject *parent)
+{
+  return new PaintAnalyzerClient(name, parent);
+}
+
+static QObject* createRemoteViewClient(const QString &name, QObject *parent)
+{
+  return new RemoteViewClient(name, parent);
+}
+
 void ClientConnectionManager::init()
 {
   StreamOperators::registerOperators();
 
   ObjectBroker::registerClientObjectFactoryCallback<PropertyControllerInterface*>(createPropertyController);
   ObjectBroker::registerClientObjectFactoryCallback<ProbeControllerInterface*>(createProbeController);
+  ObjectBroker::registerClientObjectFactoryCallback<PaintAnalyzerInterface*>(createPaintAnalyzerClient);
+  ObjectBroker::registerClientObjectFactoryCallback<RemoteViewInterface*>(createRemoteViewClient);
+
   ObjectBroker::setModelFactoryCallback(modelFactory);
   ObjectBroker::setSelectionModelFactoryCallback(selectionModelFactory);
 }
@@ -125,7 +140,7 @@ void ClientConnectionManager::connectToHost()
 
 void ClientConnectionManager::connectionEstablished()
 {
-  m_toolModel = ObjectBroker::model("com.kdab.GammaRay.ToolModel");
+  m_toolModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ToolModel"));
 
   if (m_toolModel->rowCount() <= 0) {
     connect(m_toolModel, SIGNAL(rowsInserted(QModelIndex,int,int)), SLOT(toolModelPopulated()));

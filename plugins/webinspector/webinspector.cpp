@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -51,13 +51,13 @@ WebInspector::WebInspector(ProbeInterface *probe, QObject *parent)
 {
   WebViewModel *webViewModel = new WebViewModel(this);
   webViewModel->setSourceModel(probe->objectListModel());
-  probe->registerModel("com.kdab.GammaRay.WebPages", webViewModel);
+  probe->registerModel(QStringLiteral("com.kdab.GammaRay.WebPages"), webViewModel);
 
   connect(probe->probe(), SIGNAL(objectCreated(QObject*)), SLOT(objectAdded(QObject*)));
 
   const QUrl serverUrl = Endpoint::instance()->serverAddress();
-  QString serverAddress("0.0.0.0");
-  if (serverUrl.scheme() == "tcp")
+  QString serverAddress(GAMMARAY_DEFAULT_ANY_ADDRESS);
+  if (serverUrl.scheme() == QLatin1String("tcp"))
     serverAddress = serverUrl.host();
   qputenv("QTWEBKIT_INSPECTOR_SERVER", serverAddress.toLocal8Bit() + ':' + QByteArray::number(Endpoint::defaultPort() + 1));
 }
@@ -87,6 +87,12 @@ void WebInspector::objectAdded(QObject* obj)
 
 WebInspectorFactory::WebInspectorFactory(QObject* parent): QObject(parent)
 {
+  QVector<QByteArray> types;
+#ifdef HAVE_QT_WEBKIT1
+  types << QWebPage::staticMetaObject.className();
+#endif
+  types << QByteArrayLiteral("QQuickWebView");
+  setSupportedTypes(types);
 }
 
 QString WebInspectorFactory::id() const
@@ -97,16 +103,6 @@ QString WebInspectorFactory::id() const
 void WebInspectorFactory::init(ProbeInterface* probe)
 {
   new WebInspector(probe, probe->probe());
-}
-
-QStringList WebInspectorFactory::supportedTypes() const
-{
-  QStringList types;
-#ifdef HAVE_QT_WEBKIT1
-  types.push_back(QWebPage::staticMetaObject.className());
-#endif
-  types.push_back("QQuickWebView");
-  return types;
 }
 
 QString WebInspectorFactory::name() const

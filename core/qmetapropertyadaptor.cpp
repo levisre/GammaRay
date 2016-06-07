@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,6 +30,7 @@
 #include "objectinstance.h"
 #include "propertydata.h"
 #include "util.h"
+#include "probeguard.h"
 
 #include <QMetaProperty>
 #include <QStringList>
@@ -107,7 +108,7 @@ QString QMetaPropertyAdaptor::detailString(const QMetaProperty& prop) const
     s << tr("Stored: %1").arg(translateBool(prop.isStored(obj)));
     s << tr("User: %1").arg(translateBool(prop.isUser(obj)));
     s << tr("Writable: %1").arg(translateBool(prop.isWritable()));
-    return s.join("\n");
+    return s.join(QStringLiteral("\n"));
 }
 
 PropertyData QMetaPropertyAdaptor::propertyData(int index) const
@@ -130,19 +131,23 @@ PropertyData QMetaPropertyAdaptor::propertyData(int index) const
         pmo = pmo->superClass();
     data.setClassName(pmo->className());
 
-    switch (object().type()) {
-        case ObjectInstance::QtObject:
-            if (object().qtObject())
-                data.setValue(prop.read(object().qtObject()));
-            break;
+    // we call out to the target here, so suspend the probe guard, otherwise we'll miss on-demand created object (e.g. in QQ2)
+    {
+        ProbeGuardSuspender g;
+        switch (object().type()) {
+            case ObjectInstance::QtObject:
+                if (object().qtObject())
+                    data.setValue(prop.read(object().qtObject()));
+                break;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
-        case ObjectInstance::QtGadget:
-            if (object().object())
-                data.setValue(prop.readOnGadget(object().object()));
-            break;
+            case ObjectInstance::QtGadget:
+                if (object().object())
+                    data.setValue(prop.readOnGadget(object().object()));
+                break;
 #endif
-        default:
-            break;
+            default:
+                break;
+        }
     }
 
     data.setDetails(detailString(prop));

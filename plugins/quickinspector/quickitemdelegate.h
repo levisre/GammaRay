@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,7 +32,9 @@
 #include <QModelIndex>
 #include <QStyledItemDelegate>
 
-class QTreeView;
+QT_BEGIN_NAMESPACE
+class QAbstractItemView;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 
@@ -41,10 +43,10 @@ class QuickItemDelegate : public QStyledItemDelegate
   Q_OBJECT
 
   public:
-    explicit QuickItemDelegate(QTreeView *view);
+    explicit QuickItemDelegate(QAbstractItemView *view);
 
   public Q_SLOTS:
-    void setTextColor(const QVariant &textColor);
+    void setTextColor(const QVariant &textColor, const QPersistentModelIndex &index);
 
   protected:
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
@@ -54,7 +56,7 @@ class QuickItemDelegate : public QStyledItemDelegate
 
   private:
     QHash<QModelIndex, QColor> m_colors;
-    QTreeView *m_view;
+    QAbstractItemView *m_view;
 };
 
 }

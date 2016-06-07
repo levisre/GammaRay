@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,12 +32,12 @@
 
 using namespace GammaRay;
 
-QWeakPointer<DynamicProxyStyle> DynamicProxyStyle::s_instance;
+QPointer<DynamicProxyStyle> DynamicProxyStyle::s_instance;
 
 DynamicProxyStyle::DynamicProxyStyle(QStyle *baseStyle)
   : QProxyStyle(baseStyle)
 {
-  s_instance = QWeakPointer<DynamicProxyStyle>(this);
+  s_instance = QPointer<DynamicProxyStyle>(this);
 }
 
 DynamicProxyStyle *DynamicProxyStyle::instance()

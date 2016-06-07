@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,6 +37,7 @@
 namespace GammaRay {
 
 class ClientDevice;
+class MessageStatisticsModel;
 
 /** Client-side connection endpoint. */
 class Client : public Endpoint
@@ -80,6 +81,7 @@ protected:
   void messageReceived(const Message& msg) Q_DECL_OVERRIDE;
   void objectDestroyed(Protocol::ObjectAddress objectAddress, const QString &objectName, QObject *object) Q_DECL_OVERRIDE;
   void handlerDestroyed(Protocol::ObjectAddress objectAddress, const QString& objectName) Q_DECL_OVERRIDE;
+  void doSendMessage(const GammaRay::Message & msg) Q_DECL_OVERRIDE;
 
 private:
   void monitorObject(Protocol::ObjectAddress objectAddress);
@@ -101,6 +103,7 @@ private:
   };
   QUrl m_serverAddress;
   ClientDevice *m_clientDevice;
+  MessageStatisticsModel *m_statModel;
   int m_initState;
 };
 

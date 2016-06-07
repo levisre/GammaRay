@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,7 +28,6 @@
 
 #include "quickitemtreewatcher.h"
 #include "quickitemmodelroles.h"
-#include <client/remotemodel.h>
 
 #include <QAbstractItemModel>
 #include <QTreeView>
@@ -52,23 +51,31 @@ QuickItemTreeWatcher::~QuickItemTreeWatcher()
 
 void QuickItemTreeWatcher::itemModelRowsInserted(const QModelIndex &parent, int start, int end)
 {
+  if (parent.isValid() && !m_itemView->isExpanded(parent))
+    return;
+
+  const int siblingCount = m_itemView->model()->rowCount(parent);
   for (int row = start; row <= end; ++row) {
     const QModelIndex index = m_itemView->model()->index(row, 0, parent);
     const bool invisible = index.data(QuickItemModelRole::ItemFlags).value<int>() &
                            (QuickItemModelRole::Invisible | QuickItemModelRole::ZeroSize);
-    const int siblingCount = m_itemView->model()->rowCount(parent);
 
     if (!invisible && siblingCount < 5) {
       m_itemView->setExpanded(index, true);
     }
   }
+
+  m_itemView->resizeColumnToContents(0);
 }
 
 void QuickItemTreeWatcher::sgModelRowsInserted(const QModelIndex &parent, int start, int end)
 {
+  if (parent.isValid() && !m_sgView->isExpanded(parent))
+    return;
+
+  const int siblingCount = m_sgView->model()->rowCount(parent);
   for (int row = start; row <= end; ++row) {
     const QModelIndex index = m_sgView->model()->index(row, 0, parent);
-    const int siblingCount = m_sgView->model()->rowCount(parent);
     if (siblingCount < 5) {
       m_sgView->setExpanded(index, true);
     }

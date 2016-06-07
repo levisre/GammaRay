@@ -29,7 +29,9 @@ endif()
 # probe lib
 if(APPLE) # DYLD_INSERT_LIBRARIES only works with real shared libraries, not modules
   add_library(gammaray_probe SHARED ${gammaray_probe_srcs})
-  set_target_properties(gammaray_probe PROPERTIES INSTALL_RPATH "@loader_path/../../../Frameworks")
+  if(NOT GAMMARAY_INSTALL_QT_LAYOUT)
+    set_target_properties(gammaray_probe PROPERTIES INSTALL_RPATH "@loader_path/../../../Frameworks")
+  endif()
 else()
   add_library(gammaray_probe MODULE ${gammaray_probe_srcs})
 endif()
@@ -49,12 +51,20 @@ if(NOT GAMMARAY_INSTALL_QT_LAYOUT)
   set_target_properties(gammaray_probe PROPERTIES PREFIX "")
   install(TARGETS gammaray_probe DESTINATION ${PROBE_INSTALL_DIR})
 else()
-  install(TARGETS gammaray_probe EXPORT GammaRayTargets ${INSTALL_TARGETS_DEFAULT_ARGS})
-  ecm_generate_pri_file(BASE_NAME GammaRayProbe
-                      LIB_NAME gammaray_probe
-                      DEPS "core gui network GammaRayCommon GammaRayCore"
-                      FILENAME_VAR PRI_FILENAME
-                      INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_DIR}/..)
-  install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/gammaray_probe-android-dependencies.xml DESTINATION ${LIB_INSTALL_DIR})
+  set_target_properties(gammaray_probe PROPERTIES OUTPUT_NAME gammaray_probe-${GAMMARAY_PROBE_ABI})
+
+  if(NOT GAMMARAY_PROBE_ONLY_BUILD)
+    install(TARGETS gammaray_probe EXPORT GammaRayTargets ${INSTALL_TARGETS_DEFAULT_ARGS})
+
+    ecm_generate_pri_file(BASE_NAME GammaRayProbe
+                        LIB_NAME gammaray_probe-${GAMMARAY_PROBE_ABI}
+                        DEPS "core gui network GammaRayCommon GammaRayCore"
+                        FILENAME_VAR PRI_FILENAME
+                        INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_DIR})
+
+    install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/gammaray_probe-android-dependencies.xml DESTINATION ${LIB_INSTALL_DIR})
+  else()
+    install(TARGETS gammaray_probe ${INSTALL_TARGETS_DEFAULT_ARGS})
+  endif()
 endif()

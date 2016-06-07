@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2015 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,6 +36,7 @@ MethodArgumentModel::MethodArgumentModel(QObject *parent) : QAbstractTableModel(
 
 void MethodArgumentModel::setMethod(const QMetaMethod &method)
 {
+  beginResetModel();
   m_method = method;
   m_arguments.clear();
   m_arguments.resize(method.parameterTypes().size());
@@ -44,7 +45,7 @@ void MethodArgumentModel::setMethod(const QMetaMethod &method)
     const QVariant::Type variantType = QVariant::nameToType(typeName);
     m_arguments[i] = QVariant(variantType);
   }
-  reset();
+  endResetModel();
 }
 
 QVariant MethodArgumentModel::data(const QModelIndex &index, int role) const
