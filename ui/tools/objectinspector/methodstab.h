@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,13 +30,13 @@
 #define METHODSTAB_H
 
 #include <QWidget>
+#include <memory>
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class MethodsExtensionInterface;
 
 class Ui_MethodsTab;
@@ -44,25 +44,24 @@ class PropertyWidget;
 
 class MethodsTab : public QWidget
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     explicit MethodsTab(PropertyWidget *parent);
-    virtual ~MethodsTab();
+    ~MethodsTab() override;
 
-  private:
+private:
     void setObjectBaseName(const QString &baseName);
 
-  private slots:
+private slots:
     void methodActivated(const QModelIndex &index);
     void methodContextMenu(const QPoint &pos);
 
-  private:
-    Ui_MethodsTab *m_ui;
+private:
+    std::unique_ptr<Ui_MethodsTab> m_ui;
     MethodsExtensionInterface *m_interface;
 
     QString m_objectBaseName;
 };
-
 }
 
 #endif // METHODSTAB_H

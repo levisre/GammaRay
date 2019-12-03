@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,26 +36,25 @@
 #include <QVector>
 
 namespace GammaRay {
-
 /** Aggregates the results of a bunch of PropertyAdaptor instances. */
 class GAMMARAY_CORE_EXPORT PropertyAggregator : public PropertyAdaptor
 {
     Q_OBJECT
 public:
-    explicit PropertyAggregator(QObject* parent = 0);
-    ~PropertyAggregator();
+    explicit PropertyAggregator(QObject *parent = nullptr);
+    ~PropertyAggregator() override;
 
-    int count() const Q_DECL_OVERRIDE;
-    PropertyData propertyData(int index) const Q_DECL_OVERRIDE;
-    void writeProperty(int index, const QVariant& value) Q_DECL_OVERRIDE;
-    bool canAddProperty() const Q_DECL_OVERRIDE;
-    void addProperty(const PropertyData& data) Q_DECL_OVERRIDE;
-    void resetProperty(int index) Q_DECL_OVERRIDE;
+    int count() const override;
+    PropertyData propertyData(int index) const override;
+    void writeProperty(int index, const QVariant &value) override;
+    bool canAddProperty() const override;
+    void addProperty(const PropertyData &data) override;
+    void resetProperty(int index) override;
 
     void addPropertyAdaptor(PropertyAdaptor *adaptor);
 
 protected:
-    void doSetObject(const ObjectInstance& oi) Q_DECL_OVERRIDE;
+    void doSetObject(const ObjectInstance &oi) override;
 
 private slots:
     void slotPropertyChanged(int first, int last);
@@ -63,9 +62,8 @@ private slots:
     void slotPropertyRemoved(int first, int last);
 
 private:
-    QVector<PropertyAdaptor*> m_propertyAdaptors;
+    QVector<PropertyAdaptor *> m_propertyAdaptors;
 };
-
 }
 
 #endif // GAMMARAY_PROPERTYAGGREGATOR_H

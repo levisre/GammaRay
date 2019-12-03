@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,7 +41,6 @@ struct QMetaObject;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** Represents some form of object the property adaptor/model code can handle. */
 class GAMMARAY_CORE_EXPORT ObjectInstance
 {
@@ -50,34 +49,41 @@ public:
         Invalid,
         QtObject,
         QtMetaObject,
-        QtGadget,
+        QtGadgetPointer, ///< a pointer to a gadget
         QtVariant,
         Object,
-        Value
+        Value,
+        QtGadgetValue ///< a gadget value type stored in the QVariant
     };
-    ObjectInstance();
-    ObjectInstance(QObject *obj); //krazy:exclude=explicit
+    ObjectInstance() = default;
+    ObjectInstance(QObject *obj); // krazy:exclude=explicit
     /// use this for Q_GADGETs
     ObjectInstance(void *obj, const QMetaObject *metaObj);
     /// use for things that only exist as GammaRay meta objects
-    ObjectInstance(void *obj, const char* typeName);
-    ObjectInstance(const QVariant &value); //krazy:exclude=explicit
+    ObjectInstance(void *obj, const char *typeName);
+    ObjectInstance(const QVariant &value); // krazy:exclude=explicit
     ObjectInstance(const ObjectInstance &other);
 
-    ObjectInstance& operator=(const ObjectInstance& other);
+    ObjectInstance &operator=(const ObjectInstance &other);
     bool operator==(const ObjectInstance &rhs) const;
 
     Type type() const;
+    /**!
+     * Returns @c true if this instance holds a value type.
+     * This is important to treat differently when writing to it, as this will be a copy
+     * of the value you want to change.
+     */
+    bool isValueType() const;
 
     /// only valid for QtObject
-    QObject* qtObject() const;
+    QObject *qtObject() const;
     /// only valid for QtObject, QtGadget and Object
-    void* object() const;
+    void *object() const;
     /// only valid for QtVariant
-    const QVariant& variant() const;
+    const QVariant &variant() const;
 
     /// only valid for QtObject and QtGadget
-    const QMetaObject* metaObject() const;
+    const QMetaObject *metaObject() const;
     /// only valid for [Qt]Object and QtGadget
     QByteArray typeName() const;
 
@@ -88,14 +94,13 @@ private:
     void copy(const ObjectInstance &other);
     void unpackVariant();
 
-    void *m_obj;
+    void *m_obj = nullptr;
     QPointer<QObject> m_qtObj;
     QVariant m_variant;
-    const QMetaObject *m_metaObj;
+    const QMetaObject *m_metaObj = nullptr;
     QByteArray m_typeName;
-    Type m_type;
+    Type m_type = Invalid;
 };
-
 }
 
 #endif // GAMMARAY_OBJECTINSTANCE_H

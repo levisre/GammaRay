@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,30 +34,29 @@
 #include <ui/uistatemanager.h>
 
 namespace GammaRay {
-
 class PropertyEditorFactory;
 
 class PaletteModel;
 
 namespace Ui {
-  class PaletteDialog;
+class PaletteDialog;
 }
 
 class PaletteDialog : public QDialog
 {
-  Q_OBJECT
-  public:
-    explicit PaletteDialog(const QPalette &palette, QWidget *parent = 0);
-    virtual ~PaletteDialog();
+    Q_OBJECT
+public:
+    explicit PaletteDialog(const QPalette &palette, QWidget *parent = nullptr);
+    ~PaletteDialog() override;
 
+    void setEditable(bool editable);
     QPalette editedPalette() const;
 
-  private:
+private:
     Ui::PaletteDialog *ui;
     UIStateManager m_stateManager;
     PaletteModel *m_model;
 };
-
 }
 
 #endif // GAMMARAY_PALETTEDIALOG_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,17 +26,16 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include <core/objectinstance.h>
 
 #include <QDebug>
 #include <QtTest/qtest.h>
 
-Q_DECLARE_METATYPE(QDateTime*)
+Q_DECLARE_METATYPE(QDateTime *)
 
 struct CustomType {};
 Q_DECLARE_METATYPE(CustomType)
-Q_DECLARE_METATYPE(CustomType*)
+Q_DECLARE_METATYPE(CustomType *)
 
 using namespace GammaRay;
 
@@ -54,6 +53,7 @@ private slots:
         QCOMPARE(oi.object(), &obj);
         QCOMPARE(oi.qtObject(), &obj);
         QCOMPARE(oi.metaObject(), &QObject::staticMetaObject);
+        QVERIFY(!oi.isValueType());
 
         auto oi2 = oi;
         QCOMPARE(oi2.type(), ObjectInstance::QtObject);
@@ -62,13 +62,13 @@ private slots:
 
     void testMetaObjectVariantPointer()
     {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
         QDateTime dt;
 
         ObjectInstance oi(QVariant::fromValue(&dt));
         QCOMPARE(oi.type(), ObjectInstance::Object);
         QCOMPARE(oi.typeName(), QByteArray("QDateTime*"));
         QVERIFY(oi.object());
+        QVERIFY(!oi.isValueType());
 
         auto oi2 = oi;
         QCOMPARE(oi2.type(), ObjectInstance::Object);
@@ -77,18 +77,17 @@ private slots:
         QDateTime dt2;
         oi2 = ObjectInstance(QVariant::fromValue(&dt2));
         QVERIFY(!(oi == oi2));
-#endif
     }
 
     void testMetaObjectVariantValue()
     {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
         QDateTime dt;
 
         ObjectInstance oi(QVariant::fromValue(dt));
         QCOMPARE(oi.type(), ObjectInstance::Value);
         QCOMPARE(oi.typeName(), QByteArray("QDateTime"));
         QVERIFY(oi.object());
+        QVERIFY(oi.isValueType());
 
         auto oi2 = oi;
         QCOMPARE(oi2.type(), ObjectInstance::Value);
@@ -100,7 +99,6 @@ private slots:
         QVERIFY(dt == dt2);
         QVERIFY(oi.variant() == oi2.variant());
         QVERIFY(oi == oi2);
-#endif
     }
 
     void testUnknownVariantValue()
@@ -120,7 +118,6 @@ private slots:
         QCOMPARE(oi.type(), ObjectInstance::QtVariant);
         QCOMPARE(oi.typeName(), QByteArray("CustomType*"));
     }
-
 };
 
 QTEST_MAIN(ObjectInstanceTest)

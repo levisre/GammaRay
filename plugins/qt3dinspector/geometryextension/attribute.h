@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,15 +32,12 @@
 #include <Qt3DRender/QAttribute>
 
 namespace GammaRay {
-
 /** Utilities for decoding attribute data. */
-namespace Attribute
-{
-    int size(Qt3DRender::QAttribute::VertexBaseType type);
+namespace Attribute {
+int size(Qt3DRender::QAttribute::VertexBaseType type);
 
-    QVariant variant(Qt3DRender::QAttribute::VertexBaseType type, const char *data);
+QVariant variant(Qt3DRender::QAttribute::VertexBaseType type, const char *data);
 }
-
 }
 
 #endif // GAMMARAY_ATTRIBUTE_H

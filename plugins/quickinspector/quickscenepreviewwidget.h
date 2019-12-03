@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,60 +29,71 @@
 #ifndef GAMMARAY_QUICKINSPECTOR_QUICKSCENEPREVIEWWIDGET_H
 #define GAMMARAY_QUICKINSPECTOR_QUICKSCENEPREVIEWWIDGET_H
 
+#include "quickdecorationsdrawer.h"
 #include "quickitemgeometry.h"
 #include "quickinspectorinterface.h"
+#include "quickscenecontrolwidget.h"
 
 #include <ui/remoteviewwidget.h>
 
-QT_BEGIN_NAMESPACE
-class QAction;
-class QActionGroup;
-class QComboBox;
-class QLabel;
-class QToolBar;
-QT_END_NAMESPACE
-
 namespace GammaRay {
-
 class QuickInspectorInterface;
+
+struct CompleteFrameRequest {
+    CompleteFrameRequest(const QString &filePath = QString(), bool drawDecoration = false)
+        : filePath(filePath)
+        , drawDecoration(drawDecoration)
+    { }
+
+    bool isValid() const
+    { return !filePath.isEmpty(); }
+
+    void reset()
+    { filePath.clear(); drawDecoration = false; }
+
+    CompleteFrameRequest &operator=(const CompleteFrameRequest &other)
+    {
+        if (&other != this) {
+            filePath = other.filePath;
+            drawDecoration = other.drawDecoration;
+        }
+
+        return *this;
+    }
+
+    QString filePath;
+    bool drawDecoration;
+};
 
 class QuickScenePreviewWidget : public RemoteViewWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit QuickScenePreviewWidget(QuickInspectorInterface *inspector, QWidget *parent = 0);
-    ~QuickScenePreviewWidget();
+public:
+    explicit QuickScenePreviewWidget(QuickSceneControlWidget *control, QWidget *parent = nullptr);
+    ~QuickScenePreviewWidget() override;
 
-    void setSupportsCustomRenderModes(QuickInspectorInterface::Features  supportedCustomRenderModes);
+    Q_INVOKABLE void restoreState(const QByteArray &state) override;
+    QByteArray saveState() const override;
 
-  private Q_SLOTS:
-    void visualizeActionTriggered(bool checked);
-    void updateEffectiveGeometry();
+    QuickDecorationsSettings overlaySettings() const;
+    void setOverlaySettings(const QuickDecorationsSettings &settings);
 
-  private:
-    void drawArrow(QPainter *p, QPointF first, QPointF second);
-    void drawAnchor(QPainter *p, Qt::Orientation orientation,
-                    qreal ownAnchorLine, qreal offset, const QString &label);
+    void requestCompleteFrame(const CompleteFrameRequest &request);
 
-  private:
-    void drawDecoration(QPainter* p) Q_DECL_OVERRIDE;
-    void resizeEvent(QResizeEvent *e) Q_DECL_OVERRIDE;
+private slots:
+    void saveScreenshot();
 
-    struct {
-        QToolBar *toolbarWidget;
-        QComboBox *zoomCombobox;
-        QActionGroup *visualizeGroup;
-        QAction *visualizeClipping;
-        QAction *visualizeOverdraw;
-        QAction *visualizeBatches;
-        QAction *visualizeChanges;
-    } m_toolBar;
+private:
+    void drawDecoration(QPainter *p) override;
+    void resizeEvent(QResizeEvent *e) override;
 
-    QuickInspectorInterface *m_inspectorInterface;
-    QuickItemGeometry m_effectiveGeometry; // scaled and translated
+    void renderDecoration(QPainter *p, double zoom) const;
+
+    QuickSceneControlWidget *m_control;
+    QuickDecorationsSettings m_overlaySettings;
+    CompleteFrameRequest m_pendingCompleteFrame;
 };
-
 } // namespace GammaRay
 
 #endif

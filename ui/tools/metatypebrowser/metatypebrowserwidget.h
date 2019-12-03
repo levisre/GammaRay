@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,23 +34,24 @@
 #include <QWidget>
 
 namespace GammaRay {
-
 namespace Ui {
-  class MetaTypeBrowserWidget;
+class MetaTypeBrowserWidget;
 }
 
 class MetaTypeBrowserWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit MetaTypeBrowserWidget(QWidget *parent = 0);
-    ~MetaTypeBrowserWidget();
+    Q_OBJECT
+public:
+    explicit MetaTypeBrowserWidget(QWidget *parent = nullptr);
+    ~MetaTypeBrowserWidget() override;
 
-  private:
+private slots:
+    void contextMenu(QPoint pos);
+
+private:
     QScopedPointer<Ui::MetaTypeBrowserWidget> ui;
     UIStateManager m_stateManager;
 };
-
 }
 
 #endif // GAMMARAY_METATYPEBROWSERWIDGET_H

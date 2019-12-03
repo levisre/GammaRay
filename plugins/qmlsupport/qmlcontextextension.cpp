@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -44,48 +44,47 @@
 
 using namespace GammaRay;
 
-QmlContextExtension::QmlContextExtension(PropertyController *controller) :
-    PropertyControllerExtension(controller->objectBaseName() + ".qmlContext"),
-    m_contextModel(new QmlContextModel(controller)),
-    m_propertyModel(new AggregatedPropertyModel(controller))
+QmlContextExtension::QmlContextExtension(PropertyController *controller)
+    : PropertyControllerExtension(controller->objectBaseName() + ".qmlContext")
+    , m_contextModel(new QmlContextModel(controller))
+    , m_propertyModel(new AggregatedPropertyModel(controller))
 {
     controller->registerModel(m_contextModel, QStringLiteral("qmlContextModel"));
     auto contextSelectionModel = ObjectBroker::selectionModel(m_contextModel);
-    QObject::connect(contextSelectionModel, &QItemSelectionModel::selectionChanged, [this](const QItemSelection& selection) { contextSelected(selection); });
+    QObject::connect(contextSelectionModel, &QItemSelectionModel::selectionChanged,
+                     [this](const QItemSelection &selection) {
+        contextSelected(selection);
+    });
 
     controller->registerModel(m_propertyModel, QStringLiteral("qmlContextPropertyModel"));
 }
 
-QmlContextExtension::~QmlContextExtension()
-{
-}
+QmlContextExtension::~QmlContextExtension() = default;
 
-bool QmlContextExtension::setQObject(QObject* object)
+bool QmlContextExtension::setQObject(QObject *object)
 {
     if (!object)
         return false;
 
-    auto context = qobject_cast<QQmlContext*>(object);
+    auto context = qobject_cast<QQmlContext *>(object);
     if (!context) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
         auto data = QQmlData::get(object);
         if (data && data->context)
             context = data->context->asQQmlContext();
-#endif
     }
 
     m_contextModel->setContext(context);
     return context;
 }
 
-void QmlContextExtension::contextSelected(const QItemSelection& selection)
+void QmlContextExtension::contextSelected(const QItemSelection &selection)
 {
     if (selection.isEmpty()) {
-        m_propertyModel->setObject(Q_NULLPTR);
+        m_propertyModel->setObject(nullptr);
         return;
     }
 
     const auto idx = selection.first().topLeft();
-    const auto context = idx.data(ObjectModel::ObjectRole).value<QQmlContext*>();
+    const auto context = idx.data(ObjectModel::ObjectRole).value<QQmlContext *>();
     m_propertyModel->setObject(context);
 }

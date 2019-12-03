@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,7 +33,6 @@
 #include <QVariant>
 
 namespace GammaRay {
-
 class MultiSignalMapperPrivate;
 
 /**
@@ -41,21 +40,20 @@ class MultiSignalMapperPrivate;
  */
 class MultiSignalMapper : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit MultiSignalMapper(QObject *parent = 0);
-    ~MultiSignalMapper();
+    Q_OBJECT
+public:
+    explicit MultiSignalMapper(QObject *parent = nullptr);
+    ~MultiSignalMapper() override;
 
     void connectToSignal(QObject *sender, const QMetaMethod &signal);
 
-  signals:
+signals:
     void signalEmitted(QObject *sender, int signalIndex, const QVector<QVariant> &arguments);
 
-  private:
+private:
     friend class MultiSignalMapperPrivate;
-    MultiSignalMapperPrivate* const d;
+    MultiSignalMapperPrivate * const d;
 };
-
 }
 
 #endif // GAMMARAY_MULTISIGNALMAPPER_H

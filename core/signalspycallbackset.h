@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,25 +38,23 @@ class QObject;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** @brief Callbacks for tracing signal emissions and slot invocation.
  *
  *  @since 2.3
  */
 struct GAMMARAY_CORE_EXPORT SignalSpyCallbackSet
 {
-    SignalSpyCallbackSet();
+    SignalSpyCallbackSet() = default;
     bool isNull() const;
 
-    typedef void (*BeginCallback)(QObject *caller, int methodIndex, void **argv);
-    typedef void (*EndCallback)(QObject *caller, int methodIndex);
+    using BeginCallback = void (*)(QObject *, int, void **);
+    using EndCallback = void (*)(QObject *, int);
 
-    BeginCallback signalBeginCallback;
-    EndCallback signalEndCallback;
-    BeginCallback slotBeginCallback;
-    EndCallback slotEndCallback;
+    BeginCallback signalBeginCallback = nullptr;
+    EndCallback signalEndCallback = nullptr;
+    BeginCallback slotBeginCallback = nullptr;
+    EndCallback slotEndCallback = nullptr;
 };
-
 }
 
 #endif

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,31 +34,29 @@
 #include <QMetaType>
 
 namespace GammaRay {
-
 QDataStream &operator<<(QDataStream &out, WidgetInspectorInterface::Features value)
 {
-  out << qint32(value);
-  return out;
+    out << qint32(value);
+    return out;
 }
 
 QDataStream &operator>>(QDataStream &in, WidgetInspectorInterface::Features &value)
 {
-  qint32 t;
-  in >> t;
-  value = static_cast<WidgetInspectorInterface::Features>(t);
-  return in;
+    qint32 t;
+    in >> t;
+    value = static_cast<WidgetInspectorInterface::Features>(t);
+    return in;
 }
 
 WidgetInspectorInterface::WidgetInspectorInterface(QObject *parent)
-  : QObject(parent)
+    : QObject(parent)
 {
     qRegisterMetaTypeStreamOperators<Features>();
-    ObjectBroker::registerObject<WidgetInspectorInterface*>(this);
+    qRegisterMetaTypeStreamOperators<WidgetFrameData>();
+    ObjectBroker::registerObject<WidgetInspectorInterface *>(this);
 }
 
-WidgetInspectorInterface::~WidgetInspectorInterface()
-{
-}
+WidgetInspectorInterface::~WidgetInspectorInterface() = default;
 
 WidgetInspectorInterface::Features WidgetInspectorInterface::features() const
 {
@@ -71,6 +69,18 @@ void WidgetInspectorInterface::setFeatures(WidgetInspectorInterface::Features fe
         return;
     m_features = features;
     emit featuresChanged();
+}
+
+QDataStream& operator<<(QDataStream &out, const WidgetFrameData &data)
+{
+    out << data.tabFocusRects;
+    return out;
+}
+
+QDataStream& operator>>(QDataStream& in, WidgetFrameData &data)
+{
+    in >> data.tabFocusRects;
+    return in;
 }
 
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Thomas McGuire <thomas.mcguire@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,24 +30,29 @@
 
 #include "timerinfo.h"
 
-#include <common/modelroles.h>
+#include <common/objectmodel.h>
 
 #include <QAbstractTableModel>
-#include <QSet>
+#include <QMap>
+#include <QMetaMethod>
+#include <QMutex>
+#include <QVector>
 
 QT_BEGIN_NAMESPACE
 class QTimer;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-class ProbeInterface;
+struct TimerIdData;
 
 class TimerModel : public QAbstractTableModel
 {
-  Q_OBJECT
-  public:
-    virtual ~TimerModel();
+    Q_OBJECT
+    typedef QMap<TimerId, TimerIdInfo> TimerIdInfoContainer;
+    typedef QMap<TimerId, TimerIdData> TimerIdDataContainer;
+
+public:
+    ~TimerModel() override;
 
     /// @return True in case instance() would return a valid pointer, else false
     static bool isInitialized();
@@ -58,73 +63,69 @@ class TimerModel : public QAbstractTableModel
     void preSignalActivate(QObject *caller, int methodIndex);
     void postSignalActivate(QObject *caller, int methodIndex);
 
-    enum Roles {
-      FirstRole = UserRole + 1,
-      ObjectNameRole,
-      StateRole,
-      TotalWakeupsRole,
-      WakeupsPerSecRole,
-      TimePerWakeupRole,
-      MaxTimePerWakeupRole,
-      TimerIdRole,
-      LastRole
+    enum Columns {
+        ObjectNameColumn,
+        StateColumn,
+        TotalWakeupsColumn,
+        WakeupsPerSecColumn,
+        TimePerWakeupColumn,
+        MaxTimePerWakeupColumn,
+        TimerIdColumn,
+        ColumnCount
     };
 
-    /// if set, filters out object owned by the probe
-    void setProbe(ProbeInterface *probe);
+    enum Roles {
+        TimerIntervalRole = ObjectModel::UserRole,
+        TimerTypeRole
+    };
 
     void setSourceModel(QAbstractItemModel *sourceModel);
 
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QMap<int, QVariant> itemData(const QModelIndex &index) const override;
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+public slots:
+    void clearHistory();
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+private slots:
+    void triggerPushChanges();
+    void pushChanges();
+    void applyChanges(const GammaRay::TimerModel::TimerIdInfoContainer &changes);
 
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-
-    bool eventFilter(QObject * watched, QEvent * event) Q_DECL_OVERRIDE;
-
-  private slots:
     void slotBeginRemoveRows(const QModelIndex &parent, int start, int end);
     void slotEndRemoveRows();
     void slotBeginInsertRows(const QModelIndex &parent, int start, int end);
     void slotEndInsertRows();
     void slotBeginReset();
     void slotEndReset();
-    void flushEmitPendingChangedRows();
 
-  private:
-    explicit TimerModel(QObject *parent = 0);
+private:
+    explicit TimerModel(QObject *parent = nullptr);
 
-    // Finds only QTimers based on the timer ID, not free timers.
-    TimerInfoPtr findOrCreateQTimerTimerInfo(int timerId);
+    const TimerIdInfo *findTimerInfo(const QModelIndex &index) const;
+    bool canHandleCaller(QObject *caller, int methodIndex) const;
+    void checkDispatcherStatus(QObject *object);
 
-    // Finds both QTimer and free timers
-    TimerInfoPtr findOrCreateTimerInfo(const QModelIndex &index);
+    static bool eventNotifyCallback(void *data[]);
 
-    // Finds QTimer timers
-    TimerInfoPtr findOrCreateQTimerTimerInfo(QObject* timer);
-
-    // Finds QObject timers
-    TimerInfoPtr findOrCreateFreeTimerInfo(int timerId);
-
-    int rowFor(QObject *timer) ;
-    void emitTimerObjectChanged(int row);
-    void emitFreeTimerChanged(int row);
-
+    // model data
     QAbstractItemModel *m_sourceModel;
-    QList<TimerInfoPtr> m_freeTimers;
-    ProbeInterface *m_probe;
-    // current timer signals that are being processed
-    QHash<QObject*, TimerInfoPtr> m_currentSignals;
-    // pending dataChanged() signals
-    QSet<int> m_pendingChangedTimerObjects;
-    QSet<int> m_pendingChangedFreeTimers;
-    QTimer *m_pendingChanedRowsTimer;
+    mutable TimerIdInfoContainer m_timersInfo;
+    QVector<TimerIdInfo> m_freeTimersInfo;
+
+    QTimer *m_pushTimer;
+    const QMetaMethod m_triggerPushChangesMethod;
+
     // the method index of the timeout() signal of a QTimer
     const int m_timeoutIndex;
-    int m_qmlTimerTriggeredIndex;
+    mutable int m_qmlTimerTriggeredIndex;
+    mutable int m_qmlTimerRunningChangedIndex;
+
+    TimerIdDataContainer m_gatheredTimersData;
+    QMutex m_mutex; // protects m_gatheredTimersData
 };
 
 }

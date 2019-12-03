@@ -1,6 +1,8 @@
-# <a name="title"></a> [![Logo](https://github.com/KDAB/GammaRay/blob/master/resources/gammaray-trademark-medium.png)](http://www.kdab.com/gammaray)
-Introduction
-============
+# <a name="title"></a> [![Logo](ui/resources/gammaray/ui/light/pixmaps/gammaray-trademark.png)](https://www.kdab.com/gammaray)
+
+Introduction [![Packaging status](https://repology.org/badge/tiny-repos/gammaray.svg)](https://repology.org/metapackage/gammaray) [![Windows Build status](https://ci.appveyor.com/api/projects/status/bff5abu59vm3i73x/branch/master?svg=true)](https://ci.appveyor.com/project/KDAB/gammaray/branch/master)
+=======
+
 GammaRay is a software introspection tool for Qt applications developed by KDAB.
 Leveraging the QObject introspection mechanism it allows you to observe and
 manipulate your application at runtime. This works both locally on your
@@ -52,32 +54,42 @@ Get Involved
 If you want to contribute, please check out: https://github.com/KDAB/GammaRay/wiki/Get-Involved
 
 KDAB will happily accept external contributions, but substantial
-contributions will require a signed Copyright Assignment Agreement.
+contributions will require a signed Copyright Assignment Agreement
+(see docs/GammaRay-CopyrightAssignmentForm.docx).
+
 Contact info@kdab.com for more information.
+
+Please submit your contributions or issue reports from our GitHub space at
+https://github.com/KDAB/GammaRay
 
 License
 =======
-The GammaRay Software is (C) 2010-2016 Klarälvdalens Datakonsult AB (KDAB),
+The GammaRay Software is (C) 2010-2019 Klarälvdalens Datakonsult AB (KDAB),
 and is available under the terms of the GPL version 2 (or any later version,
 at your option).  See LICENSE.GPL.txt for license details.
 
-Commercial use is also permitted as described in ReadMe-commercial.txt.
+Commercial licensing terms are available in the included file LICENSE.txt.
+
+For terms of redistribution, refer to the corresponding license agreement.
 
 About KDAB
 ==========
 GammaRay is supported and maintained by Klarälvdalens Datakonsult AB (KDAB).
 
-KDAB, the Qt experts, provide consulting and mentoring for developing
-Qt applications from scratch and in porting from all popular and legacy
-frameworks to Qt. We continue to help develop parts of Qt and are one
-of the major contributors to the Qt Project. We can give advanced or
-standard trainings anywhere around the globe.
+The KDAB Group is the global No.1 software consultancy for Qt, C++ and
+OpenGL applications across desktop, embedded and mobile platforms.
+
+The KDAB Group provides consulting and mentoring for developing Qt applications
+from scratch and in porting from all popular and legacy frameworks to Qt.
+We continue to help develop parts of Qt and are one of the major contributors
+to the Qt Project. We can give advanced or standard trainings anywhere
+around the globe on Qt as well as C++, OpenGL, 3D and more.
 
 If you would like to have a custom plugin for GammaRay to visualize, profile
 or debug your own specific components or applications, get in touch with us
-via http://www.kdab.com/contact. KDAB engineers have a lot of experience
-writing GammaRay plugins and can be contracted to help you get yours working
-and improve your development efficiency.
+via https://www.kdab.com/contact.  KDAB engineers know how to write GammaRay
+plugins and can be contracted to help you get yours working and improve your
+development efficiency.
 
 GammaRay and the GammaRay logo are registered trademarks of Klarälvdalens Datakonsult AB
 in the European Union, the United States and/or other countries.  Other product and

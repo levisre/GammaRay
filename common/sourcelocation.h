@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,44 +34,92 @@
 #include <QMetaType>
 #include <QDataStream>
 #include <QUrl>
+#include <QVector>
 
 namespace GammaRay {
-
-/** @brief Specifies a source code location. */
+/*!
+ * Specifies a source code location.
+ *
+ * A source location consists of a document and cursor position
+ *
+ * A Cursor represents a position in a Document through a tuple
+ * of two ints, namely the @ref line() and @ref column().
+ *
+ * @note Lines and columns start a 0 (=> zero-based numbering).
+ */
 class GAMMARAY_COMMON_EXPORT SourceLocation
 {
 public:
-    SourceLocation();
-    explicit SourceLocation(const QUrl &url, int line = -1, int column = -1);
+    /*!
+     * The default constructor creates a (invalid) cursor at position (-1, -1) with an invalid url
+     */
+    SourceLocation() = default;
+    /*!
+     * This constructor creates a (valid) cursor at position (0, 0) with @p url
+     */
+    explicit SourceLocation(const QUrl &url);
     ~SourceLocation();
+    static SourceLocation fromZeroBased(const QUrl &url, int line, int column = 0);
+    static SourceLocation fromOneBased(const QUrl &url, int line, int column = 1);
+
+    bool operator==(const SourceLocation &other) const;
 
     bool isValid() const;
 
     QUrl url() const;
     void setUrl(const QUrl &url);
 
+    /*!
+     * Returns the zero-based line number.
+     */
     int line() const;
-    void setLine(int line);
+    void setZeroBasedLine(int line);
+    void setOneBasedLine(int line);
 
+    /*!
+     * Returns the zero-based column number.
+     */
     int column() const;
-    void setColumn(int column);
+    void setZeroBasedColumn(int column);
+    void setOneBasedColumn(int column);
 
+    /*!
+     * Returns a human-readable version of this source location
+     *
+     * @code
+     * SourceLocation loc(QUrl::fromLocalFile("file.cpp", 0, 0);
+     * qDebug() << loc.displayString();
+     *
+     * => Prints: file.cpp:1:1
+     * @endcode
+     *
+     * @note This will use one-based numbering (file.cpp:1:1 instead of file.cpp:0:0)
+     */
     QString displayString() const;
 
 private:
-    friend GAMMARAY_COMMON_EXPORT QDataStream &operator<<(QDataStream &out, const SourceLocation &location);
-    friend GAMMARAY_COMMON_EXPORT QDataStream &operator>>(QDataStream &in, SourceLocation &location);
+    /*!
+     * This constructor creates a (valid) cursor at given @p line and @p column with @p url.
+     * Expects line and column to be zero-based.
+     */
+    explicit SourceLocation(const QUrl &url, int line, int column);
+    friend GAMMARAY_COMMON_EXPORT QDataStream &operator<<(QDataStream &out,
+                                                          const SourceLocation &location);
+    friend GAMMARAY_COMMON_EXPORT QDataStream &operator>>(QDataStream &in,
+                                                          SourceLocation &location);
 
     QUrl m_url;
-    int m_line;
-    int m_column;
+    int m_line = -1;
+    int m_column = -1;
 };
 
+///@cond internal
 GAMMARAY_COMMON_EXPORT QDataStream &operator<<(QDataStream &out, const SourceLocation &location);
 GAMMARAY_COMMON_EXPORT QDataStream &operator>>(QDataStream &in, SourceLocation &location);
-
+///@endcond
 }
 
 Q_DECLARE_METATYPE(GammaRay::SourceLocation)
+Q_DECLARE_METATYPE(QVector<GammaRay::SourceLocation>)
 
 #endif // GAMMARAY_SOURCELOCATION_H

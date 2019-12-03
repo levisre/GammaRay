@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,41 +32,44 @@
 
 #include <common/tools/messagehandler/messagehandlerinterface.h>
 
-namespace GammaRay {
+QT_BEGIN_NAMESPACE
+class QItemSelection;
+QT_END_NAMESPACE
 
+namespace GammaRay {
 struct DebugMessage;
 class MessageModel;
+class StackTraceModel;
 
 namespace Ui {
-  class MessageHandler;
+class MessageHandler;
 }
 
 class MessageHandler : public MessageHandlerInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::MessageHandlerInterface)
-  public:
-    explicit MessageHandler(ProbeInterface *probe, QObject *parent = 0);
-    ~MessageHandler();
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::MessageHandlerInterface)
+public:
+    explicit MessageHandler(Probe *probe, QObject *parent = nullptr);
+    ~MessageHandler() override;
 
-  private slots:
+private slots:
     void ensureHandlerInstalled();
     void handleFatalMessage(const GammaRay::DebugMessage &message);
+    void messageSelected(const QItemSelection &selection);
 
-  private:
+private:
     MessageModel *m_messageModel;
+    StackTraceModel *m_stackTraceModel;
 };
 
 class MessageHandlerFactory : public QObject, public StandardToolFactory<QObject, MessageHandler>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  public:
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+public:
     explicit MessageHandlerFactory(QObject *parent);
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // MESSAGEHANDLER_H

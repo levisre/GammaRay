@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,15 +32,13 @@
 #include <QDialog>
 
 namespace GammaRay {
-
 class AboutPluginsDialog : public QDialog
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit AboutPluginsDialog(QWidget *parent = 0, Qt::WindowFlags f = 0);
+public:
+    explicit AboutPluginsDialog(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
 };
-
 }
 
 #endif // GAMMARAY_ABOUTPLUGINSDIALOG_H

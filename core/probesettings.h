@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,27 +38,27 @@ class QUrl;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** General purpose settings of the probe provided by the launcher. */
-namespace ProbeSettings
-{
-  GAMMARAY_CORE_EXPORT QVariant value(const QString &key, const QVariant &defaultValue = QString());
+namespace ProbeSettings {
+GAMMARAY_CORE_EXPORT QVariant value(const QString &key, const QVariant &defaultValue = QString());
 
-  /** Call if using runtime attaching to obtain settings provided via shared memory.
-   *  This method blocks until communication with the launcher is complete.
-   */
-  void receiveSettings();
+/** Call if using runtime attaching to obtain settings provided via shared memory.
+ *  This method blocks until communication with the launcher is complete.
+ */
+void receiveSettings();
 
-  /** Identifier used for finding the communication channels to the launcher. */
-  qint64 launcherIdentifier();
+/** Identifier used for finding the communication channels to the launcher. */
+qint64 launcherIdentifier();
 
-  /** Reset the launcher Identifier. Call this when detaching the probe. */
-  void resetLauncherIdentifier();
+/** Reset the launcher Identifier. Call this when detaching the probe. */
+void resetLauncherIdentifier();
 
-  /** Sends the server address used for communication with the client back to the launcher. */
-  void sendServerAddress(const QUrl &addr);
+/** Sends the server address used for communication with the client back to the launcher. */
+void sendServerAddress(const QUrl &addr);
+
+/** Sends an error message if no server could be launched back to the launcher */
+void sendServerLaunchError(const QString &reason);
 }
-
 }
 
 #endif // GAMMARAY_PROBESETTINGS_H

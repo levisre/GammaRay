@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,22 +41,16 @@ using namespace GammaRay;
 using namespace GammaRay;
 
 KJobTrackerWidget::KJobTrackerWidget(QWidget *parent)
-  : QWidget(parent)
-  , ui(new Ui::KJobTrackerWidget)
-  , m_stateManager(this)
+    : QWidget(parent)
+    , ui(new Ui::KJobTrackerWidget)
+    , m_stateManager(this)
 {
-  ui->setupUi(this);
+    ui->setupUi(this);
 
-  auto model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.KJobModel"));
-  new SearchLineController(ui->searchLine, model);
-  ui->jobView->header()->setObjectName("jobViewHeader");
-  ui->jobView->setModel(model);
+    auto model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.KJobModel"));
+    new SearchLineController(ui->searchLine, model);
+    ui->jobView->header()->setObjectName("jobViewHeader");
+    ui->jobView->setModel(model);
 }
 
-KJobTrackerWidget::~KJobTrackerWidget()
-{
-}
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(KJobTrackerUiFactory)
-#endif
+KJobTrackerWidget::~KJobTrackerWidget() = default;

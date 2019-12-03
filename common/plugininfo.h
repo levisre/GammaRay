@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -32,9 +32,13 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include <qplugin.h>
+
+QT_BEGIN_NAMESPACE
+class QJsonObject;
+QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** Meta-data about a specific plugin.
  *  This abstracts Qt5-style embedded JSON data and Qt4-style desktop files.
  */
@@ -43,6 +47,7 @@ class PluginInfo
 public:
     PluginInfo();
     explicit PluginInfo(const QString &path);
+    explicit PluginInfo(const QStaticPlugin &staticPlugin);
 
     QString path() const;
     QString id() const;
@@ -54,12 +59,17 @@ public:
     QVector<QByteArray> selectableTypes() const;
 
     bool isValid() const;
+    bool isStatic() const;
+
+    QObject* staticInstance() const;
 
 private:
+    void init();
     void initFromJSON(const QString &path);
-    void initFromDesktopFile(const QString &path);
+    void initFromJSON(const QJsonObject& metaData);
 
     QString m_path;
+    QStaticPlugin m_staticPlugin;
     QString m_id;
     QString m_interface;
     QStringList m_supportedTypes;

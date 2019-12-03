@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Tobias Koenig <tobias.koenig@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,15 +33,16 @@
 using namespace GammaRay;
 
 PropertyMatrixEditor::PropertyMatrixEditor(QWidget *parent)
-  : PropertyExtendedEditor(parent)
+    : PropertyExtendedEditor(parent)
 {
 }
 
-void PropertyMatrixEditor::edit()
+void PropertyMatrixEditor::showEditor(QWidget* parent)
 {
-  PropertyMatrixDialog dlg;
-  dlg.setMatrix(value());
+    PropertyMatrixDialog dlg(parent);
+    dlg.setMatrix(value());
 
-  if (dlg.exec())
-    save(dlg.matrix());
+    if (dlg.exec())
+        save(dlg.matrix());
+    emit editorClosed();
 }

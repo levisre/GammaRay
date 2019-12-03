@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,33 +29,48 @@
 #ifndef GAMMARAY_POSITIONING_H
 #define GAMMARAY_POSITIONING_H
 
+#include "positioninginterface.h"
+
 #include <core/toolfactory.h>
 
 #include <QGeoPositionInfoSource>
 #include <QObject>
 
+#include <vector>
+
+QT_BEGIN_NAMESPACE
+class QGeoPositionInfoSource;
+QT_END_NAMESPACE
+
 namespace GammaRay {
 
-class Positioning : public QObject
+class Positioning : public PositioningInterface
 {
     Q_OBJECT
 public:
-    explicit Positioning(ProbeInterface *probe, QObject *parent = Q_NULLPTR);
+    explicit Positioning(Probe *probe, QObject *parent = nullptr);
+
+private slots:
+    void objectAdded(QObject *obj);
+
+private:
+    void registerMetaTypes();
+
+    std::vector<QGeoPositionInfoSource*> m_nonProxyPositionInfoSources;
 };
 
-class PositioningFactory :  public QObject, public StandardToolFactory<QGeoPositionInfoSource, Positioning>
+class PositioningFactory : public QObject,
+    public StandardToolFactory<QGeoPositionInfoSource, Positioning>
 {
     Q_OBJECT
     Q_INTERFACES(GammaRay::ToolFactory)
     Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_positioning.json")
 public:
-    explicit PositioningFactory(QObject *parent = Q_NULLPTR) : QObject(parent)
+    explicit PositioningFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // GAMMARAY_POSITIONING_H

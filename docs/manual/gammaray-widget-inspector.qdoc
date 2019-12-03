@@ -3,7 +3,7 @@
 
     This file is part of the GammaRay documentation.
 
-    Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+    Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
     Author: Volker Krause <volker.krause@kdab.com>
 
     Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -12,11 +12,11 @@
     Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
     This work is also licensed under the Creative Commons Attribution-ShareAlike 4.0
-    International License. See <http://creativecommons.org/licenses/by-sa/4.0/>.
+    International License. See <https://creativecommons.org/licenses/by-sa/4.0/>.
 */
 
 /*!
-    \contentspage {Widget Inspector}
+    \contentspage {Tools}
     \nextpage {Graphics Scene Inspector}
     \previouspage {Qt Quick 2 Inspector}
     \page gammaray-widget-Inspector.html
@@ -31,8 +31,8 @@
 
     \section1 Remote View
 
-    Similar to the \l{Qt Quick 2 Inspector}, the widget inspector has a zoomable remote view of the selected window on the lower left.
-    This offers:
+    Similar to the \l{Qt Quick 2 Inspector}, the widget inspector has a zoomable remote view of the selected window to the lower left.
+    It offers:
 
     \list
         \li Widget picking.
@@ -43,7 +43,15 @@
 
     \section1 Paint Analyzer
 
-    When selecting a QWidget sub-class in the widget tree, the paint analyzer tab is activated in the property view on the right side.
+    When selecting a QWidget sub-class in the widget tree, the \l{Paint Analyzer} tab is activated in the property view on the right side.
 
     The paint analyzer allows you to inspect every single QPainter command that is executed, and look at the visual result after each step.
+
+    \section1 Examples
+
+    The following examples make use of the widget inspector:
+    \list
+        \li \l{signal-slot}
+        \li \l{widget-layouting}
+    \endlist
 */

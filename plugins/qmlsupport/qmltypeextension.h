@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,7 +32,6 @@
 #include <core/propertycontrollerextension.h>
 
 namespace GammaRay {
-
 class AggregatedPropertyModel;
 
 class QmlTypeExtension : public PropertyControllerExtension
@@ -41,13 +40,12 @@ public:
     explicit QmlTypeExtension(PropertyController *controller);
     ~QmlTypeExtension();
 
-    bool setQObject(QObject *object) Q_DECL_OVERRIDE;
-    bool setMetaObject(const QMetaObject *metaObject) Q_DECL_OVERRIDE;
+    bool setQObject(QObject *object) override;
+    bool setMetaObject(const QMetaObject *metaObject) override;
 
 private:
     AggregatedPropertyModel *m_typePropertyModel;
 };
-
 }
 
 #endif // GAMMARAY_QMLTYPEEXTENSION_H

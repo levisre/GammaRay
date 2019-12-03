@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,15 +36,20 @@ class QColor;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class FontBrowserInterface : public QObject
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     explicit FontBrowserInterface(QObject *parent);
-    virtual ~FontBrowserInterface();
+    ~FontBrowserInterface() override;
 
-  public slots:
+    enum {
+        FontRole = Qt::UserRole + 1,
+        FontSearchRole = Qt::UserRole + 2,
+        SortRole = Qt::UserRole + 3,
+    };
+
+public slots:
     virtual void updateText(const QString &text) = 0;
     virtual void toggleBoldFont(bool bold) = 0;
     virtual void toggleItalicFont(bool italic) = 0;
@@ -52,7 +57,6 @@ class FontBrowserInterface : public QObject
     virtual void setPointSize(int size) = 0;
     virtual void setColors(const QColor &foreground, const QColor &background) = 0;
 };
-
 }
 
 QT_BEGIN_NAMESPACE

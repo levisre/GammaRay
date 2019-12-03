@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,25 +41,25 @@ static qint64 appStartTime()
 {
 #ifdef Q_OS_LINUX
 
-  // On Linux the application start time can be read by procfs.
-  const QString &self = QStringLiteral("/proc/%1").arg(qApp->applicationPid());
-  return QFileInfo(self).lastModified().toMSecsSinceEpoch();
+    // On Linux the application start time can be read by procfs.
+    const QString &self = QStringLiteral("/proc/%1").arg(qApp->applicationPid());
+    return QFileInfo(self).lastModified().toMSecsSinceEpoch();
 
 #else // !Q_OS_LINUX
 
-  // On other platforms this is a rough estimation if called early.
-  return QDateTime::currentMSecsSinceEpoch();
+    // On other platforms this is a rough estimation if called early.
+    return QDateTime::currentMSecsSinceEpoch();
 
 #endif // !Q_OS_LINUX
 }
 
-const RelativeClock* RelativeClock::sinceAppStart()
+const RelativeClock *RelativeClock::sinceAppStart()
 {
-  static const RelativeClock clock(appStartTime());
-  return &clock;
+    static const RelativeClock clock(appStartTime());
+    return &clock;
 }
 
 qint64 RelativeClock::currentMSecsSinceEpoch()
 {
-  return QDateTime::currentMSecsSinceEpoch();
+    return QDateTime::currentMSecsSinceEpoch();
 }

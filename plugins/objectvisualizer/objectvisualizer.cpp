@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,26 +33,15 @@
 
 using namespace GammaRay;
 
-GraphViewer::GraphViewer(ProbeInterface *probe, QObject *parent)
-  : QObject(parent)
+GraphViewer::GraphViewer(Probe *probe, QObject *parent)
+    : QObject(parent)
 {
-  auto model = new ServerProxyModel<ObjectVisualizerModel>(this);
-  model->setSourceModel(probe->objectTreeModel());
-  model->addProxyRole(ObjectVisualizerModel::ObjectId);
-  model->addProxyRole(ObjectVisualizerModel::ObjectDisplayName);
-  model->addProxyRole(ObjectVisualizerModel::ClassName);
-  probe->registerModel("com.kdab.GammaRay.ObjectVisualizerModel", model);
+    auto model = new ServerProxyModel<ObjectVisualizerModel>(this);
+    model->setSourceModel(probe->objectTreeModel());
+    model->addProxyRole(ObjectVisualizerModel::ObjectId);
+    model->addProxyRole(ObjectVisualizerModel::ObjectDisplayName);
+    model->addProxyRole(ObjectVisualizerModel::ClassName);
+    probe->registerModel("com.kdab.GammaRay.ObjectVisualizerModel", model);
 }
 
-GraphViewer::~GraphViewer()
-{
-}
-
-QString GraphViewerFactory::name() const
-{
-  return tr("Object Visualizer");
-}
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(GraphViewerFactory)
-#endif
+GraphViewer::~GraphViewer() = default;

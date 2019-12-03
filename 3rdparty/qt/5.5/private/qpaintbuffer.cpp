@@ -54,14 +54,14 @@ extern void qt_format_text(const QFont &font,
 QTextItemIntCopy::QTextItemIntCopy(const QTextItem &item)
     : m_item(static_cast<const QTextItemInt &>(item))
 {
-    QChar *chars = new QChar[m_item.num_chars];
-    unsigned short *logClusters = new unsigned short[m_item.num_chars];
+    auto *chars = new QChar[m_item.num_chars];
+    auto *logClusters = new unsigned short[m_item.num_chars];
     memcpy(chars, m_item.chars, m_item.num_chars * sizeof(QChar));
     memcpy(logClusters, m_item.logClusters, m_item.num_chars * sizeof(unsigned short));
     m_item.chars = chars;
     m_item.logClusters = logClusters;
 
-    char *glyphLayoutData = new char[m_item.glyphs.numGlyphs * QGlyphLayout::SpaceNeeded];
+    auto *glyphLayoutData = new char[m_item.glyphs.numGlyphs * QGlyphLayout::SpaceNeeded];
     QGlyphLayout glyphs(glyphLayoutData, m_item.glyphs.numGlyphs);
     memcpy(glyphs.offsets, m_item.glyphs.offsets, m_item.glyphs.numGlyphs * sizeof(QFixedPoint));
     memcpy(glyphs.glyphs, m_item.glyphs.glyphs, m_item.glyphs.numGlyphs * sizeof(glyph_t));
@@ -92,9 +92,9 @@ QTextItemIntCopy::~QTextItemIntCopy()
  ************************************************************************/
 
 QPaintBufferPrivate::QPaintBufferPrivate()
-    : ref(1), engine(0), penWidthAdjustment(0)
+    : ref(1), engine(nullptr), penWidthAdjustment(0)
     , calculateBoundingRect(true)
-    , cache(0)
+    , cache(nullptr)
 {
 }
 
@@ -186,8 +186,16 @@ int QPaintBuffer::metric(PaintDeviceMetric metric) const
     case PdmPhysicalDpiY:
         val = qt_defaultDpiY();
         break;
+    // here & below: use values from QPaintDevice::metric to avoid runtime warnings
+    case PdmNumColors:
+        val = 256;
+        break;
+    case PdmDevicePixelRatio:
+        val = 1;
+        break;
     default:
         val = QPaintDevice::metric(metric);
+        break;
     }
 
     return val;
@@ -265,7 +273,7 @@ int QPaintBuffer::processCommands(QPainter *painter, int begin, int end) const
         return 0;
 
     QPaintEngineEx *xengine = painter->paintEngine()->isExtended()
-                              ? (QPaintEngineEx *) painter->paintEngine() : 0;
+                              ? (QPaintEngineEx *) painter->paintEngine() : nullptr;
     if (xengine) {
         QPaintEngineExReplayer player;
         player.processCommands(*this, painter, begin, end);
@@ -580,7 +588,7 @@ bool QPaintBufferEngine::begin(QPaintDevice *)
 bool QPaintBufferEngine::end()
 {
     painter()->restore();
-    m_created_state = 0;
+    m_created_state = nullptr;
     return true;
 }
 
@@ -593,7 +601,7 @@ QPainterState *QPaintBufferEngine::createState(QPainterState *orig) const
     Q_ASSERT(!m_begin_detected);
     Q_ASSERT(!m_save_detected);
 
-    if (orig == 0) {
+    if (orig == nullptr) {
         m_begin_detected = true;
         return new QPainterState();
     } else {
@@ -1327,7 +1335,7 @@ public:
     QFakeDevice() { dpi_x = qt_defaultDpiX(); dpi_y = qt_defaultDpiY(); }
     void setDpiX(int dpi) { dpi_x = dpi; }
     void setDpiY(int dpi) { dpi_y = dpi; }
-    QPaintEngine *paintEngine() const { return 0; }
+    QPaintEngine *paintEngine() const { return nullptr; }
     int metric(PaintDeviceMetric m) const
     {
         switch(m) {

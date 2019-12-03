@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,24 +40,27 @@ class QLineEdit;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-/** Couples a line edit to a QSortFilterProxyModel for as-you-type filtering. */
+/** Couples a line edit to a QSortFilterProxyModel api-like model for as-you-type filtering.
+ * The model don't really need to be a QSortFilterProxyModel, it can be a plain QAbstractItemModel
+ * implementing QSFPM like properties (ie, filterKeyColumn, filterCaseSensitivity etc...).
+ * If the given proxy is not a QSFPM api-like model, a check is performed recursively in all
+ * sourceModel until a compatible QSFPM api-like one is found.
+*/
 class GAMMARAY_UI_EXPORT SearchLineController : public QObject
 {
     Q_OBJECT
 public:
     /** Establish a connection between @p lineEdit and @p proxyModel. */
-    explicit SearchLineController(QLineEdit *lineEdit, QAbstractItemModel* proxyModel);
-    ~SearchLineController();
+    explicit SearchLineController(QLineEdit *lineEdit, QAbstractItemModel *proxyModel);
+    ~SearchLineController() override;
 
 private slots:
     void activateSearch();
 
 private:
     QLineEdit *m_lineEdit;
-    QPointer<QAbstractItemModel> m_model;
+    QPointer<QAbstractItemModel> m_filterModel;
 };
-
 }
 
 #endif // GAMMARAY_SEARCHLINECONTROLLER_H

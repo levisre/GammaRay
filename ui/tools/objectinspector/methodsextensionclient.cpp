@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,27 +35,24 @@
 using namespace GammaRay;
 
 MethodsExtensionClient::MethodsExtensionClient(const QString &name, QObject *parent)
-  : MethodsExtensionInterface(name, parent)
+    : MethodsExtensionInterface(name, parent)
 {
-
 }
 
-MethodsExtensionClient::~MethodsExtensionClient()
-{
-
-}
+MethodsExtensionClient::~MethodsExtensionClient() = default;
 
 void MethodsExtensionClient::activateMethod()
 {
-  Endpoint::instance()->invokeObject(name(), "activateMethod");
+    Endpoint::instance()->invokeObject(name(), "activateMethod");
 }
 
 void MethodsExtensionClient::invokeMethod(Qt::ConnectionType type)
 {
-  Endpoint::instance()->invokeObject(name(), "invokeMethod", QVariantList() << QVariant::fromValue(type));
+    Endpoint::instance()->invokeObject(name(), "invokeMethod",
+                                       QVariantList() << QVariant::fromValue(type));
 }
 
 void MethodsExtensionClient::connectToSignal()
 {
-  Endpoint::instance()->invokeObject(name(), "connectToSignal");
+    Endpoint::instance()->invokeObject(name(), "connectToSignal");
 }

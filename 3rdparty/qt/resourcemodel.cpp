@@ -59,9 +59,9 @@
     \value FileNameRole
 */
 
-QT_BEGIN_NAMESPACE
+using namespace GammaRay;
 
-class ResourceModelPrivate
+class GammaRay::ResourceModelPrivate
 {
     Q_DECLARE_PUBLIC(ResourceModel)
     ResourceModel * const q_ptr;
@@ -69,7 +69,7 @@ class ResourceModelPrivate
 public:
     struct QDirNode
     {
-        QDirNode() : parent(0), populated(false), stat(false) {}
+        QDirNode() : parent(nullptr), populated(false), stat(false) {}
         ~QDirNode() { children.clear(); }
         QDirNode *parent;
         QFileInfo info;
@@ -228,7 +228,7 @@ ResourceModel::ResourceModel(const QStringList &nameFilters,
     d->nameFilters = nameFilters.isEmpty() ? QStringList(QLatin1String("*")) : nameFilters;
     d->filters = filters;
     d->sort = sort;
-    d->root.parent = 0;
+    d->root.parent = nullptr;
     d->root.info = QFileInfo();
     d->clear(&d->root);
 }
@@ -250,7 +250,7 @@ ResourceModel::ResourceModel(QObject *parent)
 
 ResourceModel::~ResourceModel()
 {
-
+    delete d_ptr;
 }
 
 /*!
@@ -273,7 +273,7 @@ QModelIndex ResourceModel::index(int row, int column, const QModelIndex &parent)
     if (row >= p->children.count())
         return QModelIndex();
     // now get the internal pointer for the index
-    ResourceModelPrivate::QDirNode *n = d->node(row, d->indexValid(parent) ? p : 0);
+    ResourceModelPrivate::QDirNode *n = d->node(row, d->indexValid(parent) ? p : nullptr);
     Q_ASSERT(n);
 
     return createIndex(row, column, n);
@@ -290,8 +290,8 @@ QModelIndex ResourceModel::parent(const QModelIndex &child) const
     if (!d->indexValid(child))
 	return QModelIndex();
     ResourceModelPrivate::QDirNode *node = d->node(child);
-    ResourceModelPrivate::QDirNode *par = (node ? node->parent : 0);
-    if (par == 0) // parent is the root node
+    ResourceModelPrivate::QDirNode *par = (node ? node->parent : nullptr);
+    if (par == nullptr) // parent is the root node
 	return QModelIndex();
 
     // get the parent's row
@@ -370,7 +370,7 @@ QVariant ResourceModel::data(const QModelIndex &index, int role) const
     }
 
     if (index.column() == 1 && Qt::TextAlignmentRole == role) {
-        return Qt::AlignRight;
+        return QVariant::fromValue<int>(Qt::AlignRight | Qt::AlignVCenter);
     }
     return QVariant();
 }
@@ -546,7 +546,7 @@ QMimeData *ResourceModel::mimeData(const QModelIndexList &indexes) const
     for (; it != indexes.end(); ++it)
         if ((*it).column() == 0)
             urls << QUrl::fromLocalFile(filePath(*it));
-    QMimeData *data = new QMimeData();
+    auto *data = new QMimeData();
     data->setUrls(urls);
     return data;
 }
@@ -571,7 +571,7 @@ bool ResourceModel::dropMimeData(const QMimeData *data, Qt::DropAction action,
     QModelIndex _parent = parent;
 
     QList<QUrl> urls = data->urls();
-    QList<QUrl>::const_iterator it = urls.constBegin();
+    auto it = urls.constBegin();
 
     switch (action) {
     case Qt::CopyAction:
@@ -1123,19 +1123,23 @@ void ResourceModelPrivate::init()
     filters = QDir::AllEntries | QDir::NoDotAndDotDot;
     sort = QDir::Name;
     nameFilters << QLatin1String("*");
-    root.parent = 0;
+    root.parent = nullptr;
     root.info = QFileInfo(":");
     clear(&root);
-    QHash<int, QByteArray> roles = q->roleNames();
+}
+
+QHash<int, QByteArray> ResourceModel::roleNames() const
+{
+    QHash<int, QByteArray> roles = QAbstractItemModel::roleNames();
     roles.insert(ResourceModel::FilePathRole, "filePath");
     roles.insert(ResourceModel::FileNameRole, "fileName");
-    q->setRoleNames(roles);
+    return roles;
 }
 
 ResourceModelPrivate::QDirNode *ResourceModelPrivate::node(int row, QDirNode *parent) const
 {
     if (row < 0)
-	return 0;
+	return nullptr;
 
     bool isDir = !parent || parent->info.isDir();
     QDirNode *p = (parent ? parent : &root);
@@ -1144,7 +1148,7 @@ ResourceModelPrivate::QDirNode *ResourceModelPrivate::node(int row, QDirNode *pa
 
     if (row >= p->children.count()) {
         qWarning("node: the row does not exist");
-        return 0;
+        return nullptr;
     }
 
     return const_cast<QDirNode*>(&p->children.at(row));
@@ -1155,7 +1159,7 @@ QVector<ResourceModelPrivate::QDirNode> ResourceModelPrivate::children(QDirNode 
     Q_ASSERT(parent);
     QFileInfoList infoList;
     if (parent == &root) {
-        parent = 0;
+        parent = nullptr;
         infoList.append(root.info);
     } else if (parent->info.isDir()) {
         //resolve directory links only if requested.
@@ -1286,14 +1290,14 @@ QString ResourceModelPrivate::size(const QModelIndex &index) const
     const quint64 tb = 1024 * gb;
     quint64 bytes = n->info.size();
     if (bytes >= tb)
-        return QObject::tr("%1 TB").arg(QLocale().toString(qreal(bytes) / tb, 'f', 3));
+        return ResourceModel::tr("%1 TB").arg(QLocale().toString(qreal(bytes) / tb, 'f', 3));
     if (bytes >= gb)
-        return QObject::tr("%1 GB").arg(QLocale().toString(qreal(bytes) / gb, 'f', 2));
+        return ResourceModel::tr("%1 GB").arg(QLocale().toString(qreal(bytes) / gb, 'f', 2));
     if (bytes >= mb)
-        return QObject::tr("%1 MB").arg(QLocale().toString(qreal(bytes) / mb, 'f', 1));
+        return ResourceModel::tr("%1 MB").arg(QLocale().toString(qreal(bytes) / mb, 'f', 1));
     if (bytes >= kb)
-        return QObject::tr("%1 KB").arg(QLocale().toString(bytes / kb));
-    return QObject::tr("%1 byte(s)").arg(QLocale().toString(bytes));
+        return ResourceModel::tr("%1 KB").arg(QLocale().toString(bytes / kb));
+    return ResourceModel::tr("%1 byte(s)").arg(QLocale().toString(bytes));
 }
 
 QString ResourceModelPrivate::type(const QModelIndex &index) const
@@ -1301,10 +1305,10 @@ QString ResourceModelPrivate::type(const QModelIndex &index) const
   // poor interpolation of what QFileIconProvider::type() did
   // TODO: for Qt5 QMimeType might actually be a better choice here
   if (!index.parent().isValid())
-    return QObject::tr("Root");
+    return ResourceModel::tr("Root");
   if (node(index)->info.isDir())
-    return QObject::tr("Folder");
-  return QObject::tr("%1 File").arg(node(index)->info.suffix());
+    return ResourceModel::tr("Folder");
+  return ResourceModel::tr("%1 File").arg(node(index)->info.suffix());
 }
 
 QString ResourceModelPrivate::time(const QModelIndex &index) const
@@ -1322,7 +1326,7 @@ void ResourceModelPrivate::appendChild(ResourceModelPrivate::QDirNode *parent, c
     ResourceModelPrivate::QDirNode node;
     node.populated = false;
     node.stat = shouldStat;
-    node.parent = (parent == &root ? 0 : parent);
+    node.parent = (parent == &root ? nullptr : parent);
     node.info = QFileInfo(path);
     node.info.setCaching(true);
 
@@ -1359,7 +1363,5 @@ QFileInfo ResourceModelPrivate::resolvedInfo(QFileInfo info)
     return info;
 #endif
 }
-
-QT_END_NAMESPACE
 
 #include "moc_resourcemodel.cpp"

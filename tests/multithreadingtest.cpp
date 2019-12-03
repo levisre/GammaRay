@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -24,13 +24,9 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <probe/probecreator.h>
-#include <probe/hooks.h>
-#include <core/probe.h>
+#include "baseprobetest.h"
 
 #include <QDebug>
-#include <QtTest/qtest.h>
-#include <QObject>
 #include <QThread>
 #include <QSignalSpy>
 
@@ -40,9 +36,9 @@ class Thread : public QThread
 {
     Q_OBJECT
 public:
-    Thread() : batchSize(1), delay(0), iterations(100) {}
+    Thread() = default;
 
-    void run() Q_DECL_OVERRIDE
+    void run() override
     {
         objects.reserve(batchSize);
         for (int i = 0; i < iterations; ++i) {
@@ -55,31 +51,21 @@ public:
         }
     }
 
-    QVector<QObject*> objects;
-    int batchSize;
-    int delay;
-    int iterations;
+    QVector<QObject *> objects;
+    int batchSize = 1;
+    int delay = 0;
+    int iterations = 100;
 };
 
-class MultiThreadingTest: public QObject
+class MultiThreadingTest : public BaseProbeTest
 {
     Q_OBJECT
-private:
-    void createProbe()
-    {
-        qputenv("GAMMARAY_ProbePath", QCoreApplication::applicationDirPath().toUtf8());
-        Hooks::installHooks();
-        Probe::startupHookReceived();
-        new ProbeCreator(ProbeCreator::Create);
-        QTest::qWait(1); // event loop re-entry
-    }
-
 private slots:
     void testCreateDestroy_data()
     {
-        QTest::addColumn<int>("batchSize");
-        QTest::addColumn<int>("delay");
-        QTest::addColumn<int>("iterations");
+        QTest::addColumn<int>("batchSize", nullptr);
+        QTest::addColumn<int>("delay", nullptr);
+        QTest::addColumn<int>("iterations", nullptr);
 
         QTest::newRow("10-0-1000") << 10 << 0 << 1000;
         QTest::newRow("100-1-100") << 100 << 1 << 100;

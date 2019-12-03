@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -29,42 +29,37 @@
 #include "protocol.h"
 
 namespace GammaRay {
-
 namespace Protocol {
-
-Protocol::ModelIndex fromQModelIndex(const QModelIndex& index)
+Protocol::ModelIndex fromQModelIndex(const QModelIndex &index)
 {
-  if (!index.isValid())
-    return ModelIndex();
-  ModelIndex result = fromQModelIndex(index.parent());
-  result.push_back(qMakePair(index.row(), index.column()));
-  return result;
+    if (!index.isValid())
+        return ModelIndex();
+    ModelIndex result = fromQModelIndex(index.parent());
+    result.push_back(ModelIndexData(index.row(), index.column()));
+    return result;
 }
 
-QModelIndex toQModelIndex(const QAbstractItemModel* model, const Protocol::ModelIndex& index)
+QModelIndex toQModelIndex(const QAbstractItemModel *model, const Protocol::ModelIndex &index)
 {
-  QModelIndex qmi;
+    QModelIndex qmi;
 
-  for (Protocol::ModelIndex::ConstIterator it = index.constBegin(), end = index.constEnd(); it != end; ++it) {
-    qmi = model->index(it->first, it->second, qmi);
-    if (!qmi.isValid()) {
-      return QModelIndex(); // model isn't loaded to the full depth, so don't restart from the top
+    for (auto it = index.constBegin(), end = index.constEnd(); it != end; ++it) {
+        qmi = model->index(it->row, it->column, qmi);
+        if (!qmi.isValid())
+            return {}; // model isn't loaded to the full depth, so don't restart from the top
     }
-  }
 
-  return qmi;
+    return qmi;
 }
 
 qint32 version()
 {
-  return 26;
+    return 36;
 }
 
 qint32 broadcastFormatVersion()
 {
-  return 2;
+    return 2;
 }
-
 }
-
 }

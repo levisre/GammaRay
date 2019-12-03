@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,28 +33,26 @@
 #include <core/propertyadaptorfactory.h>
 
 namespace GammaRay {
-
 class QJSValuePropertyAdaptor : public PropertyAdaptor
 {
     Q_OBJECT
 public:
-    explicit QJSValuePropertyAdaptor(QObject* parent = 0);
-    ~QJSValuePropertyAdaptor();
+    explicit QJSValuePropertyAdaptor(QObject *parent = nullptr);
+    ~QJSValuePropertyAdaptor() override;
 
-    int count() const Q_DECL_OVERRIDE;
-    PropertyData propertyData(int index) const Q_DECL_OVERRIDE;
+    int count() const override;
+    PropertyData propertyData(int index) const override;
 };
 
 class QJSValuePropertyAdaptorFactory : public AbstractPropertyAdaptorFactory
 {
 public:
-    PropertyAdaptor* create(const ObjectInstance& oi, QObject* parent = 0) const Q_DECL_OVERRIDE;
-    static QJSValuePropertyAdaptorFactory* instance();
+    PropertyAdaptor *create(const ObjectInstance &oi, QObject *parent = nullptr) const override;
+    static QJSValuePropertyAdaptorFactory *instance();
 
 private:
-    static QJSValuePropertyAdaptorFactory* s_instance;
+    static QJSValuePropertyAdaptorFactory *s_instance;
 };
-
 }
 
 #endif // QJSVALUEPROPERTYADAPTOR_H

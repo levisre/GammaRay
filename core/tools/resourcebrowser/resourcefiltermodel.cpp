@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,16 +35,15 @@
 using namespace GammaRay;
 
 ResourceFilterModel::ResourceFilterModel(QObject *parent)
-  : KRecursiveFilterProxyModel(parent)
+    : KRecursiveFilterProxyModel(parent)
 {
 }
 
 bool ResourceFilterModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
 {
-  const QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
-  const QString path = index.data(ResourceModel::FilePathRole).toString();
-  if (path == QLatin1String(":/gammaray") || path.startsWith(QLatin1String(":/gammaray/"))) {
-    return false;
-  }
-  return KRecursiveFilterProxyModel::filterAcceptsRow(source_row, source_parent);
+    const QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
+    const QString path = index.data(ResourceModel::FilePathRole).toString();
+    if (path == QLatin1String(":/gammaray") || path.startsWith(QLatin1String(":/gammaray/")))
+        return false;
+    return KRecursiveFilterProxyModel::filterAcceptsRow(source_row, source_parent);
 }

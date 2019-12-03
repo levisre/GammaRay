@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,19 +32,17 @@
 #include <common/tools/objectinspector/propertiesextensioninterface.h>
 
 namespace GammaRay {
-
 class PropertiesExtensionClient : public PropertiesExtensionInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::PropertiesExtensionInterface)
-  public:
-    explicit PropertiesExtensionClient(const QString &name, QObject *parent = 0);
-    ~PropertiesExtensionClient();
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::PropertiesExtensionInterface)
+public:
+    explicit PropertiesExtensionClient(const QString &name, QObject *parent = nullptr);
+    ~PropertiesExtensionClient() override;
 
-  public slots:
-    void setProperty(const QString& name, const QVariant& value) Q_DECL_OVERRIDE;
+public slots:
+    void setProperty(const QString &propertyName, const QVariant &value) override;
 };
-
 }
 
 #endif // GAMMARAY_PROPERTIESEXTENSIONCLIENT_H

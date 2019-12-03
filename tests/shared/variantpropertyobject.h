@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,8 +41,8 @@ class VariantPropertyObject : public QObject
     Q_PROPERTY(QPointer<QObject> trackingObject READ trackingObject CONSTANT)
     Q_PROPERTY(QVector<int> intVector READ widgetVector CONSTANT)
 public:
-    explicit VariantPropertyObject(QObject *parent = 0);
-    ~VariantPropertyObject();
+    explicit VariantPropertyObject(QObject *parent = nullptr);
+    ~VariantPropertyObject() override;
 
     QSharedPointer<QObject> sharedObject() const;
     QPointer<QObject> trackingObject() const;

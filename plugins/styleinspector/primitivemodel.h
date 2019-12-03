@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,24 +32,22 @@
 #include "abstractstyleelementstatetable.h"
 
 namespace GammaRay {
-
 /**
  * Model for primitive style elements.
  */
 class PrimitiveModel : public AbstractStyleElementStateTable
 {
-  Q_OBJECT
-  public:
-    explicit PrimitiveModel(QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit PrimitiveModel(QObject *parent = nullptr);
 
     QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+                        int role = Qt::DisplayRole) const override;
 
-  protected:
-    QVariant doData(int row, int column, int role) const Q_DECL_OVERRIDE;
-    int doRowCount() const Q_DECL_OVERRIDE;
+protected:
+    QVariant doData(int row, int column, int role) const override;
+    int doRowCount() const override;
 };
-
 }
 
 #endif // GAMMARAY_PRIMITIVEMODEL_H

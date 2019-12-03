@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,37 +31,42 @@
 
 #include <QAction>
 
-namespace GammaRay {
+QT_BEGIN_NAMESPACE
+class QItemSelectionModel;
+QT_END_NAMESPACE
 
+namespace GammaRay {
 class ActionInspector : public QObject
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit ActionInspector(ProbeInterface *probe, QObject *parent = 0);
-    virtual ~ActionInspector();
+public:
+    explicit ActionInspector(Probe *probe, QObject *parent = nullptr);
+    ~ActionInspector() override;
 
-  public Q_SLOTS:
+public Q_SLOTS:
     void triggerAction(int row);
 
-  private:
+private Q_SLOTS:
+    void objectSelected(QObject *obj);
+
+private:
     void registerMetaTypes();
+    QItemSelectionModel *m_selectionModel;
 };
 
 class ActionInspectorFactory : public QObject, public StandardToolFactory<QAction, ActionInspector>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_actioninspector.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_actioninspector.json")
 
-  public:
-    explicit ActionInspectorFactory(QObject *parent = 0) : QObject(parent)
+public:
+    explicit ActionInspectorFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // GAMMARAY_ACTIONINSPECTOR_H

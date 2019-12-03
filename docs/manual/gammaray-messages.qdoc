@@ -3,7 +3,7 @@
 
     This file is part of the GammaRay documentation.
 
-    Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+    Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
     Author: Volker Krause <volker.krause@kdab.com>
 
     Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -12,11 +12,11 @@
     Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
     This work is also licensed under the Creative Commons Attribution-ShareAlike 4.0
-    International License. See <http://creativecommons.org/licenses/by-sa/4.0/>.
+    International License. See <https://creativecommons.org/licenses/by-sa/4.0/>.
 */
 
 /*!
-    \contentspage {Messages}
+    \contentspage {Tools}
     \nextpage {Signal Plotter}
     \previouspage {State Machine Debugger}
     \page gammaray-messages.html
@@ -29,20 +29,27 @@
 
     \section1 Message Browser
 
-    The message browser shows you all diagnostic messages of the target of currently with a currently activated QLoggingCategory. Here you can:
+    The message browser shows you all diagnostic messages of the target using a QLoggingCategory that is active on the target. Here you can:
 
     \list
-        \li Search and filter messages.
-        \li Look at a backtrace of a selected critical or warning message.
-        \li Navigate to the code location of a diagnostic message (availability depends on build settings).
+        \li search and filter messages,
+        \li look at a backtrace of a selected critical or warning message,
+        \li and navigate to the code location of a diagnostic message (availability depends on build settings).
     \endlist
 
     \section1 Logging Categegory Configuration
 
-    The logging category Configuration shows all QLoggingCategory instances detected in the running target, as well as their current configuration.
+    The logging category configuration shows all QLoggingCategory instances detected on the running target, as well as their current configuration.
 
     \image gammaray-logging-categories.png
 
     Here you can enable or disable individual logging categories at runtime, which takes immediate effect.
     This is particularly useful to only enable output of high-volume diagnostics for a short period of time.
+
+    \section1 Examples
+
+    The following examples make use of the debug message browser:
+    \list
+        \li \l{quick-batching}
+    \endlist
 */

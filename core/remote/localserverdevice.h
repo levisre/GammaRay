@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,15 +35,15 @@
 #include <QLocalSocket>
 
 namespace GammaRay {
-
 class LocalServerDevice : public ServerDeviceImpl<QLocalServer>
 {
     Q_OBJECT
 public:
-    explicit LocalServerDevice(QObject* parent = 0);
+    explicit LocalServerDevice(QObject *parent = nullptr);
 
-    bool listen() Q_DECL_OVERRIDE;
-    QUrl externalAddress() const Q_DECL_OVERRIDE;
+    bool listen() override;
+    bool isListening() const override;
+    QUrl externalAddress() const override;
 };
 }
 

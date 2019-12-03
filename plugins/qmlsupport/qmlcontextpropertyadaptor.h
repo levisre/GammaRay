@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,20 +35,19 @@
 #include <QVector>
 
 namespace GammaRay {
-
 class QmlContextPropertyAdaptor : public PropertyAdaptor
 {
     Q_OBJECT
 public:
-    explicit QmlContextPropertyAdaptor(QObject *parent = Q_NULLPTR);
-    ~QmlContextPropertyAdaptor();
+    explicit QmlContextPropertyAdaptor(QObject *parent = nullptr);
+    ~QmlContextPropertyAdaptor() override;
 
-    int count() const Q_DECL_OVERRIDE;
-    PropertyData propertyData(int index) const Q_DECL_OVERRIDE;
-    void writeProperty(int index, const QVariant& value) Q_DECL_OVERRIDE;
+    int count() const override;
+    PropertyData propertyData(int index) const override;
+    void writeProperty(int index, const QVariant &value) override;
 
 protected:
-    void doSetObject(const ObjectInstance &oi) Q_DECL_OVERRIDE;
+    void doSetObject(const ObjectInstance &oi) override;
 
 private:
     QVector<QString> m_contextPropertyNames;
@@ -57,12 +56,11 @@ private:
 class QmlContextPropertyAdaptorFactory : public AbstractPropertyAdaptorFactory
 {
 public:
-    PropertyAdaptor* create(const ObjectInstance& oi, QObject* parent = 0) const Q_DECL_OVERRIDE;
-    static QmlContextPropertyAdaptorFactory* instance();
+    PropertyAdaptor *create(const ObjectInstance &oi, QObject *parent = nullptr) const override;
+    static QmlContextPropertyAdaptorFactory *instance();
 private:
     static QmlContextPropertyAdaptorFactory *s_instance;
 };
-
 }
 
 #endif

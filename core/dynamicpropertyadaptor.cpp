@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,22 +35,20 @@
 
 using namespace GammaRay;
 
-DynamicPropertyAdaptor::DynamicPropertyAdaptor(QObject* parent):
-    PropertyAdaptor(parent)
+DynamicPropertyAdaptor::DynamicPropertyAdaptor(QObject *parent)
+    : PropertyAdaptor(parent)
 {
 }
 
-DynamicPropertyAdaptor::~DynamicPropertyAdaptor()
-{
-}
+DynamicPropertyAdaptor::~DynamicPropertyAdaptor() = default;
 
-void DynamicPropertyAdaptor::doSetObject(const ObjectInstance& oi)
+void DynamicPropertyAdaptor::doSetObject(const ObjectInstance &oi)
 {
     auto obj = oi.qtObject();
     if (obj) {
         m_propNames = obj->dynamicPropertyNames();
         obj->installEventFilter(this);
-        connect(obj, SIGNAL(destroyed(QObject*)), this, SIGNAL(objectInvalidated()));
+        connect(obj, &QObject::destroyed, this, &PropertyAdaptor::objectInvalidated);
     }
 }
 
@@ -73,11 +71,11 @@ PropertyData DynamicPropertyAdaptor::propertyData(int index) const
     data.setName(m_propNames.at(index));
     data.setValue(object().qtObject()->property(m_propNames.at(index)));
     data.setClassName(tr("<dynamic>"));
-    data.setFlags(PropertyData::Writable | PropertyData::Deletable);
+    data.setAccessFlags(PropertyData::Writable | PropertyData::Deletable);
     return data;
 }
 
-void DynamicPropertyAdaptor::writeProperty(int index, const QVariant& value)
+void DynamicPropertyAdaptor::writeProperty(int index, const QVariant &value)
 {
     if (!object().isValid())
         return;
@@ -92,7 +90,7 @@ bool DynamicPropertyAdaptor::canAddProperty() const
     return object().qtObject();
 }
 
-void DynamicPropertyAdaptor::addProperty(const PropertyData& data)
+void DynamicPropertyAdaptor::addProperty(const PropertyData &data)
 {
     if (!object().isValid())
         return;
@@ -101,11 +99,11 @@ void DynamicPropertyAdaptor::addProperty(const PropertyData& data)
     object().qtObject()->setProperty(data.name().toUtf8(), data.value());
 }
 
-bool DynamicPropertyAdaptor::eventFilter(QObject* receiver, QEvent* event)
+bool DynamicPropertyAdaptor::eventFilter(QObject *receiver, QEvent *event)
 {
     auto obj = object().qtObject();
     if (receiver == obj && event->type() == QEvent::DynamicPropertyChange) {
-        const auto changeEvent = static_cast<QDynamicPropertyChangeEvent*>(event);
+        const auto changeEvent = static_cast<QDynamicPropertyChangeEvent *>(event);
         const auto oldIdx = m_propNames.indexOf(changeEvent->propertyName());
         const auto newIdx = obj->dynamicPropertyNames().indexOf(changeEvent->propertyName());
         if (oldIdx >= 0 && newIdx >= 0) {

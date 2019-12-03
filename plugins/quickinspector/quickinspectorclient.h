@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,22 +36,33 @@ class QEvent;
 QT_END_NAMESPACE
 
 namespace GammaRay {
+struct QuickDecorationsSettings;
 
 class QuickInspectorClient : public QuickInspectorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::QuickInspectorInterface)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::QuickInspectorInterface)
 
 public:
-  explicit QuickInspectorClient(QObject *parent = 0);
-  ~QuickInspectorClient();
+    explicit QuickInspectorClient(QObject *parent = nullptr);
+    ~QuickInspectorClient() override;
 
 public slots:
-  void selectWindow(int index) Q_DECL_OVERRIDE;
+    void selectWindow(int index) override;
 
-  void setCustomRenderMode(GammaRay::QuickInspectorInterface::RenderMode customRenderMode) Q_DECL_OVERRIDE;
+    void setCustomRenderMode(GammaRay::QuickInspectorInterface::RenderMode customRenderMode)
+    override;
 
-  void checkFeatures() Q_DECL_OVERRIDE;
+    void checkFeatures() override;
+
+    void setOverlaySettings(const GammaRay::QuickDecorationsSettings &settings) override;
+
+    void checkOverlaySettings() override;
+
+    void analyzePainting() override;
+
+    void checkSlowMode() override;
+    void setSlowMode(bool slow) override;
 };
 }
 

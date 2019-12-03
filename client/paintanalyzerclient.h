@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,15 +32,13 @@
 #include <common/paintanalyzerinterface.h>
 
 namespace GammaRay {
-
 class PaintAnalyzerClient : public PaintAnalyzerInterface
 {
     Q_OBJECT
     Q_INTERFACES(GammaRay::PaintAnalyzerInterface)
 public:
-    explicit PaintAnalyzerClient(const QString& name, QObject* parent = Q_NULLPTR);
+    explicit PaintAnalyzerClient(const QString &name, QObject *parent = nullptr);
 };
-
 }
 
 #endif // GAMMARAY_PAINTANALYZERCLIENT_H

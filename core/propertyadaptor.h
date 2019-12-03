@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,7 +36,6 @@
 #include <QVector>
 
 namespace GammaRay {
-
 class PropertyData;
 
 /** Generic interface for accessing properties from various sources of an object. */
@@ -44,11 +43,11 @@ class GAMMARAY_CORE_EXPORT PropertyAdaptor : public QObject
 {
     Q_OBJECT
 public:
-    explicit PropertyAdaptor(QObject* parent = 0);
-    ~PropertyAdaptor();
+    explicit PropertyAdaptor(QObject *parent = nullptr);
+    ~PropertyAdaptor() override;
 
     /** Returns the object instance who's properties this accesses. */
-    const ObjectInstance& object() const;
+    const ObjectInstance &object() const;
     /** Set the object instance who's properties we want to access. */
     void setObject(const ObjectInstance &oi);
 
@@ -70,6 +69,9 @@ public:
     /** Resets the specified property. */
     virtual void resetProperty(int index);
 
+    /** Property adaptor of parent object instance, if any. */
+    PropertyAdaptor *parentAdaptor() const;
+
 signals:
     void propertyAdded(int first, int last);
     void propertyRemoved(int first, int last);
@@ -84,11 +86,11 @@ protected:
     virtual void doSetObject(const ObjectInstance &oi);
 
 private:
+    friend class PropertyAggregator;
     ObjectInstance m_oi;
 };
-
 }
 
-Q_DECLARE_METATYPE(GammaRay::PropertyAdaptor*)
+Q_DECLARE_METATYPE(GammaRay::PropertyAdaptor *)
 
 #endif // GAMMARAY_PROPERTYADAPTOR_H

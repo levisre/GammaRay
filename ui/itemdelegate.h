@@ -2,7 +2,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Filipe Azevedo <filipe.azevedo@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,46 +34,45 @@
 #include <QSet>
 
 namespace GammaRay {
-
 /** @brief A simple interface that avoid empty display role texts.
  */
 class GAMMARAY_UI_EXPORT ItemDelegateInterface
 {
 public:
-  ItemDelegateInterface();
-  explicit ItemDelegateInterface(const QString &placeholderText);
+    ItemDelegateInterface();
+    explicit ItemDelegateInterface(const QString &placeholderText);
 
-  // You can put 2 placeholders for row/column using %r and %c
-  QString placeholderText() const;
-  void setPlaceholderText(const QString &placeholderText);
+    // You can put 2 placeholders for row/column using %r and %c
+    QString placeholderText() const;
+    void setPlaceholderText(const QString &placeholderText);
 
-  // which columns do show place holders, default all (empty)
-  QSet<int> placeholderColumns() const;
-  void setPlaceholderColumns(const QSet<int> &placeholderColumns);
+    // which columns do show place holders, default all (empty)
+    QSet<int> placeholderColumns() const;
+    void setPlaceholderColumns(const QSet<int> &placeholderColumns);
 
 protected:
-  QString defaultDisplayText(const QModelIndex &index) const;
+    QString defaultDisplayText(const QModelIndex &index) const;
 
-  const QWidget *widget(const QStyleOptionViewItem &option) const;
-  QStyle *style(const QStyleOptionViewItem &option) const;
+    const QWidget *widget(const QStyleOptionViewItem &option) const;
+    QStyle *style(const QStyleOptionViewItem &option) const;
 
 private:
-  QString m_placeholderText;
-  QSet<int> m_placeholderColumns;
+    QString m_placeholderText;
+    QSet<int> m_placeholderColumns;
 };
 
 /** @brief A simple delegate that avoid empty display role texts.
  */
 class GAMMARAY_UI_EXPORT ItemDelegate : public QStyledItemDelegate, public ItemDelegateInterface
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
-  explicit ItemDelegate(QObject *parent = 0);
+    explicit ItemDelegate(QObject *parent = nullptr);
 
-  void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const Q_DECL_OVERRIDE;
+    void paint(QPainter *painter, const QStyleOptionViewItem &option,
+               const QModelIndex &index) const override;
 };
-
 } // Namespace GammaRay
 
 #endif // GAMMARAY_ITEMDELEGATE_H

@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,29 +34,27 @@ class QComboBox;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class VtkWidget;
 
 class VtkPanel : public QToolBar
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit VtkPanel(VtkWidget *vtkWidget, QWidget *parent = 0);
+public:
+    explicit VtkPanel(VtkWidget *vtkWidget, QWidget *parent = nullptr);
     virtual ~VtkPanel();
 
-  public slots:
-     void layoutChanged(int);
-     void stereoModeChanged(int);
+public slots:
+    void layoutChanged(int);
+    void stereoModeChanged(int);
 
-  private:
+private:
     VtkWidget *m_vtkWidget;
 
     QComboBox *m_layoutBox;
     QComboBox *m_stereoBox;
     QString m_currentLayout;
 };
-
 }
 
 #endif // GAMMARAY_VTKPANEL_H

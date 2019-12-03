@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,18 +38,17 @@ QT_END_NAMESPACE
 
 class AttachHelper : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit AttachHelper(const QString &gammaray, const QString &injector,
-                          const QString &debuggee, const QStringList &arguments,
-                          QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit AttachHelper(const QString &gammaray, const QString &injector, const QString &debuggee,
+                          const QStringList &arguments, QObject *parent = nullptr);
 
-  public slots:
+public slots:
     void attach();
     void processStarted();
     void processFinished(int);
 
-  private:
+private:
     QTimer *m_timer;
     QProcess *m_proc;
     QString m_gammaray;

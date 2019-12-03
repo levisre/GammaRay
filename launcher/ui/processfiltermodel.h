@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,23 +32,22 @@
 #include <QSortFilterProxyModel>
 
 namespace GammaRay {
-
 // A filterable and sortable process model
 class ProcessFilterModel : public QSortFilterProxyModel
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     explicit ProcessFilterModel(QObject *parent);
 
-    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const Q_DECL_OVERRIDE;
-    bool filterAcceptsColumn(int source_column, const QModelIndex &source_parent) const Q_DECL_OVERRIDE;
+    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;
+    bool filterAcceptsColumn(int source_column,
+                             const QModelIndex &source_parent) const override;
 
-  private:
-    bool lessThan(const QModelIndex &left, const QModelIndex &right) const Q_DECL_OVERRIDE;
+private:
+    bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
     QString m_currentProcId;
     QString m_currentUser;
 };
-
 }
 
 #endif // GAMMARAY_PROCESSFILTERMODEL_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,14 +31,7 @@
 #include <QDataStream>
 
 namespace GammaRay {
-
-RemoteViewFrame::RemoteViewFrame()
-{
-}
-
-RemoteViewFrame::~RemoteViewFrame()
-{
-}
+RemoteViewFrame::~RemoteViewFrame() = default;
 
 bool RemoteViewFrame::isValid() const
 {
@@ -50,13 +43,11 @@ QRectF RemoteViewFrame::viewRect() const
     if (m_viewRect.isValid())
         return m_viewRect;
     qreal pxRatio = 1.0;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     pxRatio = m_image.image().devicePixelRatio();
-#endif
     return QRect(QPoint(), m_image.image().size() / pxRatio);
 }
 
-void RemoteViewFrame::setViewRect(const QRectF& viewRect)
+void RemoteViewFrame::setViewRect(const QRectF &viewRect)
 {
     m_viewRect = viewRect;
 }
@@ -68,7 +59,7 @@ QRectF RemoteViewFrame::sceneRect() const
     return viewRect();
 }
 
-void RemoteViewFrame::setSceneRect(const QRectF& sceneRect)
+void RemoteViewFrame::setSceneRect(const QRectF &sceneRect)
 {
     m_sceneRect = sceneRect;
 }
@@ -78,9 +69,20 @@ QImage RemoteViewFrame::image() const
     return m_image.image();
 }
 
-void RemoteViewFrame::setImage(const QImage& image)
+QTransform RemoteViewFrame::transform() const
+{
+    return m_image.transform();
+}
+
+void RemoteViewFrame::setImage(const QImage &image)
 {
     m_image.setImage(image);
+}
+
+void RemoteViewFrame::setImage(const QImage &image, const QTransform &transform)
+{
+    m_image.setImage(image);
+    m_image.setTransform(transform);
 }
 
 QVariant RemoteViewFrame::data() const
@@ -88,18 +90,18 @@ QVariant RemoteViewFrame::data() const
     return m_data;
 }
 
-void RemoteViewFrame::setData(const QVariant& data)
+void RemoteViewFrame::setData(const QVariant &data)
 {
     m_data = data;
 }
 
-QDataStream& operator<<(QDataStream& stream, const RemoteViewFrame& frame)
+QDataStream &operator<<(QDataStream &stream, const RemoteViewFrame &frame)
 {
     stream << frame.m_image << frame.m_data << frame.m_viewRect << frame.m_sceneRect;
     return stream;
 }
 
-QDataStream& operator>>(QDataStream& stream, RemoteViewFrame& frame)
+QDataStream &operator>>(QDataStream &stream, RemoteViewFrame &frame)
 {
     stream >> frame.m_image;
     stream >> frame.m_data;
@@ -107,5 +109,4 @@ QDataStream& operator>>(QDataStream& stream, RemoteViewFrame& frame)
     stream >> frame.m_sceneRect;
     return stream;
 }
-
 }

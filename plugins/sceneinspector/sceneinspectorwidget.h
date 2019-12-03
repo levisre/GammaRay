@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -41,21 +41,20 @@ class QItemSelection;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class SceneInspectorInterface;
 
 namespace Ui {
-  class SceneInspectorWidget;
+class SceneInspectorWidget;
 }
 
 class SceneInspectorWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit SceneInspectorWidget(QWidget *parent = 0);
-    ~SceneInspectorWidget();
+    Q_OBJECT
+public:
+    explicit SceneInspectorWidget(QWidget *parent = nullptr);
+    ~SceneInspectorWidget() override;
 
-  private slots:
+private slots:
     void sceneSelected(int index);
     void sceneItemSelected(const QItemSelection &selection);
     void sceneRectChanged(const QRectF &rect);
@@ -65,9 +64,10 @@ class SceneInspectorWidget : public QWidget
     void visibleSceneRectChanged();
     void itemSelected(const QRectF &boundingRect);
     void sceneContextMenu(QPoint pos);
+    void propertyWidgetTabsChanged();
 
-  private:
-    bool eventFilter(QObject *obj, QEvent *event) Q_DECL_OVERRIDE;
+private:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
     QScopedPointer<Ui::SceneInspectorWidget> ui;
     UIStateManager m_stateManager;
@@ -79,13 +79,12 @@ class SceneInspectorWidget : public QWidget
 
 class SceneInspectorUiFactory : public QObject, public StandardToolUiFactory<SceneInspectorWidget>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolUiFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_sceneinspector.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolUiFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_sceneinspector.json")
 public:
-    void initUi() Q_DECL_OVERRIDE;
+    void initUi() override;
 };
-
 }
 
 #endif // GAMMARAY_SCENEINSPECTOR_H

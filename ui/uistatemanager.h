@@ -2,7 +2,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Filipe Azevedo <filipe.azevedo@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,6 +35,7 @@
 #include <QList>
 #include <QVector>
 #include <QHash>
+#include <QMetaMethod>
 
 QT_BEGIN_NAMESPACE
 class QWidget;
@@ -44,75 +45,91 @@ class QHeaderView;
 QT_END_NAMESPACE
 
 namespace GammaRay {
+using UISizeVector = QVector<QVariant>;
 
-/** @brief Interface for UI plugins to manage their states.
+/*! Interface for UI plugins to manage their states.
  *
  * The manager is able to track if changes appear and only persists them in this case.
  * That mean any not moved splitter handle will not be persisted, and % based sizes
  * will works correctly even on resize.
  * Any QMainwindow is always restored/saved.
+ *
+ * There is now the possibility to implements custom restore/save state per targets.
+ * Just create those 2 public Q_INVOKABLE in the UIStateManager widget:
+ * - Q_INVOKABLE void saveTargetState(QSettings *settings) const;
+ * - Q_INVOKABLE void restoreTargetState(QSettings *settings);
+ *
+ * Usually, button checked, QTabWidget indexes...
+ * Do not store size related things or native Qt save/restore states here, that's the role
+ * of UIStateManager itself.
  */
-
-typedef QVector<QVariant> UISizeVector;
-
 class GAMMARAY_UI_EXPORT UIStateManager : public QObject
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
-  explicit UIStateManager(QWidget *widget);
-  virtual ~UIStateManager();
+    explicit UIStateManager(QWidget *widget);
+    ~UIStateManager() override;
 
-  virtual QList<QSplitter *> splitters() const;
-  virtual QList<QHeaderView *> headers() const;
-  virtual void setup();
+    QWidget *widget() const;
+    bool initialized() const;
 
-  UISizeVector defaultSizes(QSplitter *splitter) const;
-  void setDefaultSizes(QSplitter *splitter, const UISizeVector &defaultSizes);
+    virtual QList<QSplitter *> splitters() const;
+    virtual QList<QHeaderView *> headers() const;
+    virtual void setup();
 
-  UISizeVector defaultSizes(QHeaderView *header) const;
-  void setDefaultSizes(QHeaderView *header, const UISizeVector &defaultSizes);
+    UISizeVector defaultSizes(QSplitter *splitter) const;
+    void setDefaultSizes(QSplitter *splitter, const UISizeVector &defaultSizes);
+
+    UISizeVector defaultSizes(QHeaderView *header) const;
+    void setDefaultSizes(QHeaderView *header, const UISizeVector &defaultSizes);
 
 public slots:
-  void reset();
-  virtual void restoreState();
-  virtual void saveState();
+    void reset();
+    virtual void restoreState();
+    virtual void saveState();
 
 protected:
-  bool eventFilter(QObject *object, QEvent *event);
+    ///@cond internal
+    bool eventFilter(QObject *object, QEvent *event) override;
 
-  QString widgetName(QWidget *widget) const;
-  QString widgetPath(QWidget *widget) const;
-  QString widgetGeometryKey(QWidget *widget) const;
-  QString widgetStateKey(QWidget *widget) const;
-  QString widgetStateSectionsKey(QWidget *widget) const;
-  bool checkWidget(QWidget *widget) const;
-  int percentToInt(const QString &size) const;
+    QString widgetName(QWidget *widget) const;
+    QString widgetPath(QWidget *widget) const;
+    QString widgetGeometryKey(QWidget *widget) const;
+    QString widgetStateKey(QWidget *widget) const;
+    QString widgetStateSectionsKey(QWidget *widget) const;
+    bool checkWidget(QWidget *widget) const;
+    int percentToInt(const QString &size) const;
 
 protected slots:
-  void restoreWindowState();
-  void saveWindowState();
-  void restoreSplitterState(QSplitter *splitter = 0);
-  void saveSplitterState(QSplitter *splitter = 0);
-  void restoreHeaderState(QHeaderView *header = 0);
-  void saveHeaderState(QHeaderView *header = 0);
+    void restoreWindowState();
+    void saveWindowState();
+    void restoreSplitterState(QSplitter *splitter = nullptr);
+    void saveSplitterState(QSplitter *splitter = nullptr);
+    void restoreHeaderState(QHeaderView *header = nullptr);
+    void saveHeaderState(QHeaderView *header = nullptr);
+    ///@endcond
 
 private:
-  QPointer<QWidget> m_widget;
-  QSettings *m_stateSettings;
-  bool m_initialized;
-  bool m_resizing;
-  // Int -> pixels, String -> suffixe dependant (% -> percent else pixels)
-  // The UISizeVector is logical index based.
-  QHash<QString, UISizeVector> m_defaultSplitterSizes;
-  QHash<QString, UISizeVector> m_defaultHeaderSizes;
+    QPointer<QWidget> m_widget;
+    QSettings *m_stateSettings;
+    bool m_initialized;
+    bool m_settingsAccess;
+    bool m_resizing;
+    // Int -> pixels, String -> suffix dependent (% -> percent else pixels)
+    // The UISizeVector is logical index based.
+    QHash<QString, UISizeVector> m_defaultSplitterSizes;
+    QHash<QString, UISizeVector> m_defaultHeaderSizes;
+    // target restore/save handling
+    const QMetaObject *m_targetStateSource;
+    int m_targetRestoreMethodId;
+    int m_targetSaveMethodId;
 
 private slots:
-  void headerSectionCountChanged();
-  void widgetResized(QWidget *widget);
-  void widgetCustomized();
+    void headerSectionCountChanged();
+    void widgetResized(QWidget *widget);
+    void widgetCustomized();
 };
-
 } // namespace GammaRay
 
 #endif // UISTATEMANAGER_H

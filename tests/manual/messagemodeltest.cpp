@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,54 +37,55 @@ using namespace GammaRay;
 
 MessageGenerator::MessageGenerator()
 {
-  QVBoxLayout *layout  = new QVBoxLayout;
+    auto *layout = new QVBoxLayout;
 
-  QPushButton *button = new QPushButton(QStringLiteral("debug"));
-  connect(button, SIGNAL(clicked(bool)), SLOT(generateDebug()));
-  layout->addWidget(button);
+    QPushButton *button = new QPushButton(QStringLiteral("debug"));
+    connect(button, &QAbstractButton::clicked, this, &MessageGenerator::generateDebug);
+    layout->addWidget(button);
 
-  button = new QPushButton(QStringLiteral("warning"));
-  connect(button, SIGNAL(clicked(bool)), SLOT(generateWarning()));
-  layout->addWidget(button);
+    button = new QPushButton(QStringLiteral("warning"));
+    connect(button, &QAbstractButton::clicked, this, &MessageGenerator::generateWarning);
+    layout->addWidget(button);
 
-  button = new QPushButton(QStringLiteral("critical"));
-  connect(button, SIGNAL(clicked(bool)), SLOT(generateCritical()));
-  layout->addWidget(button);
+    button = new QPushButton(QStringLiteral("critical"));
+    connect(button, &QAbstractButton::clicked, this, &MessageGenerator::generateCritical);
+    layout->addWidget(button);
 
-  button = new QPushButton(QStringLiteral("fatal"));
-  connect(button, SIGNAL(clicked(bool)), SLOT(generateFatal()));
-  layout->addWidget(button);
+    button = new QPushButton(QStringLiteral("fatal"));
+    connect(button, &QAbstractButton::clicked, this, &MessageGenerator::generateFatal);
+    layout->addWidget(button);
 
-  setLayout(layout);
+    setLayout(layout);
 }
 
 void MessageGenerator::generateDebug()
 {
-  qDebug() << "A debug message";
+    qDebug() << "A debug message";
 }
 
 void MessageGenerator::generateWarning()
 {
-  qWarning() << "A warning message" << "split into two parts";
+    qWarning() << "A warning message" << "split into two parts";
 }
 
 void MessageGenerator::generateCritical()
 {
-  qCritical() << "A critical message";
+    qCritical() << "A critical message";
 }
 
+/*some Windows compilers don't like Q_NORETURN*/
+/*error C2381: 'GammaRay::MessageGenerator::generateFatal': redefinition; '__declspec(noreturn)' or '[[noreturn]]' differs*/
 void MessageGenerator::generateFatal()
 {
-  qFatal("A fatal message");
+    qFatal("A fatal message");
 }
 
 int main(int argc, char **argv)
 {
-  QApplication app(argc, argv);
+    QApplication app(argc, argv);
 
-  MessageGenerator generator;
-  generator.show();
+    MessageGenerator generator;
+    generator.show();
 
-  return app.exec();
+    return app.exec();
 }
-

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,11 +36,10 @@ class QAbstractItemModel;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class StyleInspectorInterface;
 
 namespace Ui {
-  class StyleElementStateTablePage;
+class StyleElementStateTablePage;
 }
 
 /**
@@ -48,23 +47,22 @@ namespace Ui {
  */
 class StyleElementStateTablePage : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit StyleElementStateTablePage(QWidget *parent = 0);
-    ~StyleElementStateTablePage();
+    Q_OBJECT
+public:
+    explicit StyleElementStateTablePage(QWidget *parent = nullptr);
+    ~StyleElementStateTablePage() override;
     void setModel(QAbstractItemModel *model);
 
-  protected:
-    void showEvent(QShowEvent *show) Q_DECL_OVERRIDE;
+protected:
+    void showEvent(QShowEvent *show) override;
 
-  private slots:
+private slots:
     void updateCellSize();
 
-  private:
+private:
     Ui::StyleElementStateTablePage *ui;
     StyleInspectorInterface *m_interface;
 };
-
 }
 
 #endif // GAMMARAY_STYLEELEMENTSTATETABLEPAGE_H

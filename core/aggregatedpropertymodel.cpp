@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,30 +34,43 @@
 #include "propertydata.h"
 #include "propertyadaptorfactory.h"
 #include "toolfactory.h"
-#include "toolmodel.h"
 #include "varianthandler.h"
+#include "enumrepositoryserver.h"
+#include "enumutil.h"
 #include "util.h"
 
-#include <common/probecontrollerinterface.h>
+#include <common/objectid.h>
 #include <common/propertymodel.h>
 
 #include <QDebug>
+#include <QMetaEnum>
 
 using namespace GammaRay;
 
-AggregatedPropertyModel::AggregatedPropertyModel(QObject* parent) :
-    QAbstractItemModel(parent),
-    m_rootAdaptor(0),
-    m_inhibitAdaptorCreation(false)
-{
-    qRegisterMetaType<GammaRay::PropertyAdaptor*>();
+
+Q_DECLARE_METATYPE(const QObject*)
+
+/*!
+ * Checks if it is dangerous to unpack a QVariant because it stores an invalid pointer.
+ * Returns true if the value is an invalid pointer to a QObject.
+ * Returns false either if it is a valid pointer or not a QObject*.
+ */
+bool isInvalidPointer(const QVariant& value) {
+    if (!value.canConvert<QObject *>() && !value.canConvert<const QObject *>())
+        return false;
+    return !Probe::instance()->isValidObject(Util::uncheckedQObjectCast(value));
 }
 
-AggregatedPropertyModel::~AggregatedPropertyModel()
+
+AggregatedPropertyModel::AggregatedPropertyModel(QObject *parent)
+    : QAbstractItemModel(parent)
 {
+    qRegisterMetaType<GammaRay::PropertyAdaptor *>();
 }
 
-void AggregatedPropertyModel::setObject(const ObjectInstance& oi)
+AggregatedPropertyModel::~AggregatedPropertyModel() = default;
+
+void AggregatedPropertyModel::setObject(const ObjectInstance &oi)
 {
     clear();
 
@@ -78,6 +91,11 @@ void AggregatedPropertyModel::setObject(const ObjectInstance& oi)
         endInsertRows();
 }
 
+void AggregatedPropertyModel::setReadOnly(bool readOnly)
+{
+    m_readOnly = readOnly;
+}
+
 void AggregatedPropertyModel::clear()
 {
     if (!m_rootAdaptor)
@@ -89,20 +107,22 @@ void AggregatedPropertyModel::clear()
 
     m_parentChildrenMap.clear();
     delete m_rootAdaptor;
-    m_rootAdaptor = 0;
+    m_rootAdaptor = nullptr;
 
     if (count)
         endRemoveRows();
 }
 
-QVariant AggregatedPropertyModel::data(const QModelIndex& index, int role) const
+QVariant AggregatedPropertyModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid() || !m_rootAdaptor)
         return QVariant();
 
     const auto adaptor = adaptorForIndex(index);
     if (!adaptor->object().isValid()) {
-        QMetaObject::invokeMethod(const_cast<AggregatedPropertyModel*>(this), "objectInvalidated", Qt::QueuedConnection, Q_ARG(GammaRay::PropertyAdaptor*, adaptor));
+        QMetaObject::invokeMethod(const_cast<AggregatedPropertyModel *>(this), "objectInvalidated",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(GammaRay::PropertyAdaptor*, adaptor));
         return QVariant();
     }
 
@@ -110,7 +130,7 @@ QVariant AggregatedPropertyModel::data(const QModelIndex& index, int role) const
     return data(adaptor, d, index.column(), role);
 }
 
-QMap<int, QVariant> AggregatedPropertyModel::itemData(const QModelIndex& index) const
+QMap<int, QVariant> AggregatedPropertyModel::itemData(const QModelIndex &index) const
 {
     QMap<int, QVariant> res;
     if (!index.isValid() || !m_rootAdaptor)
@@ -118,115 +138,177 @@ QMap<int, QVariant> AggregatedPropertyModel::itemData(const QModelIndex& index) 
 
     const auto adaptor = adaptorForIndex(index);
     if (!adaptor->object().isValid()) {
-        QMetaObject::invokeMethod(const_cast<AggregatedPropertyModel*>(this), "objectInvalidated", Qt::QueuedConnection, Q_ARG(GammaRay::PropertyAdaptor*, adaptor));
+        QMetaObject::invokeMethod(const_cast<AggregatedPropertyModel *>(this), "objectInvalidated",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(GammaRay::PropertyAdaptor*, adaptor));
         return res;
     }
     const auto d = adaptor->propertyData(index.row());
 
     res.insert(Qt::DisplayRole, data(adaptor, d, index.column(), Qt::DisplayRole));
-    res.insert(Qt::ToolTipRole, data(adaptor, d, index.column(), Qt::ToolTipRole));
-    res.insert(PropertyModel::ActionRole, data(adaptor, d, index.column(), PropertyModel::ActionRole));
-    res.insert(PropertyModel::ObjectIdRole, data(adaptor, d, index.column(), PropertyModel::ObjectIdRole));
-    if (index.column() == 1) {
+    res.insert(PropertyModel::ActionRole, data(adaptor, d,
+                                               index.column(), PropertyModel::ActionRole));
+    res.insert(PropertyModel::ObjectIdRole,
+               data(adaptor, d, index.column(), PropertyModel::ObjectIdRole));
+    if (index.column() == 0) {
+        auto v = data(adaptor, d, index.column(), PropertyModel::PropertyFlagsRole);
+        if (!v.isNull())
+            res.insert(PropertyModel::PropertyFlagsRole, v);
+        v = data(adaptor, d, index.column(), PropertyModel::PropertyRevisionRole);
+        if (!v.isNull())
+            res.insert(PropertyModel::PropertyRevisionRole, v);
+        v = data(adaptor, d, index.column(), PropertyModel::NotifySignalRole);
+        if (!v.isNull())
+            res.insert(PropertyModel::NotifySignalRole, v);
+    } else if (index.column() == 1) {
         res.insert(Qt::EditRole, data(adaptor, d, index.column(), Qt::EditRole));
         res.insert(Qt::DecorationRole, data(adaptor, d, index.column(), Qt::DecorationRole));
+        if (d.value().type() == QVariant::Bool)
+            res.insert(Qt::CheckStateRole, data(adaptor, d, index.column(), Qt::CheckStateRole));
     }
     return res;
 }
 
-QVariant AggregatedPropertyModel::data(PropertyAdaptor *adaptor, const PropertyData& d, int column, int role) const
+QVariant AggregatedPropertyModel::data(PropertyAdaptor *adaptor, const PropertyData &d, int column,
+                                       int role) const
 {
     switch (role) {
-        case Qt::DisplayRole:
-            switch (column) {
-                case 0:
-                    return d.name();
-                case 1:
-                {
-                    // QMetaProperty::read sets QVariant::typeName to int for enums,
-                    // so we need to handle that separately here
-                    const QString enumStr = Util::enumToString(d.value(), d.typeName().toLatin1(), adaptor->object().qtObject());
-                    if (!enumStr.isEmpty())
-                        return enumStr;
-                    return VariantHandler::displayString(d.value());
-                }
-                case 2:
-                    return d.typeName();
-                case 3:
-                    return d.className();
-            }
-            break;
-        case Qt::EditRole:
-            if (column == 1)
-                return VariantHandler::serializableVariant(d.value());
-            break;
-        case Qt::ToolTipRole:
-            return d.details();
-        case Qt::DecorationRole:
-            if (column == 1)
-                return VariantHandler::decoration(d.value());
-            break;
-        case PropertyModel::ActionRole:
+    case Qt::DisplayRole:
+        switch (column) {
+        case 0:
+            return d.name();
+        case 1:
         {
-            int actions = PropertyModel::NoAction;
-            if (d.flags() & PropertyData::Resettable)
-                actions |= PropertyModel::Reset;
-            if (d.flags() & PropertyData::Deletable)
-                actions |= PropertyModel::Delete;
-            if ((MetaObjectRepository::instance()->metaObject(d.typeName()) && *reinterpret_cast<void* const*>(d.value().data())) || d.value().value<QObject*>())
-                actions |= PropertyModel::NavigateTo;
-            return actions;
+            // QMetaProperty::read sets QVariant::typeName to int for enums,
+            // so we need to handle that separately here
+            const QString enumStr = EnumUtil::enumToString(d.value(), d.typeName().toLatin1(), adaptor->object().metaObject());
+            if (!enumStr.isEmpty())
+                return enumStr;
+            if (d.value().type() == QVariant::Bool && (d.accessFlags() & PropertyData::Writable))
+                return QVariant();
+            if (isInvalidPointer(d.value()) && Util::uncheckedQObjectCast(d.value()) != nullptr)
+                return "[invalid]";
+            return VariantHandler::displayString(d.value());
         }
-        case PropertyModel::ObjectIdRole:
-            if (d.value().canConvert<QObject*>()) {
-                return QVariant::fromValue(ObjectId(d.value().value<QObject*>()));
-            } else if (d.value().isValid()) {
-                const auto &v = d.value();
-                return QVariant::fromValue(ObjectId(*reinterpret_cast<void* const*>(v.data()), v.typeName()));
+        case 2:
+            return d.typeName();
+        case 3:
+            return d.className();
+        }
+        break;
+    case Qt::EditRole:
+        if (column == 1) {
+            const auto me = EnumUtil::metaEnum(d.value(), d.typeName().toLatin1(), adaptor->object().metaObject());
+            if (me.isValid()) {
+                const auto num = EnumUtil::enumToInt(d.value(), me);
+                return QVariant::fromValue(EnumRepositoryServer::valueFromMetaEnum(num, me));
             }
-            return QVariant();
+            return VariantHandler::serializableVariant(d.value());
+        }
+        break;
+    case Qt::DecorationRole:
+        if (column == 1)
+            return VariantHandler::decoration(d.value());
+        break;
+    case Qt::CheckStateRole:
+        if (column == 1 && d.value().type() == QVariant::Bool && (d.accessFlags() & PropertyData::Writable))
+            return d.value().toBool() ? Qt::Checked : Qt::Unchecked;
+        break;
+    case PropertyModel::ActionRole:
+    {
+        int actions = PropertyModel::NoAction;
+        if (d.accessFlags() & PropertyData::Resettable)
+            actions |= PropertyModel::Reset;
+        if (d.accessFlags() & PropertyData::Deletable)
+            actions |= PropertyModel::Delete;
+        if ((MetaObjectRepository::instance()->metaObject(d.typeName())
+             && *reinterpret_cast<void * const *>(d.value().data()))
+            || d.value().value<QObject *>())
+            actions |= PropertyModel::NavigateTo;
+        return actions;
     }
-
+    case PropertyModel::ObjectIdRole:
+        if (d.value().canConvert<QObject *>()) {
+            if (isInvalidPointer(d.value()))
+                return QVariant();
+            return QVariant::fromValue(ObjectId(d.value().value<QObject *>()));
+        } else if (d.value().isValid()) {
+            const auto &v = d.value();
+            return QVariant::fromValue(ObjectId(*reinterpret_cast<void * const *>(v.data()),
+                                                v.typeName()));
+        }
+        return QVariant();
+    case PropertyModel::PropertyFlagsRole:
+        if (column == 0 && d.propertyFlags() != PropertyModel::None)
+            return QVariant::fromValue(d.propertyFlags());
+        return QVariant();
+    case PropertyModel::PropertyRevisionRole:
+        if (column == 0 && d.revision() >= 0)
+            return d.revision();
+        return QVariant();
+    case PropertyModel::NotifySignalRole:
+        if (column == 0 && !d.notifySignal().isEmpty())
+            return d.notifySignal();
+        return QVariant();
+    }
     return QVariant();
 }
 
-bool AggregatedPropertyModel::setData(const QModelIndex& index, const QVariant& value, int role)
+bool AggregatedPropertyModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     if (!index.isValid() || !m_rootAdaptor)
         return false;
 
     const auto adaptor = adaptorForIndex(index);
     switch (role) {
-        case Qt::EditRole:
+    case Qt::EditRole:
+    {
+        if (value.userType() == qMetaTypeId<EnumValue>()) {
+            const auto d = adaptor->propertyData(index.row());
+            if (d.value().type() == QVariant::Int) {
+                adaptor->writeProperty(index.row(), value.value<EnumValue>().value());
+            } else {
+                auto v = d.value();
+                *(static_cast<int*>(v.data())) = value.value<EnumValue>().value();
+                adaptor->writeProperty(index.row(), v);
+            }
+        } else {
             adaptor->writeProperty(index.row(), value);
-            return true;
-        case PropertyModel::ResetActionRole:
-            adaptor->resetProperty(index.row());
-            return true;
+        }
+        propagateWrite(adaptor);
+        return true;
+    }
+    case Qt::CheckStateRole:
+        adaptor->writeProperty(index.row(), value.toInt() == Qt::Checked);
+        propagateWrite(adaptor);
+        return true;
+    case PropertyModel::ResetActionRole:
+        adaptor->resetProperty(index.row());
+        return true;
     }
 
     return false;
 }
 
-int AggregatedPropertyModel::columnCount(const QModelIndex& parent) const
+int AggregatedPropertyModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
     return 4;
 }
 
-int AggregatedPropertyModel::rowCount(const QModelIndex& parent) const
+int AggregatedPropertyModel::rowCount(const QModelIndex &parent) const
 {
-    if (!m_rootAdaptor|| parent.column() > 0)
+    if (!m_rootAdaptor || parent.column() > 0)
         return 0;
     if (!parent.isValid())
         return m_parentChildrenMap.value(m_rootAdaptor).size();
 
     auto adaptor = adaptorForIndex(parent);
-    auto& siblings = m_parentChildrenMap[adaptor];
+    auto &siblings = m_parentChildrenMap[adaptor];
     if (!m_inhibitAdaptorCreation && !siblings.at(parent.row())) {
         // TODO: remember we tried any of this
         auto pd = adaptor->propertyData(parent.row());
-        if (!hasLoop(adaptor, pd.value())) {
+        if (!isInvalidPointer(pd.value()) && !hasLoop(adaptor, pd.value())) {
             auto a = PropertyAdaptorFactory::create(pd.value(), adaptor);
             siblings[parent.row()] = a;
             addPropertyAdaptor(a);
@@ -238,48 +320,36 @@ int AggregatedPropertyModel::rowCount(const QModelIndex& parent) const
     return m_parentChildrenMap.value(childAdaptor).size(); // childAdaptor->count() might already be updated in insert/removeRows
 }
 
-Qt::ItemFlags AggregatedPropertyModel::flags(const QModelIndex& index) const
+Qt::ItemFlags AggregatedPropertyModel::flags(const QModelIndex &index) const
 {
     const auto baseFlags = QAbstractItemModel::flags(index);
-    if (!index.isValid() || index.column() != 1)
+    if (!index.isValid() || index.column() != 1 || m_readOnly)
         return baseFlags;
 
     auto adaptor = adaptorForIndex(index);
     auto data = adaptor->propertyData(index.row());
-    return (data.flags() & PropertyData::Writable) ? (baseFlags | Qt::ItemIsEditable) : baseFlags;
+    const auto editable = (data.accessFlags() & PropertyData::Writable) && isParentEditable(adaptor);
+    const auto booleanEditable = editable && data.value().type() == QVariant::Bool;
+    if (booleanEditable)
+        return baseFlags | Qt::ItemIsUserCheckable;
+    return editable ? (baseFlags | Qt::ItemIsEditable) : baseFlags;
 }
 
-QVariant AggregatedPropertyModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
-        switch (section) {
-            case 0:
-                return tr("Property");
-            case 1:
-                return tr("Value");
-            case 2:
-                return tr("Type");
-            case 3:
-                return tr("Class");
-        }
-    }
-    return QAbstractItemModel::headerData(section, orientation, role);
-}
-
-QModelIndex AggregatedPropertyModel::parent(const QModelIndex& child) const
+QModelIndex AggregatedPropertyModel::parent(const QModelIndex &child) const
 {
     auto childAdaptor = adaptorForIndex(child);
     if (childAdaptor == m_rootAdaptor)
-        return QModelIndex();
+        return {};
 
-    auto parentAdaptor = qobject_cast<PropertyAdaptor*>(childAdaptor->parent());
-    return createIndex(m_parentChildrenMap.value(parentAdaptor).indexOf(childAdaptor), 0, parentAdaptor);
+    auto parentAdaptor = childAdaptor->parentAdaptor();
+    return createIndex(m_parentChildrenMap.value(parentAdaptor).indexOf(
+                           childAdaptor), 0, parentAdaptor);
 }
 
-QModelIndex AggregatedPropertyModel::index(int row, int column, const QModelIndex& parent) const
+QModelIndex AggregatedPropertyModel::index(int row, int column, const QModelIndex &parent) const
 {
     if (!hasIndex(row, column, parent) || !m_rootAdaptor)
-        return QModelIndex();
+        return {};
 
     if (!parent.isValid())
         return createIndex(row, column, m_rootAdaptor);
@@ -287,28 +357,28 @@ QModelIndex AggregatedPropertyModel::index(int row, int column, const QModelInde
     return createIndex(row, column, m_parentChildrenMap.value(adaptor).at(parent.row()));
 }
 
-PropertyAdaptor* AggregatedPropertyModel::adaptorForIndex(const QModelIndex& index) const
+PropertyAdaptor *AggregatedPropertyModel::adaptorForIndex(const QModelIndex &index) const
 {
     if (!index.isValid())
         return m_rootAdaptor;
-    return static_cast<PropertyAdaptor*>(index.internalPointer());
+    return static_cast<PropertyAdaptor *>(index.internalPointer());
 }
 
-void AggregatedPropertyModel::addPropertyAdaptor(PropertyAdaptor* adaptor) const
+void AggregatedPropertyModel::addPropertyAdaptor(PropertyAdaptor *adaptor) const
 {
     if (!adaptor)
         return;
-    QVector<PropertyAdaptor*> children;
+    QVector<PropertyAdaptor *> children;
     children.resize(adaptor->count());
     m_parentChildrenMap.insert(adaptor, children);
-    connect(adaptor, SIGNAL(propertyChanged(int,int)), this, SLOT(propertyChanged(int,int)));
-    connect(adaptor, SIGNAL(propertyAdded(int,int)), this, SLOT(propertyAdded(int,int)));
-    connect(adaptor, SIGNAL(propertyRemoved(int,int)), this, SLOT(propertyRemoved(int,int)));
+    connect(adaptor, &PropertyAdaptor::propertyChanged, this, &AggregatedPropertyModel::propertyChanged);
+    connect(adaptor, &PropertyAdaptor::propertyAdded, this, &AggregatedPropertyModel::propertyAdded);
+    connect(adaptor, &PropertyAdaptor::propertyRemoved, this, &AggregatedPropertyModel::propertyRemoved);
 }
 
 void AggregatedPropertyModel::propertyChanged(int first, int last)
 {
-    auto adaptor = qobject_cast<PropertyAdaptor*>(sender());
+    auto adaptor = qobject_cast<PropertyAdaptor *>(sender());
     Q_ASSERT(adaptor);
     Q_ASSERT(m_parentChildrenMap.contains(adaptor));
     Q_ASSERT(first <= last);
@@ -322,7 +392,7 @@ void AggregatedPropertyModel::propertyChanged(int first, int last)
 
 void AggregatedPropertyModel::propertyAdded(int first, int last)
 {
-    auto adaptor = qobject_cast<PropertyAdaptor*>(sender());
+    auto adaptor = qobject_cast<PropertyAdaptor *>(sender());
     Q_ASSERT(adaptor);
     Q_ASSERT(m_parentChildrenMap.contains(adaptor));
     Q_ASSERT(first <= last);
@@ -335,13 +405,13 @@ void AggregatedPropertyModel::propertyAdded(int first, int last)
     if (first >= children.size())
         children.resize(last + 1);
     else
-      children.insert(first, last - first + 1, 0);
+        children.insert(first, last - first + 1, nullptr);
     endInsertRows();
 }
 
 void AggregatedPropertyModel::propertyRemoved(int first, int last)
 {
-    auto adaptor = qobject_cast<PropertyAdaptor*>(sender());
+    auto adaptor = qobject_cast<PropertyAdaptor *>(sender());
     Q_ASSERT(adaptor);
     Q_ASSERT(m_parentChildrenMap.contains(adaptor));
     Q_ASSERT(first <= last);
@@ -357,11 +427,11 @@ void AggregatedPropertyModel::propertyRemoved(int first, int last)
 
 void AggregatedPropertyModel::objectInvalidated()
 {
-    auto adaptor = qobject_cast<PropertyAdaptor*>(sender());
+    auto adaptor = qobject_cast<PropertyAdaptor *>(sender());
     objectInvalidated(adaptor);
 }
 
-void AggregatedPropertyModel::objectInvalidated(PropertyAdaptor* adaptor)
+void AggregatedPropertyModel::objectInvalidated(PropertyAdaptor *adaptor)
 {
     Q_ASSERT(adaptor);
     if (!m_parentChildrenMap.contains(adaptor)) // already handled
@@ -372,13 +442,13 @@ void AggregatedPropertyModel::objectInvalidated(PropertyAdaptor* adaptor)
         return;
     }
 
-    auto parentAdaptor = qobject_cast<PropertyAdaptor*>(adaptor->parent());
+    auto parentAdaptor = adaptor->parentAdaptor();
     Q_ASSERT(parentAdaptor);
     Q_ASSERT(m_parentChildrenMap.contains(parentAdaptor));
     reloadSubTree(parentAdaptor, m_parentChildrenMap.value(parentAdaptor).indexOf(adaptor));
 }
 
-bool AggregatedPropertyModel::hasLoop(PropertyAdaptor* adaptor, const QVariant& v) const
+bool AggregatedPropertyModel::hasLoop(PropertyAdaptor *adaptor, const QVariant &v) const
 {
     const ObjectInstance newOi(v);
     if (newOi.type() != ObjectInstance::QtObject && newOi.type() != ObjectInstance::Object)
@@ -389,13 +459,13 @@ bool AggregatedPropertyModel::hasLoop(PropertyAdaptor* adaptor, const QVariant& 
     while (adaptor) {
         if (adaptor->object() == newOi)
             return true;
-        adaptor = qobject_cast<PropertyAdaptor*>(adaptor->parent());
+        adaptor = adaptor->parentAdaptor();
     }
 
     return false;
 }
 
-void AggregatedPropertyModel::reloadSubTree(PropertyAdaptor* parentAdaptor, int index)
+void AggregatedPropertyModel::reloadSubTree(PropertyAdaptor *parentAdaptor, int index)
 {
     Q_ASSERT(parentAdaptor);
     Q_ASSERT(m_parentChildrenMap.contains(parentAdaptor));
@@ -412,7 +482,7 @@ void AggregatedPropertyModel::reloadSubTree(PropertyAdaptor* parentAdaptor, int 
         auto oldRowCount = m_parentChildrenMap.value(oldAdaptor).size();
         if (oldRowCount > 0)
             beginRemoveRows(createIndex(index, 0, parentAdaptor), 0, oldRowCount - 1);
-        m_parentChildrenMap[parentAdaptor][index] = 0;
+        m_parentChildrenMap[parentAdaptor][index] = nullptr;
         m_parentChildrenMap.remove(oldAdaptor);
         delete oldAdaptor;
         if (oldRowCount)
@@ -422,7 +492,8 @@ void AggregatedPropertyModel::reloadSubTree(PropertyAdaptor* parentAdaptor, int 
     // re-add the sub-tree
     // TODO consolidate with code in rowCount()
     auto pd = parentAdaptor->propertyData(index);
-    if (hasLoop(parentAdaptor, pd.value())) {
+
+    if (isInvalidPointer(pd.value()) || hasLoop(parentAdaptor, pd.value())) {
         m_inhibitAdaptorCreation = false;
         return;
     }
@@ -440,4 +511,39 @@ void AggregatedPropertyModel::reloadSubTree(PropertyAdaptor* parentAdaptor, int 
         endInsertRows();
 
     m_inhibitAdaptorCreation = false;
+}
+
+bool AggregatedPropertyModel::isParentEditable(PropertyAdaptor *adaptor) const
+{
+    const auto parentAdaptor = adaptor->parentAdaptor();
+    if (!parentAdaptor)
+        return true;
+
+    // we need all value types along the way to be writable
+    if (adaptor->object().isValueType()) {
+        const auto row = m_parentChildrenMap.value(parentAdaptor).indexOf(adaptor);
+        Q_ASSERT(row >= 0);
+
+        const auto pd = parentAdaptor->propertyData(row);
+        if ((pd.accessFlags() & PropertyData::Writable) == 0)
+            return false;
+    }
+
+    return isParentEditable(parentAdaptor);
+}
+
+void AggregatedPropertyModel::propagateWrite(GammaRay::PropertyAdaptor* adaptor)
+{
+    const auto parentAdaptor = adaptor->parentAdaptor();
+    if (!parentAdaptor)
+        return;
+
+    if (adaptor->object().isValueType()) {
+        const auto row = m_parentChildrenMap.value(parentAdaptor).indexOf(adaptor);
+        Q_ASSERT(row >= 0);
+
+        parentAdaptor->writeProperty(row, adaptor->object().variant());
+    }
+
+    propagateWrite(parentAdaptor);
 }

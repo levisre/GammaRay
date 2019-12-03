@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,29 +32,26 @@
 
 using namespace GammaRay;
 
-ObjectVisualizerModel::ObjectVisualizerModel(QObject* parent) : KRecursiveFilterProxyModel(parent)
+ObjectVisualizerModel::ObjectVisualizerModel(QObject *parent)
+    : KRecursiveFilterProxyModel(parent)
 {
 }
 
-ObjectVisualizerModel::~ObjectVisualizerModel()
-{
-}
+ObjectVisualizerModel::~ObjectVisualizerModel() = default;
 
-QVariant ObjectVisualizerModel::data(const QModelIndex& proxyIndex, int role) const
+QVariant ObjectVisualizerModel::data(const QModelIndex &proxyIndex, int role) const
 {
-  if (role == ObjectDisplayName) {
-    QObject *obj = data(proxyIndex, ObjectModel::ObjectRole).value<QObject*>();
-    return Util::displayString(obj);
-  }
-  else if (role == ObjectId) {
-    QObject *obj = data(proxyIndex, ObjectModel::ObjectRole).value<QObject*>();
-    return static_cast<qulonglong>(reinterpret_cast<quintptr>(obj));
-  }
-  else if (role == ClassName) {
-    QObject *obj = data(proxyIndex, ObjectModel::ObjectRole).value<QObject*>();
-    Q_ASSERT(obj);
-    return obj->metaObject()->className();
-  }
+    if (role == ObjectDisplayName) {
+        QObject *obj = data(proxyIndex, ObjectModel::ObjectRole).value<QObject *>();
+        return Util::displayString(obj);
+    } else if (role == ObjectId) {
+        QObject *obj = data(proxyIndex, ObjectModel::ObjectRole).value<QObject *>();
+        return static_cast<qulonglong>(reinterpret_cast<quintptr>(obj));
+    } else if (role == ClassName) {
+        QObject *obj = data(proxyIndex, ObjectModel::ObjectRole).value<QObject *>();
+        Q_ASSERT(obj);
+        return obj->metaObject()->className();
+    }
 
-  return KRecursiveFilterProxyModel::data(proxyIndex, role);
+    return KRecursiveFilterProxyModel::data(proxyIndex, role);
 }

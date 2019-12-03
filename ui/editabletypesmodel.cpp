@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,33 +31,31 @@
 
 using namespace GammaRay;
 
-EditableTypesModel::EditableTypesModel(QObject* parent): QAbstractListModel(parent)
+EditableTypesModel::EditableTypesModel(QObject *parent)
+    : QAbstractListModel(parent)
 {
-  m_types = PropertyEditorFactory::supportedTypes();
+    m_types = PropertyEditorFactory::supportedTypes();
 }
 
-EditableTypesModel::~EditableTypesModel()
+EditableTypesModel::~EditableTypesModel() = default;
+
+int EditableTypesModel::rowCount(const QModelIndex &parent) const
 {
+    if (parent.isValid())
+        return 0;
+    return m_types.size();
 }
 
-int EditableTypesModel::rowCount(const QModelIndex& parent) const
+QVariant EditableTypesModel::data(const QModelIndex &index, int role) const
 {
-  if (parent.isValid())
-    return 0;
-  return m_types.size();
-}
+    if (!index.isValid())
+        return QVariant();
 
-QVariant EditableTypesModel::data(const QModelIndex& index, int role) const
-{
-  if (!index.isValid())
+    const int type = m_types.at(index.row());
+    if (role == Qt::DisplayRole)
+        return QMetaType::typeName(type);
+    else if (role == Qt::UserRole)
+        return type;
+
     return QVariant();
-
-  const int type = m_types.at(index.row());
-  if (role == Qt::DisplayRole) {
-    return QMetaType::typeName(type);
-  } else if (role == Qt::UserRole) {
-    return type;
-  }
-
-  return QVariant();
 }

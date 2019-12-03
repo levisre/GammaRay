@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,17 +31,57 @@
 
 #include <core/toolfactory.h>
 
-namespace GammaRay {
+#include <QIcon>
+#include <QSet>
 
+QT_BEGIN_NAMESPACE
+class QWindow;
+QT_END_NAMESPACE
+
+namespace GammaRay {
 class GuiSupport : public QObject
 {
     Q_OBJECT
 public:
-    explicit GuiSupport(ProbeInterface *probe, QObject *parent = Q_NULLPTR);
+    explicit GuiSupport(Probe *probe, QObject *parent = nullptr);
+
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     void registerMetaTypes();
     void registerVariantHandler();
+    void discoverObjects();
+    QObject *targetObject(QObject *object) const;
+    QIcon createIcon(const QIcon &oldIcon, QWindow *w=nullptr);
+    void updateWindowIcon(QWindow *w=nullptr);
+    void updateWindowTitle(QWindow *w);
+    void restoreWindowIcon(QWindow *w=nullptr);
+    void restoreWindowTitle(QWindow *w);
+
+    struct IconAndTitleOverriderData {
+        struct Icons {
+            explicit Icons(const QIcon &originalIcon = QIcon(),
+                           const QIcon &gammarayIcon = QIcon())
+                : originalIcon(originalIcon)
+                , gammarayIcon(gammarayIcon)
+            { }
+
+            QIcon originalIcon;
+            QIcon gammarayIcon;
+        };
+
+        QSet<QObject *> updatingObjectsIcon;
+        QSet<QObject *> updatingObjectsTitle;
+        QHash<QObject *, Icons> objectsIcons;
+        QString titleSuffix;
+    } m_iconAndTitleOverrider;
+
+private:
+    Probe *m_probe;
+
+private slots:
+    void objectCreated(QObject *object);
+    void restoreIconAndTitle();
 };
 
 class GuiSupportFactory : public QObject, public StandardToolFactory<QObject, GuiSupport>
@@ -50,10 +90,8 @@ class GuiSupportFactory : public QObject, public StandardToolFactory<QObject, Gu
     Q_INTERFACES(GammaRay::ToolFactory)
     Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_guisupport.json")
 public:
-    explicit GuiSupportFactory(QObject *parent = Q_NULLPTR);
-    QString name() const Q_DECL_OVERRIDE;
+    explicit GuiSupportFactory(QObject *parent = nullptr);
 };
-
 }
 
 #endif // GAMMARAY_GUISUPPORT_H

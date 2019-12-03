@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,33 +32,30 @@
 using namespace GammaRay;
 
 StyleInspectorClient::StyleInspectorClient(QObject *parent)
-  : StyleInspectorInterface(parent)
+    : StyleInspectorInterface(parent)
 {
-  // make sure the remote server side uses our initial values
-  setCellHeight(cellHeight());
-  setCellWidth(cellWidth());
-  setCellZoom(cellZoom());
+    // make sure the remote server side uses our initial values
+    setCellHeight(cellHeight());
+    setCellWidth(cellWidth());
+    setCellZoom(cellZoom());
 }
 
-StyleInspectorClient::~StyleInspectorClient()
-{
-
-}
+StyleInspectorClient::~StyleInspectorClient() = default;
 
 void StyleInspectorClient::setCellHeight(int height)
 {
-  StyleInspectorInterface::setCellHeight(height);
-  Endpoint::instance()->invokeObject(objectName(), "setCellHeight", QVariantList() << height);
+    StyleInspectorInterface::setCellHeight(height);
+    Endpoint::instance()->invokeObject(objectName(), "setCellHeight", QVariantList() << height);
 }
 
 void StyleInspectorClient::setCellWidth(int width)
 {
-  StyleInspectorInterface::setCellWidth(width);
-  Endpoint::instance()->invokeObject(objectName(), "setCellWidth", QVariantList() << width);
+    StyleInspectorInterface::setCellWidth(width);
+    Endpoint::instance()->invokeObject(objectName(), "setCellWidth", QVariantList() << width);
 }
 
 void StyleInspectorClient::setCellZoom(int zoom)
 {
-  StyleInspectorInterface::setCellZoom(zoom);
-  Endpoint::instance()->invokeObject(objectName(), "setCellZoom", QVariantList() << zoom);
+    StyleInspectorInterface::setCellZoom(zoom);
+    Endpoint::instance()->invokeObject(objectName(), "setCellZoom", QVariantList() << zoom);
 }

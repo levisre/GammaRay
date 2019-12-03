@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,14 +34,13 @@
 #include <QPointer>
 
 namespace GammaRay {
-
 /**
  * A proxy style that allows runtime-editing of various parameters.
  */
 class DynamicProxyStyle : public QProxyStyle
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     explicit DynamicProxyStyle(QStyle *baseStyle);
 
     static DynamicProxyStyle *instance();
@@ -49,15 +48,17 @@ class DynamicProxyStyle : public QProxyStyle
     static void insertProxyStyle();
 
     void setPixelMetric(PixelMetric metric, int value);
+    void setStyleHint(StyleHint hint, int value);
 
-    int pixelMetric(PixelMetric metric, const QStyleOption *option = 0,
-                    const QWidget *widget = 0) const Q_DECL_OVERRIDE;
+    int pixelMetric(PixelMetric metric, const QStyleOption *option = nullptr,
+                    const QWidget *widget = nullptr) const override;
+    int styleHint(QStyle::StyleHint hint, const QStyleOption *option, const QWidget *widget, QStyleHintReturn *returnData) const override;
 
-  private:
+private:
     QHash<QStyle::PixelMetric, int> m_pixelMetrics;
+    QHash<QStyle::StyleHint, int> m_styleHints;
     static QPointer<DynamicProxyStyle> s_instance;
 };
-
 }
 
 #endif // GAMMARAY_DYNAMICPROXYSTYLE_H

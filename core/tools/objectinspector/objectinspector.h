@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,22 +40,24 @@ class QModelIndex;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class PropertyController;
 
 class ObjectInspector : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit ObjectInspector(ProbeInterface *probe, QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit ObjectInspector(Probe *probe, QObject *parent = nullptr);
 
-  private slots:
-    void objectSelected(const QModelIndex &index);
+private slots:
+    void modelIndexSelected(const QModelIndex &index);
     void objectSelectionChanged(const QItemSelection &selection);
     void objectSelected(QObject *object);
 
-  private:
+private:
     void registerPCExtensions();
+
+    static void scanForConnectionIssues();
+    static void scanForThreadAffinityIssues();
 
     PropertyController *m_propertyController;
     QItemSelectionModel *m_selectionModel;
@@ -63,17 +65,16 @@ class ObjectInspector : public QObject
 
 class ObjectInspectorFactory : public QObject, public StandardToolFactory<QObject, ObjectInspector>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  public:
-    explicit ObjectInspectorFactory(QObject *parent) : QObject(parent)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+public:
+    explicit ObjectInspectorFactory(QObject *parent)
+        : QObject(parent)
     {
     }
 
-    QString name() const Q_DECL_OVERRIDE;
-    QVector<QByteArray> selectableTypes() const Q_DECL_OVERRIDE;
+    QVector<QByteArray> selectableTypes() const override;
 };
-
 }
 
 #endif // GAMMARAY_OBJECTINSPECTOR_H

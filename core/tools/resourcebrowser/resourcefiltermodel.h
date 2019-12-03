@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,15 +32,13 @@
 #include <3rdparty/kde/krecursivefilterproxymodel.h>
 
 namespace GammaRay {
-
 class ResourceFilterModel : public KRecursiveFilterProxyModel
 {
-  Q_OBJECT
-  public:
-    explicit ResourceFilterModel(QObject *parent = 0);
-    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const Q_DECL_OVERRIDE;
+    Q_OBJECT
+public:
+    explicit ResourceFilterModel(QObject *parent = nullptr);
+    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;
 };
-
 }
 
 #endif // RESOURCEFILTERMODEL_H

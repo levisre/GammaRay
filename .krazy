@@ -4,11 +4,13 @@ CHECKSETS qt4,c++,foss
 EXTRA kdabcopyright,kdabcommercial
 
 #additional checks
-EXTRA defines,null
+#EXTRA defines,null
 #EXTRA style
 
-#exclude checks now being done by clazy
-EXCLUDE foreach
+#exclude checks now being done by clazy or clang-tools
+EXCLUDE strings,explicit,normalize,passbyvalue,operators,nullstrcompare,nullstrassign,doublequote_chars,qobject,sigsandslots,staticobjects
+#exclude more checks
+EXCLUDE qminmax,captruefalse
 
 #coding style settings
 STYLE_CPPSTYLE qt
@@ -19,13 +21,19 @@ STYLE_CMAKESTYLE_OFFSET 2
 #skip over known invalid desktop files
 SKIP /plugins/.*/.*\.desktop$
 
+#skip generated cmake
+SKIP GammaRayConfig\.cmake\.in
+
+#skip generated qhcp
+SKIP .*\.qhcp\.cmake
+
 #no need to check 3rdparty stuff
 SKIP /3rdparty/
 #nor Nokia's stuff
-SKIP /processlist_unix.cpp|/processlist_win.cpp|/processlist.h
+SKIP /processlist_unix.cpp|/processlist_win.cpp|/processlist.h|/compat/qasconst.h
 #if you have a build subdir, skip it
 SKIP /build-
 SKIP Doxyfile.cmake
 
 #skip the borrowed code in the cmake subdir
-SKIP /cmake/Toolchain-QNX65.cmake|/cmake/Toolchain-QNX66.cmake|/cmake/ECMQt4To5Porting.cmake|/cmake/ECMEnableSanitizers.cmake|/cmake/ECMGeneratePriFile.cmake|/cmake/ECMQueryQmake.cmake|/cmake/Toolchain-android.cmake
+SKIP /cmake/Toolchain-QNX|/cmake/ECMQt4To5Porting.cmake|/cmake/ECMEnableSanitizers.cmake|/cmake/ECMGeneratePriFile.cmake|/cmake/ECMQueryQmake.cmake|/cmake/Toolchain-android.cmake|/cmake/FindWayland.cmake|/cmake/ECMFindModuleHelpers.cmake|/cmake/GammaRayQt4To5Porting.cmake

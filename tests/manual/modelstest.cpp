@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: David Faure <david.faure@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,24 +34,24 @@
 
 int main(int argc, char **argv)
 {
-  QApplication app(argc, argv);
+    QApplication app(argc, argv);
 
-  QStandardItemModel firstModel(3, 3);
-  for (int row = 0; row < 4; ++row) {
-      for (int column = 0; column < 4; ++column) {
-          QStandardItem *item = new QStandardItem(QString("row %0, column %1").arg(row).arg(column));
-          firstModel.setItem(row, column, item);
-      }
-  }
-  QTableView firstView;
-  firstView.setModel(&firstModel);
-  firstView.show();
+    QStandardItemModel firstModel(3, 3);
+    for (int row = 0; row < 4; ++row) {
+        for (int column = 0; column < 4; ++column) {
+            QStandardItem *item = new QStandardItem(QString("row %0, column %1").arg(row).arg(
+                                                        column));
+            firstModel.setItem(row, column, item);
+        }
+    }
+    QTableView firstView;
+    firstView.setModel(&firstModel);
+    firstView.show();
 
-  QStringListModel stringListModel(QStringList() << "Item1" << "Item2");
-  QTableView secondView;
-  secondView.setModel(&stringListModel);
-  secondView.show();
+    QStringListModel stringListModel(QStringList() << "Item1" << "Item2");
+    QTableView secondView;
+    secondView.setModel(&stringListModel);
+    secondView.show();
 
-  return app.exec();
+    return app.exec();
 }
-

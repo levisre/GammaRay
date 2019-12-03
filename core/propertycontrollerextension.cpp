@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,35 +30,33 @@
 
 using namespace GammaRay;
 
-PropertyControllerExtension::PropertyControllerExtension(const QString& name)
-  : m_name(name)
+PropertyControllerExtension::PropertyControllerExtension(const QString &name)
+    : m_name(name)
 {
 }
 
-PropertyControllerExtension::~PropertyControllerExtension()
-{
-}
+PropertyControllerExtension::~PropertyControllerExtension() = default;
 
 QString PropertyControllerExtension::name() const
 {
-  return m_name;
+    return m_name;
 }
 
-bool PropertyControllerExtension::setObject(void* object, const QString& typeName)
+bool PropertyControllerExtension::setObject(void *object, const QString &typeName)
 {
-  Q_UNUSED(object);
-  Q_UNUSED(typeName);
-  return false;
+    Q_UNUSED(object);
+    Q_UNUSED(typeName);
+    return false;
 }
 
-bool PropertyControllerExtension::setQObject(QObject* object)
+bool PropertyControllerExtension::setQObject(QObject *object)
 {
-  Q_UNUSED(object);
-  return false;
+    Q_UNUSED(object);
+    return false;
 }
 
-bool PropertyControllerExtension::setMetaObject(const QMetaObject* metaObject)
+bool PropertyControllerExtension::setMetaObject(const QMetaObject *metaObject)
 {
-  Q_UNUSED(metaObject);
-  return false;
+    Q_UNUSED(metaObject);
+    return false;
 }

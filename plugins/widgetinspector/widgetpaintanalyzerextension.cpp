@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,31 +37,42 @@
 
 using namespace GammaRay;
 
-WidgetPaintAnalyzerExtension::WidgetPaintAnalyzerExtension(PropertyController* controller) :
-    PropertyControllerExtension(controller->objectBaseName() + ".painting"),
-    m_paintAnalyzer(Q_NULLPTR)
+WidgetPaintAnalyzerExtension::WidgetPaintAnalyzerExtension(PropertyController *controller)
+    : PropertyControllerExtension(controller->objectBaseName() + ".painting")
+    , m_paintAnalyzer(nullptr)
+    , m_widget(nullptr)
 {
-    // check if the paint analyzer already exists before creating it, as we share the UI with other plugins
-    const QString analyzerName = controller->objectBaseName() + QStringLiteral(".painting.analyzer");
-    if (ObjectBroker::hasObject(analyzerName))
-        m_paintAnalyzer = qobject_cast<PaintAnalyzer*>(ObjectBroker::object<PaintAnalyzerInterface*>(analyzerName));
-    else
-        m_paintAnalyzer = new PaintAnalyzer(analyzerName, controller);
+    // check if the paint analyzer already exists before creating it,
+    // as we share the UI with the other plugins.
+    const QString aName = controller->objectBaseName() + QStringLiteral(".painting.analyzer");
+    if (ObjectBroker::hasObject(aName)) {
+        m_paintAnalyzer =
+            qobject_cast<PaintAnalyzer *>(ObjectBroker::object<PaintAnalyzerInterface *>(aName));
+    } else {
+        m_paintAnalyzer = new PaintAnalyzer(aName, controller);
+    }
+
+    QObject::connect(m_paintAnalyzer, &PaintAnalyzer::requestUpdate, [this]() { analyze(); });
 }
 
-WidgetPaintAnalyzerExtension::~WidgetPaintAnalyzerExtension()
-{
-}
+WidgetPaintAnalyzerExtension::~WidgetPaintAnalyzerExtension() = default;
 
-bool WidgetPaintAnalyzerExtension::setQObject(QObject* object)
+bool WidgetPaintAnalyzerExtension::setQObject(QObject *object)
 {
-    auto widget = qobject_cast<QWidget*>(object);
-    if (!PaintAnalyzer::isAvailable() || !widget)
+    m_widget = qobject_cast<QWidget *>(object);
+    if (!PaintAnalyzer::isAvailable() || !m_widget)
         return false;
 
-    m_paintAnalyzer->beginAnalyzePainting();
-    m_paintAnalyzer->setBoundingRect(widget->rect());
-    widget->render(m_paintAnalyzer->paintDevice(), QPoint(), QRegion(), 0);
-    m_paintAnalyzer->endAnalyzePainting();
+    m_paintAnalyzer->reset();
     return true;
+}
+
+void WidgetPaintAnalyzerExtension::analyze()
+{
+    if (!m_widget)
+        return;
+    m_paintAnalyzer->beginAnalyzePainting();
+    m_paintAnalyzer->setBoundingRect(m_widget->rect());
+    m_widget->render(m_paintAnalyzer->paintDevice(), QPoint(), QRegion(), nullptr);
+    m_paintAnalyzer->endAnalyzePainting();
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -42,57 +42,54 @@ class QModelIndex;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class PropertyController;
 class SceneModel;
 
 class SceneInspector : public SceneInspectorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::SceneInspectorInterface)
-  public:
-    explicit SceneInspector(ProbeInterface *probe, QObject *parent = 0);
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::SceneInspectorInterface)
+public:
+    explicit SceneInspector(Probe *probe, QObject *parent = nullptr);
 
-  private slots:
-    void initializeGui() Q_DECL_OVERRIDE;
-    void renderScene(const QTransform &transform, const QSize &size) Q_DECL_OVERRIDE;
+private slots:
+    void initializeGui() override;
+    void renderScene(const QTransform &transform, const QSize &size) override;
 
     void sceneSelected(const QItemSelection &selection);
-    void sceneItemSelected(const QItemSelection &selection);
+    void sceneItemSelectionChanged(const QItemSelection &selection);
     void sceneItemSelected(QGraphicsItem *item);
-    void objectSelected(QObject *object, const QPoint &pos);
-    void objectSelected(void *obj, const QString &typeName);
-    void sceneClicked(const QPointF &pos) Q_DECL_OVERRIDE;
+    void qObjectSelected(QObject *object, const QPoint &pos);
+    void nonQObjectSelected(void *obj, const QString &typeName);
+    void sceneClicked(const QPointF &pos) override;
 
     void clientConnectedChanged(bool clientConnected);
 
-  private:
+private:
     QString findBestType(QGraphicsItem *item);
     void registerGraphicsViewMetaTypes();
     void registerVariantHandlers();
     void connectToScene();
 
-  private:
+private:
     SceneModel *m_sceneModel;
-    QItemSelectionModel* m_itemSelectionModel;
+    QItemSelectionModel *m_itemSelectionModel;
     PropertyController *m_propertyController;
     bool m_clientConnected;
 };
 
 class SceneInspectorFactory : public QObject,
-                              public StandardToolFactory<QGraphicsScene, SceneInspector>
+    public StandardToolFactory<QGraphicsScene, SceneInspector>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_sceneinspector.json")
-  public:
-    explicit SceneInspectorFactory(QObject *parent = 0) : QObject(parent)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_sceneinspector.json")
+public:
+    explicit SceneInspectorFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // GAMMARAY_SCENEINSPECTOR_H

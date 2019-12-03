@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -45,22 +45,22 @@
 #include <QMargins>
 #include <QPainterPath>
 #include <QMatrix4x4>
+#include <QPainter>
+#include <QPaintEngine>
+#include <QValidator>
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QGuiApplication>
 #include <QOpenGLShader>
 #include <QSurfaceFormat>
 #endif
-#endif
 
 Q_DECLARE_METATYPE(Qt::ConnectionType)
+Q_DECLARE_METATYPE(QMetaMethod::Access)
 Q_DECLARE_METATYPE(QMetaMethod::MethodType)
-Q_DECLARE_METATYPE(const QMetaObject*)
+Q_DECLARE_METATYPE(const QMetaObject *)
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
 #include <QTimeZone>
 Q_DECLARE_METATYPE(QTimeZone)
-#endif
 
 #ifdef QT_GUI_LIB // TODO move all this to the GUI support plug-in
 Q_DECLARE_METATYPE(Qt::FillRule)
@@ -73,15 +73,18 @@ Q_DECLARE_METATYPE(QMargins)
 Q_DECLARE_METATYPE(Qt::WindowType)
 Q_DECLARE_METATYPE(Qt::WindowState)
 Q_DECLARE_METATYPE(const QMatrix4x4*)
+Q_DECLARE_METATYPE(const QValidator*)
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+Q_DECLARE_METATYPE(QPainter::CompositionMode)
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+Q_DECLARE_METATYPE(QPainter::RenderHints)
+#endif
+Q_DECLARE_METATYPE(QPaintEngine::PolygonDrawMode)
+
+#ifndef QT_NO_OPENGL
 Q_DECLARE_METATYPE(QOpenGLShader::ShaderType)
+#endif
 Q_DECLARE_METATYPE(QSurfaceFormat)
-#endif
-#endif
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0) && QT_VERSION < QT_VERSION_CHECK(5, 5, 0)
-Q_DECLARE_METATYPE(Qt::ApplicationState)
 #endif
 
 #endif

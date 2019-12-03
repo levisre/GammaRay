@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,40 +31,38 @@
 using namespace GammaRay;
 
 ObjectClassInfoModel::ObjectClassInfoModel(QObject *parent)
-  : MetaObjectModel<QMetaClassInfo,
-                    &QMetaObject::classInfo,
-                    &QMetaObject::classInfoCount,
-                    &QMetaObject::classInfoOffset>(parent)
+    : MetaObjectModel<QMetaClassInfo,
+                      &QMetaObject::classInfo,
+                      &QMetaObject::classInfoCount,
+                      &QMetaObject::classInfoOffset>(parent)
 {
 }
 
-QVariant ObjectClassInfoModel::metaData(const QModelIndex &index,
-                                    const QMetaClassInfo &classInfo, int role) const
+QVariant ObjectClassInfoModel::metaData(const QModelIndex &index, const QMetaClassInfo &classInfo,
+                                        int role) const
 {
-  if (role == Qt::DisplayRole) {
-    if (index.column() == 0) {
-      return classInfo.name();
+    if (role == Qt::DisplayRole) {
+        if (index.column() == 0)
+            return classInfo.name();
+        if (index.column() == 1)
+            return classInfo.value();
     }
-    if (index.column() == 1) {
-      return classInfo.value();
-    }
-  }
-  return QVariant();
+    return QVariant();
 }
 
 int ObjectClassInfoModel::columnCount(const QModelIndex &parent) const
 {
-  Q_UNUSED(parent);
-  return 3;
+    Q_UNUSED(parent);
+    return 3;
 }
 
 QString GammaRay::ObjectClassInfoModel::columnHeader(int index) const
 {
-  switch (index) {
-  case 0:
-    return tr("Name");
-  case 1:
-    return tr("Value");
-  }
-  return QString();
+    switch (index) {
+    case 0:
+        return tr("Name");
+    case 1:
+        return tr("Value");
+    }
+    return QString();
 }

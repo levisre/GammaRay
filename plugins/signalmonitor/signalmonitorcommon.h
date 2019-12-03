@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,21 +34,10 @@
 #include <QMetaType>
 #include <QVector>
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_DECLARE_METATYPE(QVector<qlonglong>)
-
-typedef QHash<int, QByteArray> IntByteArrayHash;
-Q_DECLARE_METATYPE(IntByteArrayHash)
-#endif
-
 namespace GammaRay {
-
 namespace StreamOperators {
-
 void registerSignalMonitorStreamOperators();
-
 }
-
 }
 
 #endif // GAMMARAY_SIGNALMONITORCOMMON_H

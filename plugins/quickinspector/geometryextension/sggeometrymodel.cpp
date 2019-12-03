@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -44,194 +44,276 @@ Q_DECLARE_METATYPE(QVector<uint>)
 Q_DECLARE_METATYPE(QVector<float>)
 Q_DECLARE_METATYPE(QVector<double>)
 
-GammaRay::SGGeometryModel::SGGeometryModel(QObject *parent)
-  : QAbstractTableModel(parent), m_geometry(0), m_node(0)
+template<typename T>
+static QStringList toStringList(void *data, int size)
+{
+    QStringList list;
+    T *typedData = static_cast<T *>(data);
+    for (int i = 0; i < size; i++) {
+        list << QString::number(*typedData);
+        ++typedData;
+    }
+    return list;
+}
+
+template<typename T>
+static QVariantList toVariantList(void *data, int size)
+{
+    QVariantList list;
+    T *typedData = static_cast<T *>(data);
+    for (int i = 0; i < size; i++) {
+        list << QVariant::fromValue<T>(*typedData);
+        ++typedData;
+    }
+    return list;
+}
+
+GammaRay::SGVertexModel::SGVertexModel(QObject *parent)
+    : QAbstractTableModel(parent)
+    , m_geometry(nullptr)
+    , m_node(nullptr)
 {
 }
 
-int SGGeometryModel::rowCount(const QModelIndex &parent) const
+int SGVertexModel::rowCount(const QModelIndex &parent) const
 {
-  if (!m_geometry || parent.isValid()) {
-    return 0;
-  }
+    if (!m_geometry || parent.isValid())
+        return 0;
 
-  return m_geometry->vertexCount();
+    return m_geometry->vertexCount();
 }
 
-int GammaRay::SGGeometryModel::columnCount(const QModelIndex &parent) const
+int GammaRay::SGVertexModel::columnCount(const QModelIndex &parent) const
 {
-  if (!m_geometry || parent.isValid()) {
-    return 0;
-  }
+    if (!m_geometry || parent.isValid())
+        return 0;
 
-  return m_geometry->attributeCount();
+    return m_geometry->attributeCount();
 }
 
-QVariant SGGeometryModel::data(const QModelIndex &index, int role) const
+QVariant SGVertexModel::data(const QModelIndex &index, int role) const
 {
-  if (!index.isValid() ||
-      !m_geometry ||
-      !index.internalPointer() ||
-      index.row() >= m_geometry->vertexCount() ||
-      index.column() >= m_geometry->attributeCount()) {
-    return QVariant();
-  }
+    if (!index.isValid()
+        || !m_geometry
+        || !index.internalPointer()
+        || index.row() >= m_geometry->vertexCount()
+        || index.column() >= m_geometry->attributeCount())
+        return QVariant();
 
-  if (role == Qt::DisplayRole) {
-    const QSGGeometry::Attribute *attrInfo = m_geometry->attributes();
-    attrInfo += index.column();
-    switch (attrInfo->type) {
-    case GL_BYTE:
-      return toStringList<char>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
-    case GL_UNSIGNED_BYTE:
-      return toStringList<unsigned char>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
-    case GL_UNSIGNED_SHORT:
-      return toStringList<quint16>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
-    case GL_SHORT:
-      return toStringList<qint16>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
-    case GL_INT:
-      return toStringList<int>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
-    case GL_UNSIGNED_INT:
-      return toStringList<uint>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
-    case GL_FLOAT:
-      return toStringList<float>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
+    if (role == Qt::DisplayRole) {
+        const QSGGeometry::Attribute *attrInfo = m_geometry->attributes();
+        attrInfo += index.column();
+        switch (attrInfo->type) {
+        case GL_BYTE:
+            return toStringList<char>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(
+                                                                                             ", "));
+        case GL_UNSIGNED_BYTE:
+            return toStringList<unsigned char>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(
+                                                                                                      ", "));
+        case GL_UNSIGNED_SHORT:
+            return toStringList<quint16>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(
+                                                                                                ", "));
+        case GL_SHORT:
+            return toStringList<qint16>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(
+                                                                                               ", "));
+        case GL_INT:
+            return toStringList<int>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(
+                                                                                            ", "));
+        case GL_UNSIGNED_INT:
+            return toStringList<uint>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(
+                                                                                             ", "));
+        case GL_FLOAT:
+            return toStringList<float>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(
+                                                                                              ", "));
 #if defined(GL_DOUBLE) && GL_DOUBLE != GL_FLOAT
-    case GL_DOUBLE:
-      return toStringList<double>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(", "));
+        case GL_DOUBLE:
+            return toStringList<double>(index.internalPointer(), attrInfo->tupleSize).join(QStringLiteral(
+                                                                                               ", "));
 #endif
 #ifndef QT_OPENGL_ES_2
-    case GL_2_BYTES:
-      return "2Bytes";
-    case GL_3_BYTES:
-      return "3Bytes";
-    case GL_4_BYTES:
-      return "4Bytes";
+        case GL_2_BYTES:
+            return "2Bytes";
+        case GL_3_BYTES:
+            return "3Bytes";
+        case GL_4_BYTES:
+            return "4Bytes";
 #endif
-    default:
-      return QStringLiteral("Unknown %1 byte data: 0x").
-        arg(attrInfo->tupleSize).
-          append(QByteArray((char*)index.internalPointer(), attrInfo->tupleSize).
-            toHex());
+        default:
+            return QStringLiteral("Unknown %1 byte data: 0x").
+                   arg(attrInfo->tupleSize).
+                   append(QByteArray((char *)index.internalPointer(), attrInfo->tupleSize).
+                          toHex());
+        }
+    } else if (role == IsCoordinateRole) {
+        const QSGGeometry::Attribute *attrInfo = m_geometry->attributes();
+        attrInfo += index.column();
+        return (bool)attrInfo->isVertexCoordinate;
+    } else if (role == RenderRole) {
+        const QSGGeometry::Attribute *attrInfo = m_geometry->attributes();
+        attrInfo += index.column();
+        switch (attrInfo->type) {
+        case GL_BYTE:
+            return toVariantList<char>(index.internalPointer(), attrInfo->tupleSize);
+        case GL_UNSIGNED_BYTE:
+            return toVariantList<unsigned char>(index.internalPointer(), attrInfo->tupleSize);
+        case GL_UNSIGNED_SHORT:
+            return toVariantList<quint16>(index.internalPointer(), attrInfo->tupleSize);
+        case GL_SHORT:
+            return toVariantList<qint16>(index.internalPointer(), attrInfo->tupleSize);
+        case GL_INT:
+            return toVariantList<int>(index.internalPointer(), attrInfo->tupleSize);
+        case GL_UNSIGNED_INT:
+            return toVariantList<uint>(index.internalPointer(), attrInfo->tupleSize);
+        case GL_FLOAT:
+            return toVariantList<float>(index.internalPointer(), attrInfo->tupleSize);
+#if defined(GL_DOUBLE) && GL_DOUBLE != GL_FLOAT
+        case GL_DOUBLE:
+            return toVariantList<double>(index.internalPointer(), attrInfo->tupleSize);
+#endif
+        default:
+            return QVariant();
+        }
     }
-  } else if (role == IsCoordinateRole) {
+
+    return QVariant();
+}
+
+QMap< int, QVariant > SGVertexModel::itemData(const QModelIndex &index) const
+{
+    QMap<int, QVariant> map = QAbstractItemModel::itemData(index);
+    map.insert(IsCoordinateRole, data(index, IsCoordinateRole));
+    map.insert(RenderRole, data(index, RenderRole));
+    return map;
+}
+
+QVariant SGVertexModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (role == Qt::DisplayRole && orientation == Qt::Horizontal && m_geometry) {
+        char const * const *attributeNames = m_node->material()->createShader()->attributeNames();
+
+        for (int i = 0; i <= section; i++) {
+            if (!attributeNames[i])
+                break;
+            if (i == section)
+                return attributeNames[section];
+        }
+    }
+    return QAbstractItemModel::headerData(section, orientation, role);
+}
+
+void SGVertexModel::setNode(QSGGeometryNode *node)
+{
+    beginResetModel();
+    m_node = node;
+    m_geometry = node->geometry();
+    endResetModel();
+}
+
+QModelIndex GammaRay::SGVertexModel::index(int row, int column, const QModelIndex &parent) const
+{
+    if (!m_geometry
+        || row >= m_geometry->vertexCount()
+        || column >= m_geometry->attributeCount()
+        || parent.isValid())
+        return {};
+
+    char *attr = static_cast<char *>(m_geometry->vertexData());
+    attr += m_geometry->sizeOfVertex() * row;
     const QSGGeometry::Attribute *attrInfo = m_geometry->attributes();
-    attrInfo += index.column();
-    return (bool)attrInfo->isVertexCoordinate;
-  } else if (role == RenderRole) {
-    const QSGGeometry::Attribute *attrInfo = m_geometry->attributes();
-    attrInfo += index.column();
+    int tupleItemSize = 0;
+
     switch (attrInfo->type) {
     case GL_BYTE:
-      return toVariantList<char>(index.internalPointer(), attrInfo->tupleSize);
+        tupleItemSize = sizeof(char);
+        break;
     case GL_UNSIGNED_BYTE:
-      return toVariantList<unsigned char>(index.internalPointer(), attrInfo->tupleSize);
+        tupleItemSize = sizeof(unsigned char);
+        break;
     case GL_UNSIGNED_SHORT:
-      return toVariantList<quint16>(index.internalPointer(), attrInfo->tupleSize);
+        tupleItemSize = sizeof(unsigned short);
+        break;
     case GL_SHORT:
-      return toVariantList<qint16>(index.internalPointer(), attrInfo->tupleSize);
+        tupleItemSize = sizeof(short);
+        break;
     case GL_INT:
-      return toVariantList<int>(index.internalPointer(), attrInfo->tupleSize);
+        tupleItemSize = sizeof(int);
+        break;
     case GL_UNSIGNED_INT:
-      return toVariantList<uint>(index.internalPointer(), attrInfo->tupleSize);
+        tupleItemSize = sizeof(unsigned int);
+        break;
     case GL_FLOAT:
-      return toVariantList<float>(index.internalPointer(), attrInfo->tupleSize);
+        tupleItemSize = sizeof(float);
+        break;
 #if defined(GL_DOUBLE) && GL_DOUBLE != GL_FLOAT
     case GL_DOUBLE:
-      return toVariantList<double>(index.internalPointer(), attrInfo->tupleSize);
+        tupleItemSize = sizeof(double);
+        break;
 #endif
     default:
-      return QVariant();
+        return createIndex(row, column);
     }
-  }
 
-  return QVariant();
-}
-
-QMap< int, QVariant > SGGeometryModel::itemData(const QModelIndex &index) const
-{
-  QMap<int, QVariant> map = QAbstractItemModel::itemData(index);
-  map.insert(IsCoordinateRole, data(index, IsCoordinateRole));
-  map.insert(RenderRole, data(index, RenderRole));
-  return map;
-}
-
-QVariant SGGeometryModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-  if (role == Qt::DisplayRole && orientation == Qt::Horizontal && m_geometry) {
-    const QSGGeometry::Attribute *attrInfo = m_geometry->attributes();
-    attrInfo += section;
-
-    char const *const *attributeNames = m_node->material()->createShader()->attributeNames();
-
-    for (int i = 0; i <= section; i++) {
-      if (!attributeNames[i]) {
-        break;
-      }
-      if (i == section) {
-        return attributeNames[section];
-      }
+    for (int i = 0; i < column; i++) {
+        attr += tupleItemSize * attrInfo->tupleSize;
+        attrInfo++;
     }
-  }
-  return QAbstractItemModel::headerData(section, orientation, role);
+
+    return createIndex(row, column, attr);
 }
 
-void SGGeometryModel::setNode(QSGGeometryNode *node)
+
+GammaRay::SGAdjacencyModel::SGAdjacencyModel(QObject *parent)
+    : QAbstractListModel(parent)
+    , m_geometry(nullptr)
+    , m_node(nullptr)
 {
-  beginResetModel();
-  m_node = node;
-  m_geometry = node->geometry();
-  endResetModel();
 }
 
-QModelIndex GammaRay::SGGeometryModel::index(int row, int column, const QModelIndex &parent) const
+int SGAdjacencyModel::rowCount(const QModelIndex &parent) const
 {
-  if (!m_geometry ||
-      row >= m_geometry->vertexCount() ||
-      column >= m_geometry->attributeCount() ||
-      parent.isValid()) {
-    return QModelIndex();
-  }
+    if (!m_geometry || parent.isValid())
+        return 0;
 
-  char *attr = static_cast<char*>(m_geometry->vertexData());
-  attr += m_geometry->sizeOfVertex() * row;
-  const QSGGeometry::Attribute *attrInfo = m_geometry->attributes();
-  int tupleItemSize = 0;
+    return m_geometry->indexCount();
+}
 
-  switch (attrInfo->type) {
-  case GL_BYTE:
-    tupleItemSize = sizeof(char);
-    break;
-  case GL_UNSIGNED_BYTE:
-    tupleItemSize = sizeof(unsigned char);
-    break;
-  case GL_UNSIGNED_SHORT:
-    tupleItemSize = sizeof(unsigned short);
-    break;
-  case GL_SHORT:
-    tupleItemSize = sizeof(short);
-    break;
-  case GL_INT:
-    tupleItemSize = sizeof(int);
-    break;
-  case GL_UNSIGNED_INT:
-    tupleItemSize = sizeof(unsigned int);
-    break;
-  case GL_FLOAT:
-    tupleItemSize = sizeof(float);
-    break;
-#if defined(GL_DOUBLE) && GL_DOUBLE != GL_FLOAT
-  case GL_DOUBLE:
-    tupleItemSize = sizeof(double);
-    break;
-#endif
-  default:
-    return createIndex(row, column);
-  }
+QVariant SGAdjacencyModel::data(const QModelIndex &index, int role) const
+{
+    if (!index.isValid()
+        || !m_geometry
+        || index.row() >= m_geometry->indexCount()
+        || index.column() != 0)
+        return QVariant();
 
-  for (int i = 0; i < column; i++) {
-    attr += tupleItemSize * attrInfo->tupleSize;
-    attrInfo++;
-  }
+    if (role == DrawingModeRole) {
+        return m_geometry->drawingMode();
+    }
+    if (role == RenderRole) {
+        int indexType = m_geometry->indexType();
 
-  return createIndex(row, column, attr);
+        if (indexType == GL_UNSIGNED_INT)
+            return *(static_cast<const quint32 *>(m_geometry->indexData()) + index.row());
+        else if (indexType == GL_UNSIGNED_SHORT)
+            return *(static_cast<const quint16 *>(m_geometry->indexData()) + index.row());
+        else if (indexType == GL_UNSIGNED_BYTE)
+            return *(static_cast<const quint8 *>(m_geometry->indexData()) + index.row());
+    }
+
+    return QVariant();
+}
+
+void SGAdjacencyModel::setNode(QSGGeometryNode *node)
+{
+    beginResetModel();
+    m_node = node;
+    m_geometry = node->geometry();
+    endResetModel();
+}
+
+QMap< int, QVariant > SGAdjacencyModel::itemData(const QModelIndex &index) const
+{
+    QMap<int, QVariant> map = QAbstractItemModel::itemData(index);
+    map.insert(DrawingModeRole, data(index, DrawingModeRole));
+    map.insert(RenderRole, data(index, RenderRole));
+    return map;
 }

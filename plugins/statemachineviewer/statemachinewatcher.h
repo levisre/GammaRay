@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,6 +30,8 @@
 #include <QObject>
 #include <QVector>
 
+#include "statemachinedebuginterface.h"
+
 QT_BEGIN_NAMESPACE
 class QAbstractState;
 class QAbstractState;
@@ -39,26 +41,25 @@ class QStateMachine;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class StateMachineWatcher : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit StateMachineWatcher(QObject *parent = 0);
-    virtual ~StateMachineWatcher();
+    Q_OBJECT
+public:
+    explicit StateMachineWatcher(QObject *parent = nullptr);
+    ~StateMachineWatcher() override;
 
     void setWatchedStateMachine(QStateMachine *machine);
     QStateMachine *watchedStateMachine() const;
 
-  Q_SIGNALS:
-    void stateEntered(QAbstractState *state);
-    void stateExited(QAbstractState *state);
+Q_SIGNALS:
+    void stateEntered(State state);
+    void stateExited(State state);
 
-    void transitionTriggered(QAbstractTransition*);
+    void transitionTriggered(Transition transition);
 
     void watchedStateMachineChanged(QStateMachine *);
 
-  private Q_SLOTS:
+private Q_SLOTS:
     void watchState(QAbstractState *state);
     void clearWatchedStates();
 
@@ -67,14 +68,13 @@ class StateMachineWatcher : public QObject
     void handleStateDestroyed();
     void handleTransitionTriggered();
 
-  private:
+private:
     QStateMachine *m_watchedStateMachine;
     QVector<QAbstractState *> m_watchedStates;
 
     QAbstractState *m_lastEnteredState;
     QAbstractState *m_lastExitedState;
 };
-
 }
 
 #endif // GAMMARAY_STATEMACHINEWATCHER_H

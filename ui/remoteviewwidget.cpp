@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,52 +27,90 @@
 */
 
 #include "remoteviewwidget.h"
+#include "modelpickerdialog.h"
+#include "trailingcolorlabel.h"
+#include <visibilityfilterproxymodel.h>
 
-#include <common/remoteviewinterface.h>
-#include <common/objectbroker.h>
 #include <common/endpoint.h>
+#include <common/objectbroker.h>
+#include <common/objectidfilterproxymodel.h>
+#include <common/objectmodel.h>
+#include <common/remoteviewinterface.h>
+#include <common/streamoperators.h>
+
+#include <compat/qasconst.h>
+
+#include <ui/uiresources.h>
 
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QClipboard>
 #include <QDebug>
 #include <QMenu>
+#include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QStandardItemModel>
 
+#include <cmath>
 #include <cstdlib>
 
 using namespace GammaRay;
+static const qint32 RemoteViewWidgetStateVersion = 1;
 
-RemoteViewWidget::RemoteViewWidget(QWidget* parent):
-    QWidget(parent),
-    m_zoomLevelModel(new QStandardItemModel(this)),
-    m_unavailableText(tr("No remote view available.")),
-    m_interactionModeActions(new QActionGroup(this)),
-    m_zoom(1.0),
-    m_x(0),
-    m_y(0),
-    m_interactionMode(NoInteraction),
-    m_supportedInteractionModes(ViewInteraction | Measuring | ElementPicking | InputRedirection),
-    m_hasMeasurement(false)
+QT_BEGIN_NAMESPACE
+GAMMARAY_ENUM_STREAM_OPERATORS(GammaRay::RemoteViewWidget::InteractionMode)
+QT_END_NAMESPACE
+
+RemoteViewWidget::RemoteViewWidget(QWidget *parent)
+    : QWidget(parent)
+    , m_zoomLevelModel(new QStandardItemModel(this))
+    , m_unavailableText(tr("No remote view available."))
+    , m_interactionModeActions(new QActionGroup(this))
+    , m_trailingColorLabel(new TrailingColorLabel(this))
+    , m_zoom(1.0)
+    , m_x(0)
+    , m_y(0)
+    , m_interactionMode(NoInteraction)
+    , m_supportedInteractionModes(NoInteraction)
+    , m_hasMeasurement(false)
+    , m_pickProxyModel(new ObjectIdsFilterProxyModel(this))
+    , m_invisibleItemsProxyModel(new VisibilityFilterProxyModel(this))
+    , m_initialZoomDone(false)
+    , m_extraViewportUpdateNeeded(true)
+    , m_showFps(false)
 {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setMouseTracking(true);
     setMinimumSize(QSize(400, 300));
     setFocusPolicy(Qt::StrongFocus);
+    window()->setAttribute(Qt::WA_AcceptTouchEvents);
+    window()->setAttribute(Qt::WA_TouchPadAcceptSingleTouchEvents);
+    setAttribute(Qt::WA_AcceptTouchEvents);
+    setAttribute(Qt::WA_TouchPadAcceptSingleTouchEvents);
 
-    // Background
-    QPixmap bgPattern(20, 20);
-    bgPattern.fill(Qt::lightGray);
-    QPainter bgPainter(&bgPattern);
-    bgPainter.fillRect(10, 0, 10, 10, Qt::gray);
-    bgPainter.fillRect(0, 10, 10, 10, Qt::gray);
-    m_backgroundBrush.setTexture(bgPattern);
+    // Background textures
+    {
+        QPixmap bgPattern(20, 20);
+        bgPattern.fill(Qt::lightGray);
+        QPainter bgPainter(&bgPattern);
+        bgPainter.fillRect(10, 0, 10, 10, Qt::gray);
+        bgPainter.fillRect(0, 10, 10, 10, Qt::gray);
+        m_activeBackgroundBrush.setTexture(bgPattern);
+    }
+    {
+        QPixmap bgPattern(20, 20);
+        bgPattern.fill(Qt::darkGray);
+        QPainter bgPainter(&bgPattern);
+        bgPainter.fillRect(10, 0, 10, 10, Qt::gray);
+        bgPainter.fillRect(0, 10, 10, 10, Qt::gray);
+        m_inactiveBackgroundBrush.setTexture(bgPattern);
+    }
 
     m_zoomLevels.reserve(8);
     m_zoomLevels <<  .1 << .25 << .5 << 1.0 << 2.0 << 4.0 << 8.0 << 16.0;
-    foreach (const auto level, m_zoomLevels) {
+    for (const auto level : qAsConst(m_zoomLevels)) {
         auto item = new QStandardItem;
         item->setText(QString::number(level * 100.0) + locale().percent());
         item->setData(level, Qt::UserRole);
@@ -80,8 +118,10 @@ RemoteViewWidget::RemoteViewWidget(QWidget* parent):
     }
 
     setupActions();
-    connect(m_interactionModeActions, SIGNAL(triggered(QAction*)), this, SLOT(interactionActionTriggered(QAction*)));
+    connect(m_interactionModeActions, &QActionGroup::triggered, this,
+            &RemoteViewWidget::interactionActionTriggered);
 
+    setSupportedInteractionModes(ViewInteraction | Measuring | ElementPicking | InputRedirection | ColorPicking);
     setInteractionMode(ViewInteraction);
 
     window()->installEventFilter(this);
@@ -92,11 +132,18 @@ RemoteViewWidget::~RemoteViewWidget()
     window()->removeEventFilter(this);
 }
 
-void RemoteViewWidget::setName(const QString& name)
+void RemoteViewWidget::setName(const QString &name)
 {
-    m_interface = ObjectBroker::object<RemoteViewInterface*>(name);
-    connect(m_interface, SIGNAL(reset()), this, SLOT(reset()));
-    connect(m_interface, SIGNAL(frameUpdated(GammaRay::RemoteViewFrame)), this, SLOT(frameUpdated(GammaRay::RemoteViewFrame)));
+    m_interface = ObjectBroker::object<RemoteViewInterface *>(name);
+    connect(m_interface.data(), &RemoteViewInterface::reset,
+            this, &RemoteViewWidget::reset);
+    connect(m_interface.data(), &RemoteViewInterface::elementsAtReceived,
+            this, &RemoteViewWidget::elementsAtReceived);
+    connect(m_interface.data(), &RemoteViewInterface::frameUpdated,
+            this, &RemoteViewWidget::frameUpdated);
+    if (isVisible()) {
+        m_interface->setViewActive(true);
+    }
     m_interface->clientViewUpdated();
 }
 
@@ -104,58 +151,87 @@ void RemoteViewWidget::setupActions()
 {
     m_interactionModeActions->setExclusive(true);
 
-    auto action = new QAction(QIcon(QStringLiteral(":/gammaray/ui/move-preview.png")), tr("Pan View"), this);
+    auto action = new QAction(UIResources::themedIcon(QLatin1String("move-preview.png")), tr(
+                                  "Pan View"), this);
+    action->setObjectName("aPanView");
     action->setCheckable(true);
     action->setToolTip(tr("<b>Pan view</b><br>"
-        "Default mode. Click and drag to move the preview. Won't impact the original application in any way."));
+                          "Default mode. Click and drag to move the preview. Won't impact the original application in any way."));
     action->setData(ViewInteraction);
     action->setActionGroup(m_interactionModeActions);
 
-    action = new QAction(QIcon(QStringLiteral(":/gammaray/ui/measure-pixels.png")), tr("Measure Pixel Sizes"), this);
+    action = new QAction(UIResources::themedIcon(QLatin1String("measure-pixels.png")),
+                         tr("Measure Pixel Sizes"), this);
+    action->setObjectName("aMeasurePixelSizes");
     action->setCheckable(true);
     action->setToolTip(tr("<b>Measure pixel-sizes</b><br>"
-        "Choose this mode, click somewhere and drag to measure the distance between the "
-        "point you clicked and the point where your mouse pointer is. (Measured in scene "
-        "coordinates)."));
+                          "Choose this mode, click somewhere and drag to measure the distance between the "
+                          "point you clicked and the point where your mouse pointer is. (Measured in scene "
+                          "coordinates)."));
     action->setData(Measuring);
     action->setActionGroup(m_interactionModeActions);
 
     action = new QAction(tr("Pick Element"), this);
+    action->setObjectName("aPickElement");
     action->setIconText(tr("Pick"));
-    action->setIcon(QIcon(QStringLiteral(":/gammaray/ui/pick-element.png")));
+    action->setIcon(UIResources::themedIcon(QLatin1String("pick-element.png")));
     action->setCheckable(true);
     action->setToolTip(tr("<b>Pick Element</b><br>"
-        "Select an element for inspection by clicking on it."));
+                          "Select an element for inspection by clicking on it."));
     action->setData(ElementPicking);
     action->setActionGroup(m_interactionModeActions);
 
-    action = new QAction(QIcon(QStringLiteral(":/gammaray/ui/redirect-input.png")), tr("Redirect Input"), this);
+    action = new QAction(UIResources::themedIcon(QLatin1String("redirect-input.png")),
+                         tr("Redirect Input"), this);
+    action->setObjectName("aRedirectInput");
     action->setCheckable(true);
     action->setToolTip(tr("<b>Redirect Input</b><br>"
-        "In this mode all mouse input is redirected directly to the original application,"
-        "so you can control the application directly from within GammaRay."));
+                          "In this mode all mouse input is redirected directly to the original application,"
+                          "so you can control the application directly from within GammaRay."));
     action->setData(InputRedirection);
     action->setActionGroup(m_interactionModeActions);
 
-    m_zoomOutAction = new QAction(QIcon(QStringLiteral(":/gammaray/ui/zoom-out.png")), tr("Zoom Out"), this);
+    action = new QAction(UIResources::themedIcon(QLatin1String("pick-color.png")),
+                         tr("Inspect Colors"), this);
+    action->setObjectName("aInspectColors");
+    action->setCheckable(true);
+    action->setToolTip(tr("<b>Inspect Colors</b><br>"
+                          "Inspect the RGBA channels of the currently hovered pixel"));
+    action->setData(ColorPicking);
+    action->setActionGroup(m_interactionModeActions);
+
+    m_zoomOutAction = new QAction(UIResources::themedIcon(QLatin1String("zoom-out.png")), tr(
+                                      "Zoom Out"), this);
+    m_zoomOutAction->setObjectName("aZoomOut");
     m_zoomOutAction->setShortcutContext(Qt::WidgetShortcut);
     m_zoomOutAction->setShortcuts(QKeySequence::ZoomOut);
-    connect(m_zoomOutAction, SIGNAL(triggered(bool)), this, SLOT(zoomOut()));
+    connect(m_zoomOutAction, &QAction::triggered, this, &RemoteViewWidget::zoomOut);
     addAction(m_zoomOutAction); // needed to make the WidgetShortcut context work
 
-    m_zoomInAction = new QAction(QIcon(QStringLiteral(":/gammaray/ui/zoom-in.png")), tr("Zoom In"), this);
+    m_zoomInAction = new QAction(UIResources::themedIcon(QLatin1String("zoom-in.png")), tr(
+                                     "Zoom In"), this);
+    m_zoomInAction->setObjectName("aZoomIn");
     m_zoomInAction->setShortcutContext(Qt::WidgetShortcut);
     m_zoomInAction->setShortcuts(QKeySequence::ZoomIn);
-    connect(m_zoomInAction, SIGNAL(triggered(bool)), this, SLOT(zoomIn()));
+    connect(m_zoomInAction, &QAction::triggered, this, &RemoteViewWidget::zoomIn);
     addAction(m_zoomInAction);
+
+    m_toggleFPSAction = new QAction(tr("Display FPS"), this);
+    m_toggleFPSAction->setObjectName("aToggleFPS");
+    m_toggleFPSAction->setCheckable(true);
+    m_toggleFPSAction->setToolTip("<b>Display FPS</b><br>"
+                                  "Shows rate of received frames from debuggee.");
+    connect(m_toggleFPSAction, &QAction::toggled, this, &RemoteViewWidget::enableFPS);
+    addAction(m_toggleFPSAction);
 
     updateActions();
 }
 
 void RemoteViewWidget::updateActions()
 {
-    foreach (auto action, m_interactionModeActions->actions())
+    foreach (auto action, m_interactionModeActions->actions()) {
         action->setEnabled(m_frame.isValid());
+    }
 
     Q_ASSERT(!m_zoomLevels.isEmpty());
     const auto zoomLevel = zoomLevelIndex();
@@ -163,23 +239,144 @@ void RemoteViewWidget::updateActions()
     m_zoomInAction->setEnabled(zoomLevel != m_zoomLevels.size() - 1);
 }
 
-const RemoteViewFrame& RemoteViewWidget::frame() const
+void RemoteViewWidget::enableFPS(const bool showFPS)
+{
+    m_showFps = showFPS;
+}
+
+void RemoteViewWidget::updateUserViewport()
+{
+    if (!isVisible())
+        return;
+
+    const auto userViewport = QRectF(QPointF(std::floor(-m_x / m_zoom), std::floor(-m_y / m_zoom)),
+                              QSizeF(std::ceil(width() / m_zoom) + 1, std::ceil(height() / m_zoom) + 1));
+
+    // When We update the viewport by zooming out we need one additional
+    // frameupdate from the application before stopping to send userViewports,
+    // or otherwise the newly appeared area stays empty :(
+
+    // If we would skip, but need an extra update
+    if (userViewport.contains(frame().viewRect()) && m_extraViewportUpdateNeeded) {
+        m_extraViewportUpdateNeeded = false;
+        m_interface->sendUserViewport(userViewport);
+        return;
+    }
+
+    // Regular skip
+    if (userViewport.contains(frame().viewRect())) {
+        return;
+    }
+
+    // Refill extra-update again once we needed a real update
+    m_extraViewportUpdateNeeded = true;
+    m_interface->sendUserViewport(userViewport);
+}
+
+const RemoteViewFrame &RemoteViewWidget::frame() const
 {
     return m_frame;
 }
 
-void RemoteViewWidget::frameUpdated(const RemoteViewFrame& frame)
+RemoteViewInterface *RemoteViewWidget::remoteViewInterface() const
+{
+    return m_interface.data();
+}
+
+void RemoteViewWidget::pickElementId(const QModelIndex &index)
+{
+    const GammaRay::ObjectId id = index.data(ObjectModel::ObjectIdRole).value<GammaRay::ObjectId>();
+    m_interface->pickElementId(id);
+}
+
+void RemoteViewWidget::elementsAtReceived(const GammaRay::ObjectIds &ids, int bestCandidate)
+{
+    Q_ASSERT(!ids.isEmpty());
+
+    m_pickProxyModel->setIds(ids);
+
+    if (ids.count() == 1) {
+        m_interface->pickElementId(ids.first());
+    } else {
+        const int candidate = bestCandidate == -1 ? 0 : bestCandidate;
+        auto *dlg = new ModelPickerDialog(window());
+        m_invisibleItemsProxyModel->setSourceModel(m_pickProxyModel);
+        m_invisibleItemsProxyModel->setFlagRole(flagRole());
+        m_invisibleItemsProxyModel->setInvisibleMask(invisibleMask());
+
+        dlg->setModel(m_invisibleItemsProxyModel);
+        dlg->setCurrentIndex(ObjectModel::ObjectIdRole, QVariant::fromValue(ids[candidate]));
+        connect(dlg, &ModelPickerDialog::activated, this, &RemoteViewWidget::pickElementId);
+        connect(dlg, &ModelPickerDialog::checkBoxStateChanged, m_invisibleItemsProxyModel, &VisibilityFilterProxyModel::setHideItems);
+        dlg->open();
+    }
+}
+
+void RemoteViewWidget::frameUpdated(const RemoteViewFrame &frame)
 {
     if (!m_frame.isValid()) {
         m_frame = frame;
-        fitToView();
+        if (m_initialZoomDone)
+            centerView();
+        else
+            fitToView();
     } else {
         m_frame = frame;
         update();
+        m_fps = 1000.0 / m_fpsTimer.elapsed();
+        m_fpsTimer.restart();
     }
 
     updateActions();
+    if (m_interactionMode == ColorPicking)
+        pickColor();
+    emit frameChanged();
     QMetaObject::invokeMethod(m_interface, "clientViewUpdated", Qt::QueuedConnection);
+}
+
+int RemoteViewWidget::invisibleMask() const
+{
+    return m_invisibleMask;
+}
+
+void RemoteViewWidget::setInvisibleMask(int invisibleMask)
+{
+    m_invisibleMask = invisibleMask;
+}
+
+bool RemoteViewWidget::hasValidFrame() const
+{
+    return m_frame.isValid();
+}
+
+bool RemoteViewWidget::hasValidCompleteFrame() const
+{
+    return m_frame.isValid()
+            && (m_frame.image().size() / m_frame.image().devicePixelRatio())
+            == m_frame.viewRect().size().toSize();
+}
+
+int RemoteViewWidget::flagRole() const
+{
+    return m_flagRole;
+}
+
+void RemoteViewWidget::setFlagRole(int flagRole)
+{
+    m_flagRole = flagRole;
+}
+
+QAbstractItemModel *RemoteViewWidget::pickSourceModel() const
+{
+    return m_pickProxyModel->sourceModel();
+}
+
+void RemoteViewWidget::setPickSourceModel(QAbstractItemModel *sourceModel)
+{
+    if (sourceModel == m_pickProxyModel->sourceModel())
+        return;
+
+    m_pickProxyModel->setSourceModel(sourceModel);
 }
 
 void RemoteViewWidget::reset()
@@ -187,27 +384,49 @@ void RemoteViewWidget::reset()
     m_frame = RemoteViewFrame();
     m_hasMeasurement = false;
     update();
+    emit frameChanged();
 }
 
-void RemoteViewWidget::setUnavailableText(const QString& msg)
+void RemoteViewWidget::setUnavailableText(const QString &msg)
 {
     m_unavailableText = msg;
     update();
 }
 
-QActionGroup* RemoteViewWidget::interactionModeActions() const
+QActionGroup *RemoteViewWidget::interactionModeActions() const
 {
     return m_interactionModeActions;
 }
 
-QAction* RemoteViewWidget::zoomOutAction() const
+QAction *RemoteViewWidget::zoomOutAction() const
 {
     return m_zoomOutAction;
 }
 
-QAction* RemoteViewWidget::zoomInAction() const
+QAction *RemoteViewWidget::zoomInAction() const
 {
     return m_zoomInAction;
+}
+
+void RemoteViewWidget::restoreState(const QByteArray &state)
+{
+    if (state.isEmpty())
+        return;
+
+    QDataStream stream(state);
+    restoreState(stream);
+}
+
+QByteArray RemoteViewWidget::saveState() const
+{
+    QByteArray data;
+
+    {
+        QDataStream stream(&data, QIODevice::WriteOnly);
+        saveState(stream);
+    }
+
+    return data;
 }
 
 double RemoteViewWidget::zoom() const
@@ -235,21 +454,23 @@ void RemoteViewWidget::setZoom(double zoom)
         const auto delta = (*it) - zoom;
         index = std::distance(m_zoomLevels.constBegin(), it);
         --it;
-        if (zoom - (*it) < delta) {
+        if (zoom - (*it) < delta)
             --index;
-        }
     }
 
     if (m_zoomLevels.at(index) == oldZoom)
         return;
+
     m_zoom = m_zoomLevels.at(index);
     emit zoomChanged();
     emit zoomLevelChanged(index);
+    emit stateChanged();
 
     m_x = contentWidth() / 2 - (contentWidth() / 2 - m_x) * m_zoom / oldZoom;
     m_y = contentHeight() / 2 - (contentHeight() / 2 - m_y) * m_zoom / oldZoom;
 
     updateActions();
+    updateUserViewport();
     update();
 }
 
@@ -265,9 +486,11 @@ void RemoteViewWidget::zoomIn()
     auto it = std::lower_bound(m_zoomLevels.constBegin(), m_zoomLevels.constEnd(), m_zoom);
     if (it == m_zoomLevels.constEnd())
         return;
+
     ++it;
     if (it == m_zoomLevels.constEnd())
         return;
+
     setZoom(*it);
 }
 
@@ -277,20 +500,30 @@ void RemoteViewWidget::zoomOut()
     auto it = std::lower_bound(m_zoomLevels.constBegin(), m_zoomLevels.constEnd(), m_zoom);
     if (it == m_zoomLevels.constBegin())
         return;
+
     --it;
     setZoom(*it);
 }
 
 void RemoteViewWidget::fitToView()
 {
-    const auto scale = std::min<double>(1.0, std::min((double)contentWidth() / (double)m_frame.sceneRect().width(), (double)contentHeight() / (double)m_frame.sceneRect().height()));
+    const auto scale =
+        std::min<double>(1.0,
+                         std::min((double)contentWidth() / (double)m_frame.sceneRect().width(),
+                                  (double)contentHeight() / (double)m_frame.sceneRect().height()));
     setZoom(scale);
+    centerView();
+}
+
+void RemoteViewWidget::centerView()
+{
     m_x = 0.5 * (contentWidth() - m_frame.sceneRect().width() * m_zoom);
     m_y = 0.5 * (contentHeight() - m_frame.sceneRect().height() * m_zoom);
+    updateUserViewport();
     update();
 }
 
-QAbstractItemModel* RemoteViewWidget::zoomLevelModel() const
+QAbstractItemModel *RemoteViewWidget::zoomLevelModel() const
 {
     return m_zoomLevelModel;
 }
@@ -306,17 +539,20 @@ void RemoteViewWidget::setInteractionMode(RemoteViewWidget::InteractionMode mode
         return;
 
     switch (mode) {
-        case Measuring:
-        case ElementPicking:
-            setCursor(Qt::CrossCursor);
-            break;
-        case ViewInteraction:
-            setCursor(Qt::OpenHandCursor);
-            break;
-        case NoInteraction:
-        case InputRedirection:
-            setCursor(QCursor());
-            break;
+    case Measuring:
+    case ElementPicking:
+        setCursor(Qt::CrossCursor);
+        break;
+    case ViewInteraction:
+        setCursor(Qt::OpenHandCursor);
+        break;
+    case NoInteraction:
+    case InputRedirection:
+        setCursor(QCursor());
+        break;
+    case ColorPicking:
+        setCursor(Qt::CrossCursor);
+        break;
     }
 
     m_interactionMode = mode;
@@ -326,6 +562,8 @@ void RemoteViewWidget::setInteractionMode(RemoteViewWidget::InteractionMode mode
     }
 
     update();
+    emit interactionModeChanged();
+    emit stateChanged();
 }
 
 RemoteViewWidget::InteractionModes RemoteViewWidget::supportedInteractionModes() const
@@ -336,12 +574,11 @@ RemoteViewWidget::InteractionModes RemoteViewWidget::supportedInteractionModes()
 void RemoteViewWidget::setSupportedInteractionModes(RemoteViewWidget::InteractionModes modes)
 {
     m_supportedInteractionModes = modes;
-    foreach (auto action, m_interactionModeActions->actions()) {
+    foreach (auto action, m_interactionModeActions->actions())
         action->setVisible(action->data().toInt() & modes);
-    }
 }
 
-void RemoteViewWidget::paintEvent(QPaintEvent* event)
+void RemoteViewWidget::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
     QPainter p(this);
@@ -352,7 +589,7 @@ void RemoteViewWidget::paintEvent(QPaintEvent* event)
         return;
     }
 
-    p.fillRect(rect(), m_backgroundBrush);
+    drawBackground(&p);
 
     p.save();
     p.setTransform(QTransform::fromTranslate(m_x, m_y));
@@ -360,18 +597,35 @@ void RemoteViewWidget::paintEvent(QPaintEvent* event)
                         // but need to be able to see single pixels when zoomed in.
         p.setRenderHint(QPainter::SmoothPixmapTransform);
     }
-    p.drawImage(QRect(QPoint(0, 0), m_frame.viewRect().size().toSize() * m_zoom), m_frame.image());
+
+    p.save();
+    p.setTransform(QTransform().scale(m_zoom, m_zoom), true);
+    p.setTransform(m_frame.transform(), true);
+    p.drawImage(QPoint(), m_frame.image());
+    p.restore();
+
     drawDecoration(&p);
     p.restore();
 
     drawRuler(&p);
+    if (m_showFps)
+        drawFPS(&p);
 
-    if (m_interactionMode == Measuring && m_hasMeasurement) {
+    if (m_interactionMode == Measuring && m_hasMeasurement)
         drawMeasureOverlay(&p);
-    }
 }
 
-void RemoteViewWidget::drawDecoration(QPainter* p)
+void RemoteViewWidget::drawBackground(QPainter *p)
+{
+    // not really efficient...
+    p->fillRect(rect(), m_inactiveBackgroundBrush);
+    p->fillRect(m_x, m_y,
+                m_zoom * m_frame.viewRect().width(),
+                m_zoom * m_frame.viewRect().height(),
+                m_activeBackgroundBrush);
+}
+
+void RemoteViewWidget::drawDecoration(QPainter *p)
 {
     Q_UNUSED(p);
 }
@@ -379,16 +633,18 @@ void RemoteViewWidget::drawDecoration(QPainter* p)
 static int tickLength(int sourcePos, int labelDistance)
 {
     int l = 8;
-    if (sourcePos % labelDistance == 0)
+    if (sourcePos % labelDistance == 0) {
         return 2 * l;
-    if (sourcePos % 10 == 0)
+    }
+    if (sourcePos % 10 == 0) {
         return l + 2;
-    else if (sourcePos % 5 == 0)
+    } else if (sourcePos % 5 == 0) {
         return l + 1;
+    }
     return l;
 }
 
-void RemoteViewWidget::drawRuler(QPainter* p)
+void RemoteViewWidget::drawRuler(QPainter *p)
 {
     p->save();
 
@@ -414,22 +670,25 @@ void RemoteViewWidget::drawRuler(QPainter* p)
     p->translate(0, height() - hRulerHeight);
     for (int i = (m_x % viewTickStep); i < contentWidth(); i += viewTickStep) {
         const int sourcePos = (i - m_x) / m_zoom;
-        if (sourcePos == m_currentMousePosition.x())
+        if (sourcePos == m_currentMousePosition.x()) {
             p->setPen(selectedPen);
-        else if (sourcePos < 0 || sourcePos > m_frame.viewRect().width())
+        } else if (sourcePos < 0 || sourcePos > m_frame.viewRect().width()) {
             p->setPen(inactivePen);
-        else
+        } else {
             p->setPen(activePen);
+        }
 
         const int tickSize = tickLength(sourcePos, sourceLabelDist);
         p->drawLine(i, 0, i, tickSize);
 
         if (sourcePos % sourceLabelDist == 0) {
-            if (sourcePos < 0 || sourcePos > m_frame.viewRect().width())
+            if (sourcePos < 0 || sourcePos > m_frame.viewRect().width()) {
                 p->setPen(inactivePen);
-            else
+            } else {
                 p->setPen(activePen);
-            p->drawText(i - viewLabelDist / 2, tickSize, viewLabelDist, hRulerHeight - tickSize, Qt::AlignHCenter | Qt::AlignVCenter, QString::number(sourcePos));
+            }
+            p->drawText(i - viewLabelDist / 2, tickSize, viewLabelDist, hRulerHeight - tickSize,
+                        Qt::AlignHCenter | Qt::AlignVCenter, QString::number(sourcePos));
         }
     }
     p->restore();
@@ -439,31 +698,61 @@ void RemoteViewWidget::drawRuler(QPainter* p)
     p->translate(width() - vRulerWidth, 0);
     for (int i = (m_y % viewTickStep); i < contentHeight(); i += viewTickStep) {
         const int sourcePos = (i - m_y) / m_zoom;
-        if (sourcePos == m_currentMousePosition.y())
+        if (sourcePos == m_currentMousePosition.y()) {
             p->setPen(selectedPen);
-        else if (sourcePos < 0 || sourcePos > m_frame.viewRect().height())
+        } else if (sourcePos < 0 || sourcePos > m_frame.viewRect().height()) {
             p->setPen(inactivePen);
-        else
+        } else {
             p->setPen(activePen);
+        }
 
         const int tickSize = tickLength(sourcePos, sourceLabelDist);
         p->drawLine(0, i, tickSize, i);
 
         if (sourcePos % sourceLabelDist == 0) {
-            if (sourcePos < 0 || sourcePos > m_frame.viewRect().height())
+            if (sourcePos < 0 || sourcePos > m_frame.viewRect().height()) {
                 p->setPen(inactivePen);
-            else
+            } else {
                 p->setPen(activePen);
-            p->drawText(tickSize, i - viewLabelDist / 2, vRulerWidth - tickSize, viewLabelDist, Qt::AlignHCenter | Qt::AlignVCenter, QString::number(sourcePos));
+            }
+            p->drawText(tickSize, i - viewLabelDist / 2, vRulerWidth - tickSize, viewLabelDist,
+                        Qt::AlignHCenter | Qt::AlignVCenter, QString::number(sourcePos));
         }
     }
     p->restore();
 
     p->setPen(activePen);
     p->drawText(QRect(width() - vRulerWidth, height() - hRulerHeight, vRulerWidth, hRulerHeight),
-                QStringLiteral("%1x\n%2").arg(m_currentMousePosition.x()).arg(m_currentMousePosition.y()),
-                Qt::AlignHCenter | Qt::AlignVCenter
-               );
+                QStringLiteral("%1x\n%2").
+                    arg(std::floor(m_currentMousePosition.x())).
+                    arg(std::floor(m_currentMousePosition.y())),
+                Qt::AlignHCenter | Qt::AlignVCenter);
+    p->restore();
+}
+
+void RemoteViewWidget::drawFPS(QPainter *p)
+{
+    p->save();
+
+    const int hRulerHeight = horizontalRulerHeight();
+    const int vRulerWidth = verticalRulerWidth();
+    QFontMetrics metrics(p->font());
+    const int barWidth = 20;
+
+    QString fps = QString::number(m_fps, 'g', 3) + " fps";
+    const QRect textrect(width()  - vRulerWidth  - metrics.width(fps) - 5,
+                         height() - hRulerHeight - metrics.height()   - 5,
+                         metrics.width(fps) + 2,
+                         metrics.height()   + 2);
+    p->drawText(textrect, Qt::AlignRight, fps);
+
+    p->setBrush(QBrush(QColor(51, 51, 51, 170)));
+    p->setPen(Qt::NoPen);
+    p->drawRect(QRect(width() - vRulerWidth - barWidth - 5,
+                      height() - hRulerHeight - metrics.height() - 5,
+                      barWidth,
+                      -10.0 * m_fps));
+
     p->restore();
 }
 
@@ -482,15 +771,15 @@ int RemoteViewWidget::sourceTickLabelDistance(int viewDistance)
         m_tickLabelDists << 5 << 10 << 20 << 25 << 50 << 100 << 200 << 250 << 500 << 1000 << 2000;
     }
     const int sourceDist = viewDistance / m_zoom;
-    while (sourceDist > m_tickLabelDists.last()) {
+    while (sourceDist > m_tickLabelDists.last())
         m_tickLabelDists.push_back(m_tickLabelDists.at(m_tickLabelDists.size() - 4) * 10);
-    }
 
-    const auto it = std::lower_bound(m_tickLabelDists.constBegin(), m_tickLabelDists.constEnd(), sourceDist);
+    const auto it = std::lower_bound(m_tickLabelDists.constBegin(),
+                                     m_tickLabelDists.constEnd(), sourceDist);
     return *it;
 }
 
-void RemoteViewWidget::drawMeasureOverlay(QPainter* p)
+void RemoteViewWidget::drawMeasureOverlay(QPainter *p)
 {
     p->save();
 
@@ -498,7 +787,7 @@ void RemoteViewWidget::drawMeasureOverlay(QPainter* p)
     auto pen = QPen(QColor(255, 255, 255, 170));
     p->setPen(pen);
 
-    const auto startPos =  mapFromSource(m_measurementStartPosition);
+    const auto startPos = mapFromSource(m_measurementStartPosition);
     const auto endPos = mapFromSource(m_measurementEndPosition);
     const QPoint hOffset(5, 0);
     const QPoint vOffset(0, 5);
@@ -518,11 +807,19 @@ void RemoteViewWidget::drawMeasureOverlay(QPainter* p)
     p->restore();
 
     // start and end labels
-    const QPoint startLabelDir(startPos.x() < endPos.x() ? -1 : 1, startPos.y() < endPos.y() ? -1 : 1);
+    const QPoint startLabelDir(startPos.x() < endPos.x() ? -1 : 1,
+                               startPos.y() < endPos.y() ? -1 : 1);
     const QPoint endLabelDir(-startLabelDir.x(), -startLabelDir.y());
-    drawMeasurementLabel(p, startPos, startLabelDir, QStringLiteral("x: %1 y: %2").arg(m_measurementStartPosition.x()).arg(m_measurementStartPosition.y()));
-    if (endPos != startPos)
-        drawMeasurementLabel(p, endPos, endLabelDir, QStringLiteral("x: %1 y: %2").arg(m_measurementEndPosition.x()).arg(m_measurementEndPosition.y()));
+    drawMeasurementLabel(p, startPos, startLabelDir,
+                         QStringLiteral("x: %1 y: %2").
+                             arg(m_measurementStartPosition.x()).
+                             arg(m_measurementStartPosition.y()));
+    if (endPos != startPos) {
+        drawMeasurementLabel(p, endPos, endLabelDir,
+                             QStringLiteral("x: %1 y: %2").
+                                 arg(m_measurementEndPosition.x()).
+                                 arg(m_measurementEndPosition.y()));
+    }
 
     // distance label
     const auto dPos = QPoint(startPos + endPos) / 2;
@@ -551,12 +848,13 @@ void RemoteViewWidget::drawMeasureOverlay(QPainter* p)
     }
 }
 
-void RemoteViewWidget::drawMeasurementLabel(QPainter* p, QPoint pos, QPoint dir, const QString& text)
+void RemoteViewWidget::drawMeasurementLabel(QPainter *p, QPoint pos, QPoint dir,
+                                            const QString &text)
 {
     p->save();
     static const auto margin = 2;
-    const auto height = fontMetrics().height() + 2*margin;
-    const auto width = fontMetrics().width(text) + 2*margin;
+    const auto height = fontMetrics().height() + (2 * margin);
+    const auto width = fontMetrics().width(text) + (2 * margin);
 
     QRect r(pos.x(), pos.y(), width * dir.x(), height * dir.y());
     r = r.normalized();
@@ -574,183 +872,343 @@ QPoint RemoteViewWidget::mapToSource(QPoint pos) const
     return (pos - QPoint(m_x, m_y)) / m_zoom;
 }
 
+QPointF RemoteViewWidget::mapToSource(QPointF pos) const
+{
+    return (pos - QPointF(m_x, m_y)) / m_zoom;
+}
+
+QRectF RemoteViewWidget::mapToSource(const QRectF &r) const
+{
+    return QRectF(mapToSource(r.topLeft()), mapToSource(r.bottomRight()));
+}
+
 QPoint RemoteViewWidget::mapFromSource(QPoint pos) const
 {
     return pos * m_zoom + QPoint(m_x, m_y);
 }
 
-void RemoteViewWidget::clampPanPosition()
+QPointF RemoteViewWidget::mapFromSource(QPointF pos) const
 {
-    if (m_x > width() / 2) {
-        m_x = width() / 2;
-    } else if (m_x + m_frame.sceneRect().width() * m_zoom < width() / 2.0) {
-        m_x = width() / 2 - m_frame.sceneRect().width() * m_zoom;
+    return pos * m_zoom + QPointF(m_x, m_y);
+}
+
+QRectF RemoteViewWidget::mapFromSource(const QRect& rect) const
+{
+    return {rect.x() * m_zoom, rect.y() * m_zoom, rect.width() * m_zoom, rect.height() * m_zoom};
+}
+
+QTouchEvent::TouchPoint RemoteViewWidget::mapToSource(const QTouchEvent::TouchPoint &point)
+{
+    QTouchEvent::TouchPoint p;
+
+    p.setFlags(point.flags());
+    p.setId(point.id());
+    p.setPressure(point.pressure());
+    p.setState(point.state());
+
+    p.setStartPos(mapToSource(point.startPos()));
+    p.setLastPos(mapToSource(point.lastPos()));
+    p.setPos(mapToSource(point.pos())); // relative
+    p.setRect(mapToSource(point.rect()));
+
+    p.setStartNormalizedPos(mapToSource(point.startNormalizedPos()));
+    p.setLastNormalizedPos(mapToSource(point.lastNormalizedPos()));
+    p.setNormalizedPos(mapToSource(point.normalizedPos()));
+
+    p.setStartScenePos(mapToSource(point.startScenePos()));
+    p.setLastScenePos(mapToSource(point.lastScenePos()));
+    p.setScenePos(mapToSource(point.scenePos()));
+    p.setSceneRect(mapToSource(point.sceneRect()));
+
+    // These may not have the right x,y but i don't think there is a way to get the right value.
+    // On the other hand, it's not a problem, probably
+    p.setStartScreenPos(mapToSource(point.startScreenPos()));
+    p.setLastScreenPos(mapToSource(point.lastScreenPos()));
+    p.setScreenPos(mapToSource(point.screenPos()));
+    p.setScreenRect(mapToSource(point.screenRect()));
+
+    return p;
+}
+
+void RemoteViewWidget::restoreState(QDataStream &stream)
+{
+    stream.setVersion(QDataStream::Qt_4_8);
+
+    qint32 version;
+    InteractionMode interactionMode = m_interactionMode;
+    double zoom = m_zoom;
+
+    stream >> version;
+
+    switch (version) {
+    case RemoteViewWidgetStateVersion: {
+        stream >> interactionMode;
+        stream >> zoom;
+        break;
     }
-    if (m_y > height() / 2) {
-        m_y = height() / 2;
-    } else if (m_y + m_frame.sceneRect().height() * m_zoom < height() / 2.0) {
-        m_y = height() / 2 - m_frame.sceneRect().height() * m_zoom;
+    }
+
+    setInteractionMode(interactionMode);
+    setZoom(zoom);
+    m_initialZoomDone = true;
+}
+
+void RemoteViewWidget::saveState(QDataStream &stream) const
+{
+    stream.setVersion(QDataStream::Qt_4_8);
+
+    stream << RemoteViewWidgetStateVersion;
+
+    switch (RemoteViewWidgetStateVersion) {
+    case 1: {
+        stream << m_interactionMode;
+        stream << m_zoom;
+        break;
+    }
     }
 }
 
-void RemoteViewWidget::resizeEvent(QResizeEvent* event)
+void RemoteViewWidget::clampPanPosition()
+{
+    if (m_x > width() / 2)
+        m_x = width() / 2;
+    else if (m_x + m_frame.sceneRect().width() * m_zoom < width() / 2.0)
+        m_x = width() / 2 - m_frame.sceneRect().width() * m_zoom;
+    if (m_y > height() / 2)
+        m_y = height() / 2;
+    else if (m_y + m_frame.sceneRect().height() * m_zoom < height() / 2.0)
+        m_y = height() / 2 - m_frame.sceneRect().height() * m_zoom;
+}
+
+void RemoteViewWidget::resizeEvent(QResizeEvent *event)
 {
     m_x += 0.5 * (event->size().width() - event->oldSize().width());
     m_y += 0.5 * (event->size().height() - event->oldSize().height());
 
+    updateUserViewport();
     QWidget::resizeEvent(event);
 }
 
-void RemoteViewWidget::mousePressEvent(QMouseEvent* event)
+void RemoteViewWidget::mousePressEvent(QMouseEvent *event)
 {
-    m_currentMousePosition = mapToSource(event->pos());
+    m_currentMousePosition = mapToSource(QPointF(event->pos()));
 
     switch (m_interactionMode) {
-        case NoInteraction:
-            break;
-        case ViewInteraction:
-            m_mouseDownPosition = event->pos() - QPoint(m_x, m_y);
-            if ((event->modifiers() & Qt::ControlModifier) && (m_supportedInteractionModes & ElementPicking))
-                m_interface->pickElementAt(mapToSource(event->pos()));
-            if (event->buttons() & Qt::LeftButton)
-                setCursor(Qt::ClosedHandCursor);
-             break;
-        case Measuring:
-            if (event->buttons() & Qt::LeftButton) {
-                m_hasMeasurement = true;
-                m_measurementStartPosition = mapToSource(event->pos());
-                m_measurementEndPosition = mapToSource(event->pos());
-                update();
+    case NoInteraction:
+        break;
+    case ViewInteraction:
+        m_mouseDownPosition = event->pos() - QPoint(m_x, m_y);
+        if ((m_supportedInteractionModes & ElementPicking)) {
+            if ((event->modifiers() & Qt::ShiftModifier) && (event->modifiers() & Qt::ControlModifier)) {
+                m_interface->requestElementsAt(mapToSource(event->pos()), RemoteViewInterface::RequestAll);
             }
-            break;
-        case ElementPicking:
-            if (event->buttons() & Qt::LeftButton)
-                m_interface->pickElementAt(mapToSource(event->pos()));
-            break;
-        case InputRedirection:
-            sendMouseEvent(event);
-            break;
+            else if ((event->modifiers() & Qt::ControlModifier)) {
+                m_interface->requestElementsAt(mapToSource(event->pos()), RemoteViewInterface::RequestBest);
+            }
+        }
+        if (event->buttons() & Qt::LeftButton)
+            setCursor(Qt::ClosedHandCursor);
+        break;
+    case Measuring:
+        if (event->buttons() & Qt::LeftButton) {
+            m_hasMeasurement = true;
+            m_measurementStartPosition = mapToSource(event->pos());
+            m_measurementEndPosition = mapToSource(event->pos());
+            update();
+        }
+        break;
+    case ElementPicking:
+        if (event->buttons() & Qt::LeftButton) {
+            if ((event->modifiers() & Qt::ShiftModifier) && (event->modifiers() & Qt::ControlModifier)) {
+                m_interface->requestElementsAt(mapToSource(event->pos()), RemoteViewInterface::RequestAll);
+            }
+            else {
+                m_interface->requestElementsAt(mapToSource(event->pos()), RemoteViewInterface::RequestBest);
+            }
+        }
+        break;
+    case InputRedirection:
+        sendMouseEvent(event);
+        break;
+    case ColorPicking:
+        break;
     }
 
     QWidget::mousePressEvent(event);
 }
 
-void RemoteViewWidget::mouseReleaseEvent(QMouseEvent* event)
+void RemoteViewWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-    m_currentMousePosition = mapToSource(event->pos());
+    m_currentMousePosition = mapToSource(QPointF(event->pos()));
 
     switch (m_interactionMode) {
-        case NoInteraction:
-        case ElementPicking:
-            break;
-        case ViewInteraction:
-            setCursor(Qt::OpenHandCursor);
-            break;
-        case Measuring:
-            if (event->buttons() & Qt::LeftButton)
-                m_measurementEndPosition = mapToSource(event->pos());
-            break;
-        case InputRedirection:
-            sendMouseEvent(event);
-            break;
+    case NoInteraction:
+    case ElementPicking:
+        break;
+    case ViewInteraction:
+        setCursor(Qt::OpenHandCursor);
+        break;
+    case Measuring:
+        if (event->buttons() & Qt::LeftButton)
+            m_measurementEndPosition = mapToSource(event->pos());
+        break;
+    case InputRedirection:
+        sendMouseEvent(event);
+        break;
+    case ColorPicking:
+        break;
     }
 
     QWidget::mouseReleaseEvent(event);
 }
 
+void RemoteViewWidget::updatePickerVisibility() const
+{
+    QPointF sourceCoordinates = frame().transform().inverted().map(QPointF(m_currentMousePosition)); // for quick view, transform is needed
+    QPoint sourceCoordinatesInt = QPoint(std::floor(sourceCoordinates.x()), std::floor(sourceCoordinates.y()));
+    if (frame().image().rect().contains(sourceCoordinatesInt)) {
+        m_trailingColorLabel->show();
+    } else {
+        m_trailingColorLabel->hide();
+    }
+}
+
+void RemoteViewWidget::pickColor() const
+{
+    QPointF sourceCoordinates = frame().transform().inverted().map(QPointF(m_currentMousePosition)); // for quick view, transform is needed
+    QPoint sourceCoordinatesInt = QPoint(std::floor(sourceCoordinates.x()), std::floor(sourceCoordinates.y()));
+    if (frame().image().rect().contains(sourceCoordinatesInt)) {
+        m_trailingColorLabel->setPickedColor(frame().image().pixel(sourceCoordinatesInt));
+    } else {
+        m_trailingColorLabel->setPickedColor(Qt::transparent);
+    }
+}
+
 void RemoteViewWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    m_currentMousePosition = mapToSource(event->pos());
+    m_currentMousePosition = mapToSource(QPointF(event->pos()));
 
     switch (m_interactionMode) {
-        case NoInteraction:
-        case ElementPicking:
+    case NoInteraction:
+    case ElementPicking:
+        break;
+    case ViewInteraction:
+        if (event->buttons() != Qt::LeftButton) {
             break;
-        case ViewInteraction:
-            if (event->buttons() != Qt::LeftButton)
-                break;
-            m_x = event->x() - m_mouseDownPosition.x();
-            m_y = event->y() - m_mouseDownPosition.y();
-            clampPanPosition();
-            break;
-        case Measuring:
-            if (event->buttons() & Qt::LeftButton)
-                m_measurementEndPosition = mapToSource(event->pos());
-            break;
-        case InputRedirection:
-            sendMouseEvent(event);
-            break;
+        }
+        m_x = event->x() - m_mouseDownPosition.x();
+        m_y = event->y() - m_mouseDownPosition.y();
+        clampPanPosition();
+        updateUserViewport();
+        break;
+    case Measuring:
+        if (event->buttons() & Qt::LeftButton) {
+            m_measurementEndPosition = mapToSource(event->pos());
+        }
+        break;
+    case InputRedirection:
+        sendMouseEvent(event);
+        break;
+    case ColorPicking:
+        // label should be always fully inside the remoteviewwidget
+        auto labelPosition = event->pos() + QPoint(4, 4);
+        // flip to top if it would stick out bottom end of remoteviewwidget
+        if ((labelPosition.y() + m_trailingColorLabel->height()) > this->height())
+            labelPosition = labelPosition - QPoint(0, 8) - QPoint(0, m_trailingColorLabel->height());
+        // flip to left if it would stick out right side of remoteviewwidget
+        if ((labelPosition.x() + m_trailingColorLabel->width()) > this->width())
+            labelPosition = labelPosition - QPoint(8, 0) - QPoint(m_trailingColorLabel->width(), 0);
+        m_trailingColorLabel->move(labelPosition);
+        updatePickerVisibility();
+        pickColor();
+        break;
     }
-
     update();
 }
 
 void RemoteViewWidget::wheelEvent(QWheelEvent *event)
 {
     switch (m_interactionMode) {
-        case NoInteraction:
-            break;
-        case ViewInteraction:
-        case ElementPicking:
-        case Measuring:
-            if (event->modifiers() & Qt::ControlModifier && event->orientation() == Qt::Vertical) {
-                if (event->delta() > 0)
-                    zoomIn();
-                else
-                    zoomOut();
+    case NoInteraction:
+        break;
+    case ViewInteraction:
+    case ElementPicking:
+    case Measuring:
+    case ColorPicking:
+        if (event->modifiers() & Qt::ControlModifier && event->orientation() == Qt::Vertical) {
+            if (event->delta() > 0) {
+                zoomIn();
             } else {
-                if (event->orientation() == Qt::Vertical)
-                    m_y += event->delta();
-                else
-                    m_x += event->delta();
-                clampPanPosition();
-                update();
+                zoomOut();
             }
-            break;
-        case InputRedirection:
-            sendWheelEvent(event);
-            break;
+        } else {
+            if (event->orientation() == Qt::Vertical) {
+                m_y += event->delta();
+            } else {
+                m_x += event->delta();
+            }
+            clampPanPosition();
+            updateUserViewport();
+        }
+        m_currentMousePosition = mapToSource(QPointF(event->pos()));
+        if (m_interactionMode == ColorPicking) {
+            updatePickerVisibility();
+            pickColor();
+        }
+        update();
+        break;
+    case InputRedirection:
+        sendWheelEvent(event);
+        break;
     }
 
     QWidget::wheelEvent(event);
 }
 
-void RemoteViewWidget::keyPressEvent(QKeyEvent* event)
+void RemoteViewWidget::keyPressEvent(QKeyEvent *event)
 {
     switch (m_interactionMode) {
-        case NoInteraction:
-        case ViewInteraction:
-        case ElementPicking:
-        case Measuring:
-            break;
-        case InputRedirection:
-            sendKeyEvent(event);
-            break;
+    case NoInteraction:
+    case ViewInteraction:
+    case ElementPicking:
+    case Measuring:
+        break;
+    case InputRedirection:
+        sendKeyEvent(event);
+        break;
+    case ColorPicking:
+        if (event->matches(QKeySequence::Copy)){
+            QMimeData *data = new QMimeData();
+            data->setColorData(m_trailingColorLabel->pickedColor());
+            qApp->clipboard()->setMimeData(data);
+            qApp->clipboard()->setText(m_trailingColorLabel->pickedColor().name());
+        }
     }
     QWidget::keyPressEvent(event);
 }
 
-void RemoteViewWidget::keyReleaseEvent(QKeyEvent* event)
+void RemoteViewWidget::keyReleaseEvent(QKeyEvent *event)
 {
     switch (m_interactionMode) {
-        case InputRedirection:
-            sendKeyEvent(event);
-            break;
-        default:
-            break;
+    case InputRedirection:
+        sendKeyEvent(event);
+        break;
+    default:
+        break;
     }
     QWidget::keyReleaseEvent(event);
 }
 
-void RemoteViewWidget::showEvent(QShowEvent* event)
+void RemoteViewWidget::showEvent(QShowEvent *event)
 {
     if (m_interface) {
         m_interface->setViewActive(true);
+        updateUserViewport();
     }
     QWidget::showEvent(event);
 }
 
-void RemoteViewWidget::hideEvent(QHideEvent* event)
+void RemoteViewWidget::hideEvent(QHideEvent *event)
 {
     if (Endpoint::isConnected()) {
         if (m_interface)
@@ -762,22 +1220,59 @@ void RemoteViewWidget::hideEvent(QHideEvent* event)
 void RemoteViewWidget::contextMenuEvent(QContextMenuEvent *event)
 {
     switch (m_interactionMode) {
-        case ViewInteraction:
-        case ElementPicking:
-        case Measuring:
-        {
-            QMenu menu;
-            menu.addActions(m_interactionModeActions->actions());
+    case ViewInteraction:
+    case ElementPicking:
+    case Measuring:
+    case ColorPicking:
+    {
+        QMenu menu;
+        menu.addActions(m_interactionModeActions->actions());
+        menu.addSeparator();
+        menu.addAction(m_zoomOutAction);
+        menu.addAction(m_zoomInAction);
+        if (!qgetenv("GAMMARAY_DEVELOPERMODE").isEmpty()) {
             menu.addSeparator();
-            menu.addAction(m_zoomOutAction);
-            menu.addAction(m_zoomInAction);
-            menu.exec(event->globalPos());
+            menu.addAction(m_toggleFPSAction);
         }
-        case NoInteraction:
-        case InputRedirection:
-            break;
+        menu.exec(event->globalPos());
+        break;
     }
-    QWidget::contextMenuEvent(event);
+    case NoInteraction:
+    case InputRedirection:
+        QWidget::contextMenuEvent(event);
+        break;
+    }
+}
+
+void RemoteViewWidget::enterEvent(QEvent *event)
+{
+    Q_UNUSED(event);
+    switch (m_interactionMode) {
+    case ViewInteraction:
+    case ElementPicking:
+    case Measuring:
+    case NoInteraction:
+    case InputRedirection:
+        break;
+    case ColorPicking:
+        m_trailingColorLabel->show();
+        break;
+    }
+}
+
+void RemoteViewWidget::leaveEvent(QEvent *event)
+{
+    Q_UNUSED(event);
+    switch (m_interactionMode) {
+    case ViewInteraction:
+    case ElementPicking:
+    case Measuring:
+    case NoInteraction:
+    case InputRedirection:
+    case ColorPicking:
+        m_trailingColorLabel->hide();
+        break;
+    }
 }
 
 bool RemoteViewWidget::eventFilter(QObject *receiver, QEvent *event)
@@ -793,6 +1288,25 @@ bool RemoteViewWidget::eventFilter(QObject *receiver, QEvent *event)
     }
 
     return QWidget::eventFilter(receiver, event);
+}
+
+bool RemoteViewWidget::event(QEvent *event)
+{
+    if (m_interactionMode == InputRedirection) {
+        switch (event->type()) {
+        case QEvent::TouchBegin:
+        case QEvent::TouchCancel:
+        case QEvent::TouchEnd:
+        case QEvent::TouchUpdate:
+            sendTouchEvent(static_cast<QTouchEvent *>(event));
+            return true;
+
+        default:
+            break;
+        }
+    }
+
+    return QWidget::event(event);
 }
 
 int RemoteViewWidget::contentWidth() const
@@ -815,34 +1329,48 @@ int RemoteViewWidget::horizontalRulerHeight() const
     return fontMetrics().height() + 20; // 2 * tick length + some margin
 }
 
-void RemoteViewWidget::interactionActionTriggered(QAction* action)
+void RemoteViewWidget::interactionActionTriggered(QAction *action)
 {
     Q_ASSERT(action);
     setInteractionMode(static_cast<InteractionMode>(action->data().toInt()));
 }
 
-void RemoteViewWidget::sendMouseEvent(QMouseEvent* event)
+void RemoteViewWidget::sendMouseEvent(QMouseEvent *event)
 {
-    m_interface->sendMouseEvent(event->type(), mapToSource(event->pos()), event->button(), event->buttons(), event->modifiers());
+    m_interface->sendMouseEvent(event->type(), mapToSource(event->pos()),
+                                event->button(), event->buttons(), event->modifiers());
 }
 
-void RemoteViewWidget::sendKeyEvent(QKeyEvent* event)
+void RemoteViewWidget::sendKeyEvent(QKeyEvent *event)
 {
-    m_interface->sendKeyEvent(event->type(), event->key(), event->modifiers(), event->text(), event->isAutoRepeat(), event->count());
+    m_interface->sendKeyEvent(event->type(), event->key(), event->modifiers(),
+                              event->text(), event->isAutoRepeat(), event->count());
 }
 
-void RemoteViewWidget::sendWheelEvent(QWheelEvent* event)
+void RemoteViewWidget::sendWheelEvent(QWheelEvent *event)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     auto angleDelta = event->angleDelta();
     auto pixelDelta = event->pixelDelta();
-#else
-    QPoint angleDelta;
-    if (event->orientation() == Qt::Horizontal)
-        angleDelta.setX(event->delta());
-    else
-        angleDelta.setY(event->delta());
-    QPoint pixelDelta;
-#endif
-    m_interface->sendWheelEvent(mapToSource(event->pos()), pixelDelta, angleDelta, event->buttons(), event->modifiers());
+    m_interface->sendWheelEvent(mapToSource(event->pos()), pixelDelta, angleDelta,
+                                event->buttons(), event->modifiers());
+}
+
+void RemoteViewWidget::sendTouchEvent(QTouchEvent *event)
+{
+    event->accept();
+
+    QList<QTouchEvent::TouchPoint> touchPoints;
+    foreach (const QTouchEvent::TouchPoint &point, event->touchPoints()) {
+        touchPoints << mapToSource(point);
+    }
+
+    QTouchDevice::Capabilities caps = event->device()->capabilities();
+    caps &= ~QTouchDevice::RawPositions; //we don't have a way to meaningfully map the raw positions to the source
+    caps &= ~QTouchDevice::Velocity; //neither for velocity
+
+    m_interface->sendTouchEvent(event->type(),
+                                event->device()->type(),
+                                caps,
+                                event->device()->maximumTouchPoints(),
+                                event->modifiers(), event->touchPointStates(), touchPoints);
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,32 +27,66 @@
 */
 
 #include "aboutdialog.h"
-#include "ui_aboutdialog.h"
+#include "aboutwidget.h"
+
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QDialogButtonBox>
 
 using namespace GammaRay;
 
-AboutDialog::AboutDialog(QWidget* parent): QDialog(parent),
-  ui(new Ui::AboutDialog)
+AboutDialog::AboutDialog(QWidget *parent)
+    : QDialog(parent)
+    , ui(new AboutWidget)
 {
-  ui->setupUi(this);
+    auto button = new QDialogButtonBox(this);
+    button->setStandardButtons(QDialogButtonBox::Close);
+
+    QVBoxLayout *vl = new QVBoxLayout(this);
+    vl->addWidget(ui);
+    vl->addWidget(button);
+
+    connect(button, &QDialogButtonBox::rejected, this, &QWidget::close);
 }
 
-AboutDialog::~AboutDialog()
+AboutDialog::~AboutDialog() = default;
+
+void AboutDialog::setLogo(const QString &iconFileName)
 {
+    ui->setLogo(iconFileName);
 }
 
-void AboutDialog::setTitle(const QString& title)
+void AboutDialog::setThemeLogo(const QString &fileName)
 {
-  ui->titleLabel->setText(title);
+    ui->setThemeLogo(fileName);
 }
 
-void AboutDialog::setText(const QString& text)
+void AboutDialog::setTitle(const QString &title)
 {
-  ui->textLabel->setText(text);
+    ui->setTitle(title);
 }
 
-void AboutDialog::setLogo(const QString& iconFileName)
+void AboutDialog::setHeader(const QString &header)
 {
-  ui->logoLabel->setPixmap(iconFileName);
+    ui->setHeader(header);
 }
 
+void AboutDialog::setAuthors(const QString &authors)
+{
+    ui->setAuthors(authors);
+}
+
+void AboutDialog::setFooter(const QString &footer)
+{
+    ui->setFooter(footer);
+}
+
+void AboutDialog::setText(const QString &text)
+{
+    ui->setText(text);
+}
+
+QSize AboutDialog::sizeHint() const
+{
+    return {960, 730};
+}

@@ -4,7 +4,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Milian Wolff <milian.wolff@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,22 +33,21 @@
 #include <widgetinspectorinterface.h>
 
 namespace GammaRay {
-
 class WidgetInspectorClient : public WidgetInspectorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::WidgetInspectorInterface)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::WidgetInspectorInterface)
 
-  public:
+public:
     explicit WidgetInspectorClient(QObject *parent);
-    ~WidgetInspectorClient();
+    ~WidgetInspectorClient() override;
 
-  private:
-    void saveAsImage(const QString &fileName) Q_DECL_OVERRIDE;
-    void saveAsSvg(const QString &fileName) Q_DECL_OVERRIDE;
-    void saveAsPdf(const QString &fileName) Q_DECL_OVERRIDE;
-    void saveAsUiFile(const QString &fileName) Q_DECL_OVERRIDE;
-    void analyzePainting() Q_DECL_OVERRIDE;
+private:
+    void saveAsImage(const QString &fileName) override;
+    void saveAsSvg(const QString &fileName) override;
+    void saveAsPdf(const QString &fileName) override;
+    void saveAsUiFile(const QString &fileName) override;
+    void analyzePainting() override;
 };
 }
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,6 +29,7 @@
 #include "qmltypetab.h"
 #include "ui_qmltypetab.h"
 
+#include <ui/clientpropertymodel.h>
 #include <ui/contextmenuextension.h>
 #include <ui/propertywidget.h>
 
@@ -40,22 +41,21 @@
 using namespace GammaRay;
 
 QmlTypeTab::QmlTypeTab(PropertyWidget *parent)
-  : QWidget(parent)
-  , ui(new Ui::QmlTypeTab)
+    : QWidget(parent)
+    , ui(new Ui::QmlTypeTab)
 {
     ui->setupUi(this);
 
     ui->typeView->header()->setObjectName("qmlTypeViewHeader");
     ui->typeView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
-    ui->typeView->setModel(ObjectBroker::model(parent->objectBaseName() + QStringLiteral(".qmlTypeModel")));
+    auto clientPropModel = new ClientPropertyModel(this);
+    clientPropModel->setSourceModel(ObjectBroker::model(parent->objectBaseName() + QStringLiteral(".qmlTypeModel")));
+    ui->typeView->setModel(clientPropModel);
 
     connect(ui->typeView, &QWidget::customContextMenuRequested, this, &QmlTypeTab::contextMenu);
-
 }
 
-QmlTypeTab::~QmlTypeTab()
-{
-}
+QmlTypeTab::~QmlTypeTab() = default;
 
 void QmlTypeTab::contextMenu(QPoint pos)
 {
@@ -67,8 +67,8 @@ void QmlTypeTab::contextMenu(QPoint pos)
     const auto actions = idx.data(PropertyModel::ActionRole).toInt();
     const auto objectId = idx.data(PropertyModel::ObjectIdRole).value<ObjectId>();
     ContextMenuExtension ext(objectId);
-    const bool canShow = actions != PropertyModel::NoAction ||
-        ext.discoverPropertySourceLocation(ContextMenuExtension::GoTo, idx);
+    const bool canShow = actions != PropertyModel::NoAction
+                         || ext.discoverPropertySourceLocation(ContextMenuExtension::GoTo, idx);
 
     if (!canShow)
         return;

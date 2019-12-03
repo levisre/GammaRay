@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,42 +36,41 @@
 
 using namespace GammaRay;
 
-MetaPropertyAdaptor::MetaPropertyAdaptor(QObject* parent):
-    PropertyAdaptor(parent),
-    m_metaObj(0),
-    m_obj(0)
+MetaPropertyAdaptor::MetaPropertyAdaptor(QObject *parent)
+    : PropertyAdaptor(parent)
+    , m_metaObj(nullptr)
+    , m_obj(nullptr)
 {
 }
 
-MetaPropertyAdaptor::~MetaPropertyAdaptor()
-{
-}
+MetaPropertyAdaptor::~MetaPropertyAdaptor() = default;
 
-void MetaPropertyAdaptor::doSetObject(const ObjectInstance& oi)
+void MetaPropertyAdaptor::doSetObject(const ObjectInstance &oi)
 {
-    Q_ASSERT(m_metaObj == 0);
-    Q_ASSERT(m_obj == 0);
+    Q_ASSERT(m_metaObj == nullptr);
+    Q_ASSERT(m_obj == nullptr);
 
     switch (oi.type()) {
-        case ObjectInstance::Object:
-        case ObjectInstance::Value:
-            m_metaObj = MetaObjectRepository::instance()->metaObject(oi.typeName());
-            m_obj = oi.object();
-            break;
-        case ObjectInstance::QtObject:
-        case ObjectInstance::QtGadget:
-        {
-            const QMetaObject *mo = oi.metaObject();
-            while (mo && !m_metaObj) {
-                m_metaObj = MetaObjectRepository::instance()->metaObject(mo->className());
-                mo = mo->superClass();
-            }
-            if (m_metaObj)
-                m_obj = oi.object();
-            break;
+    case ObjectInstance::Object:
+    case ObjectInstance::Value:
+        m_obj = oi.object();
+        m_metaObj = MetaObjectRepository::instance()->metaObject(oi.typeName(), m_obj);
+        break;
+    case ObjectInstance::QtObject:
+    case ObjectInstance::QtGadgetPointer:
+    case ObjectInstance::QtGadgetValue:
+    {
+        const QMetaObject *mo = oi.metaObject();
+        while (mo && !m_metaObj) {
+            m_metaObj = MetaObjectRepository::instance()->metaObject(mo->className());
+            mo = mo->superClass();
         }
-        default:
-            break;
+        if (m_metaObj)
+            m_obj = oi.object();
+        break;
+    }
+    default:
+        break;
     }
 }
 
@@ -94,7 +93,7 @@ PropertyData MetaPropertyAdaptor::propertyData(int index) const
     data.setName(property->name());
     data.setTypeName(property->typeName());
     data.setClassName(property->metaObject()->className());
-    data.setFlags(property->isReadOnly() ? PropertyData::Readable : PropertyData::Writable);
+    data.setAccessFlags(property->isReadOnly() ? PropertyData::Readable : PropertyData::Writable);
 
     if (m_obj) {
         const auto value = property->value(m_metaObj->castForPropertyAt(m_obj, index));
@@ -104,7 +103,7 @@ PropertyData MetaPropertyAdaptor::propertyData(int index) const
     return data;
 }
 
-void MetaPropertyAdaptor::writeProperty(int index, const QVariant& value)
+void MetaPropertyAdaptor::writeProperty(int index, const QVariant &value)
 {
     if (!object().isValid())
         return;

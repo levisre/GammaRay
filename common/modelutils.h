@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,27 +34,25 @@
 #include <QModelIndex>
 
 namespace GammaRay {
-
 namespace ModelUtils {
 
-  /**
-  * Return a list of items that are accepted by an acceptor function
-  * This class extends the functionality provided in QAbstractItemModel::match(...)
-  *
-  * If (accept(v)) for an item v in the model returns true, it will be appended
-  * to the result list
-  *
-  * @param accept Function in the form 'bool f(const QVariant&)'
-  *
-  * @see QAbstractItemModel::match(...)
-  */
-  typedef bool (*MatchAcceptor)(const QVariant&);
-  GAMMARAY_COMMON_EXPORT QModelIndexList match(const QModelIndex& start,
-                              int role, MatchAcceptor accept,
-                              int hits = 1, Qt::MatchFlags flags = Qt::MatchFlags(Qt::MatchWrap));
+typedef bool (*MatchAcceptor)(const QVariant &);
 
+/**
+ * Return a list of items that are accepted by an acceptor function
+ * This class extends the functionality provided in QAbstractItemModel::match(...)
+ *
+ * If (accept(v)) for an item v in the model returns true, it will be appended
+ * to the result list
+ *
+ * @param accept Function in the form 'bool f(const QVariant&)'
+ *
+ * @see QAbstractItemModel::match(...)
+ */
+GAMMARAY_COMMON_EXPORT QModelIndexList match(const QModelIndex &start, int role,
+                                             MatchAcceptor accept, int hits = 1,
+                                             Qt::MatchFlags flags = Qt::MatchFlags(Qt::MatchWrap));
 }
-
 }
 
 Q_DECLARE_METATYPE(GammaRay::ModelUtils::MatchAcceptor)

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,12 +32,9 @@
 #include <QFileIconProvider>
 #include <QIdentityProxyModel>
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0 ,0)
 #include <QMimeDatabase>
-#endif
 
 namespace GammaRay {
-
 /**
  * Adds file icons for the resource model.
  * This can't be done server-side since the icon stuff might not exist in a pure QtCore application.
@@ -46,16 +43,14 @@ class ClientResourceModel : public QIdentityProxyModel
 {
     Q_OBJECT
 public:
-  explicit ClientResourceModel(QObject *parent = 0);
-  ~ClientResourceModel();
+    explicit ClientResourceModel(QObject *parent = nullptr);
+    ~ClientResourceModel() override;
 
-  QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
 private:
-  QFileIconProvider m_iconProvider;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-  QMimeDatabase m_mimeDb;
-#endif
+    QFileIconProvider m_iconProvider;
+    QMimeDatabase m_mimeDb;
 };
 }
 

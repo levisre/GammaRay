@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,11 +38,10 @@ class QAbstractItemModel;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class WidgetInspectorInterface;
 
 namespace Ui {
-  class PaintBufferViewer;
+class PaintBufferViewer;
 }
 
 /**
@@ -50,15 +49,14 @@ namespace Ui {
  */
 class GAMMARAY_UI_EXPORT PaintBufferViewer : public QDialog
 {
-  Q_OBJECT
-  public:
-    explicit PaintBufferViewer(const QString &name, QWidget *parent = 0);
-    virtual ~PaintBufferViewer();
+    Q_OBJECT
+public:
+    explicit PaintBufferViewer(const QString &name, QWidget *parent = nullptr);
+    ~PaintBufferViewer() override;
 
-  private:
+private:
     QScopedPointer<Ui::PaintBufferViewer> ui;
 };
-
 }
 
 #endif

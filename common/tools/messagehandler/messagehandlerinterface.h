@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,19 +36,25 @@ class QTime;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class MessageHandlerInterface : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit MessageHandlerInterface(QObject *parent = 0);
-    virtual ~MessageHandlerInterface();
+    Q_OBJECT
+    Q_PROPERTY(bool stackTraceAvailable READ stackTraceAvailable WRITE setStackTraceAvailable NOTIFY stackTraceAvailableChanged)
+public:
+    explicit MessageHandlerInterface(QObject *parent = nullptr);
+    ~MessageHandlerInterface() override;
 
-  signals:
-    void fatalMessageReceived(const QString &app, const QString &message,
-                              const QTime &time, const QStringList &backtrace);
+    bool stackTraceAvailable() const;
+    void setStackTraceAvailable(bool available);
+
+signals:
+    void fatalMessageReceived(const QString &app, const QString &message, const QTime &time,
+                              const QStringList &backtrace);
+    void stackTraceAvailableChanged(bool available);
+
+private:
+    bool m_stackTraceAvailable;
 };
-
 }
 
 QT_BEGIN_NAMESPACE

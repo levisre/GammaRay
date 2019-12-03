@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,47 +29,39 @@
 #include "proxytoolfactory.h"
 
 using namespace GammaRay;
-using namespace std;
 
 ProxyToolFactory::ProxyToolFactory(const PluginInfo &pluginInfo, QObject *parent)
-  : ProxyFactory<ToolFactory>(pluginInfo, parent)
+    : ProxyFactory<ToolFactory>(pluginInfo, parent)
 {
-  const QStringList typesList = pluginInfo.supportedTypes();
-  QVector<QByteArray> typesVector;
-  typesVector.reserve(typesList.count());
-  for (auto it = typesList.constBegin(), end = typesList.constEnd(); it != end; ++it) {
-    typesVector << (*it).toLatin1();
-  }
-  setSupportedTypes(typesVector);
+    const QStringList typesList = pluginInfo.supportedTypes();
+    QVector<QByteArray> typesVector;
+    typesVector.reserve(typesList.count());
+    for (auto it = typesList.constBegin(), end = typesList.constEnd(); it != end; ++it)
+        typesVector << (*it).toLatin1();
+    setSupportedTypes(typesVector);
 }
 
 bool ProxyToolFactory::isValid() const
 {
-  return
-    pluginInfo().isValid() &&
-    !name().isEmpty() &&
-    !supportedTypes().isEmpty();
+    return
+        pluginInfo().isValid()
+        && !id().isEmpty()
+        && !supportedTypes().isEmpty();
 }
 
-QString ProxyToolFactory::name() const
+void ProxyToolFactory::init(Probe *probe)
 {
-  return pluginInfo().name();
-}
-
-void ProxyToolFactory::init(ProbeInterface *probe)
-{
-  loadPlugin();
-  ToolFactory *fac = factory();
-  if (!fac) {
-    return;
-  }
-  Q_ASSERT(fac);
-  fac->init(probe);
+    loadPlugin();
+    ToolFactory *fac = factory();
+    if (!fac)
+        return;
+    Q_ASSERT(fac);
+    fac->init(probe);
 }
 
 bool ProxyToolFactory::isHidden() const
 {
-  return pluginInfo().isHidden();
+    return pluginInfo().isHidden();
 }
 
 QVector<QByteArray> ProxyToolFactory::selectableTypes() const

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,25 +38,26 @@
 
 using namespace GammaRay;
 
-QuickPaintAnalyzerExtension::QuickPaintAnalyzerExtension(PropertyController* controller) :
-    PropertyControllerExtension(controller->objectBaseName() + ".painting"),
-    m_paintAnalyzer(Q_NULLPTR)
+QuickPaintAnalyzerExtension::QuickPaintAnalyzerExtension(PropertyController *controller)
+    : PropertyControllerExtension(controller->objectBaseName() + ".painting")
+    , m_paintAnalyzer(nullptr)
 {
-    // check if the paint analyzer already exists before creating it, as we share the UI with other plugins
-    const QString analyzerName = controller->objectBaseName() + QStringLiteral(".painting.analyzer");
-    if (ObjectBroker::hasObject(analyzerName))
-        m_paintAnalyzer = qobject_cast<PaintAnalyzer*>(ObjectBroker::object<PaintAnalyzerInterface*>(analyzerName));
-    else
-        m_paintAnalyzer = new PaintAnalyzer(analyzerName, controller);
+    // check if the paint analyzer already exists before creating it,
+    // as we share the UI with the other plugins.
+    const QString aName = controller->objectBaseName() + QStringLiteral(".painting.analyzer");
+    if (ObjectBroker::hasObject(aName)) {
+        m_paintAnalyzer =
+            qobject_cast<PaintAnalyzer *>(ObjectBroker::object<PaintAnalyzerInterface *>(aName));
+    } else {
+        m_paintAnalyzer = new PaintAnalyzer(aName, controller);
+    }
 }
 
-QuickPaintAnalyzerExtension::~QuickPaintAnalyzerExtension()
-{
-}
+QuickPaintAnalyzerExtension::~QuickPaintAnalyzerExtension() = default;
 
-bool QuickPaintAnalyzerExtension::setQObject(QObject* object)
+bool QuickPaintAnalyzerExtension::setQObject(QObject *object)
 {
-    auto item = qobject_cast<QQuickPaintedItem*>(object);
+    auto item = qobject_cast<QQuickPaintedItem *>(object);
     if (!PaintAnalyzer::isAvailable() || !item)
         return false;
 

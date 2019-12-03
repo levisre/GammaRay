@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,48 +35,51 @@
 #include <QVector>
 
 namespace GammaRay {
-
 /** Common base class for the inbound and outbound connections models. */
 class AbstractConnectionsModel : public QAbstractTableModel
 {
-  Q_OBJECT
-  public:
-    explicit AbstractConnectionsModel(QObject *parent = 0);
-    ~AbstractConnectionsModel();
+    Q_OBJECT
+public:
+    explicit AbstractConnectionsModel(QObject *parent = nullptr);
+    ~AbstractConnectionsModel() override;
 
     virtual void setObject(QObject *object) = 0;
 
-    int columnCount(const QModelIndex &parent) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex &parent) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QMap< int, QVariant > itemData(const QModelIndex &index) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent) const override;
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
+    QMap< int, QVariant > itemData(const QModelIndex &index) const override;
 
-  protected:
     struct Connection {
-      QPointer<QObject> endpoint;
-      int signalIndex;
-      int slotIndex;
-      int type;
+        QPointer<QObject> endpoint;
+        int signalIndex;
+        int slotIndex;
+        int type;
     };
 
+protected:
     static QString displayString(QObject *object, int methodIndex);
     static QString displayString(QObject *object);
 
     static int signalIndexToMethodIndex(QObject *object, int signalIndex);
 
     void clear();
-    void setConnections(const QVector<Connection>& connections);
+    void setConnections(const QVector<Connection> &connections);
 
-  protected:
+public:
+    static bool isDuplicate(const QVector<Connection> &connections, const Connection &conn);
+    static bool isDirectCrossThreadConnection(QObject *object, const Connection &conn);
+
+protected:
     QPointer<QObject> m_object;
     QVector<Connection> m_connections;
 
-  private:
+private:
     bool isDuplicate(const Connection &conn) const;
     bool isDirectCrossThreadConnection(const Connection &conn) const;
 };
-
 }
 
 #endif // GAMMARAY_ABSTRACTCONNECTIONSMODEL_H

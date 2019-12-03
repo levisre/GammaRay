@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,7 +36,6 @@
 #include <QSet>
 
 namespace GammaRay {
-
 class Probe;
 
 /**
@@ -52,27 +51,33 @@ class Probe;
  */
 class ObjectListModel : public ObjectModelBase<QAbstractTableModel>
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     explicit ObjectListModel(Probe *probe);
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
-  public slots:
-    QPair<int, QVariant> defaultSelectedItem() const;
+    Q_INVOKABLE QPair<int, QVariant> defaultSelectedItem() const;
 
-  private slots:
+    /*!
+     * Returns a list of all objects.
+     *
+     * FIXME: This is a dirty hack. Instead of offering a getter to the internal data
+     * here, we should move it out and only give the model a view of the data.
+     */
+    const QVector<QObject*> &objects() const;
+
+private slots:
     void objectAdded(QObject *obj);
     void objectRemoved(QObject *obj);
 
-  private:
+private:
     void removeObject(QObject *obj);
 
     // sorted vector for stable iterators/indexes, esp. for the model methods
-    QVector<QObject*> m_objects;
+    QVector<QObject *> m_objects;
 };
-
 }
 
 #endif // GAMMARAY_OBJECTLISTMODEL_H

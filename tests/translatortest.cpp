@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -24,37 +24,21 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <config-gammaray.h>
+#include "baseprobetest.h"
 
-#include <probe/hooks.h>
-#include <probe/probecreator.h>
-#include <core/probe.h>
-#include <common/paths.h>
 #include <common/objectbroker.h>
 
 #include <3rdparty/qt/modeltest.h>
 
-#include <QtTest/qtest.h>
-#include <QObject>
+#include <QItemSelectionModel>
 #include <QLibraryInfo>
 #include <QTranslator>
 
 using namespace GammaRay;
 
-class TranslatorTest : public QObject
+class TranslatorTest : public BaseProbeTest
 {
     Q_OBJECT
-private:
-    void createProbe()
-    {
-        Paths::setRelativeRootPath(GAMMARAY_INVERSE_BIN_DIR);
-        qputenv("GAMMARAY_ProbePath", Paths::currentProbePath().toUtf8());
-        Hooks::installHooks();
-        Probe::startupHookReceived();
-        new ProbeCreator(ProbeCreator::Create);
-        QTest::qWait(1); // event loop re-entry
-    }
-
 private slots:
     void testCreateDestroy()
     {
@@ -62,7 +46,8 @@ private slots:
 
         auto t1 = new QTranslator;
         t1->setObjectName(QStringLiteral("t1"));
-        t1->load(QLibraryInfo::location(QLibraryInfo::TranslationsPath) + QStringLiteral("/qt_sv.qm"));
+        t1->load(QLibraryInfo::location(QLibraryInfo::TranslationsPath) + QStringLiteral(
+                     "/qt_sv.qm"));
         QVERIFY(!t1->isEmpty());
         QCoreApplication::installTranslator(t1);
         QTest::qWait(1);
@@ -91,6 +76,39 @@ private slots:
 
         QCoreApplication::removeTranslator(t2);
         delete t2;
+        QTest::qWait(1);
+    }
+
+    void testTranslate()
+    {
+        createProbe();
+
+        auto t1 = new QTranslator;
+        t1->setObjectName(QStringLiteral("t1"));
+        t1->load(QLibraryInfo::location(QLibraryInfo::TranslationsPath) + QStringLiteral( "/qt_sv.qm"));
+        QVERIFY(!t1->isEmpty());
+        QCoreApplication::installTranslator(t1);
+        QTest::qWait(1);
+
+        auto *translatorModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.TranslatorsModel"));
+        QVERIFY(translatorModel);
+        ModelTest TranslationsModelTest(translatorModel);
+        QCOMPARE(translatorModel->rowCount(), 2);
+
+        auto translatorSelection = ObjectBroker::selectionModel(translatorModel);
+        QVERIFY(translatorSelection);
+        translatorSelection->select(translatorModel->index(0, 0), QItemSelectionModel::ClearAndSelect);
+
+        auto *model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.TranslationsModel"));
+        QVERIFY(model);
+        ModelTest modelTest(model);
+
+        QCoreApplication::translate("context", "key", nullptr);
+        QCoreApplication::translate(nullptr, "key", nullptr);
+        QCoreApplication::translate(nullptr, "key", "disambiguation");
+        QCoreApplication::translate("context", "key", "disambiguation");
+
+        delete t1;
         QTest::qWait(1);
     }
 };

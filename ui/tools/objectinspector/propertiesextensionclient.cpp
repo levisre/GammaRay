@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,17 +35,15 @@
 using namespace GammaRay;
 
 PropertiesExtensionClient::PropertiesExtensionClient(const QString &name, QObject *parent)
-  : PropertiesExtensionInterface(name, parent)
+    : PropertiesExtensionInterface(name, parent)
 {
-
 }
 
-PropertiesExtensionClient::~PropertiesExtensionClient()
-{
+PropertiesExtensionClient::~PropertiesExtensionClient() = default;
 
-}
-
-void PropertiesExtensionClient::setProperty(const QString& propertyName, const QVariant& value)
+void PropertiesExtensionClient::setProperty(const QString &propertyName, const QVariant &value)
 {
-  Endpoint::instance()->invokeObject(name(), "setProperty", QVariantList() << QVariant::fromValue(propertyName) << VariantWrapper(value));
+    Endpoint::instance()->invokeObject(name(), "setProperty",
+                                       QVariantList() << QVariant::fromValue(
+                                           propertyName) << VariantWrapper(value));
 }

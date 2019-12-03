@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -35,8 +35,12 @@
 #include <QByteArray>
 #include <QDataStream>
 
-namespace GammaRay {
+#include <functional>
+#include <memory>
 
+class MessageBuffer;
+
+namespace GammaRay {
 /**
  * Single message send between client and server.
  * Binary format:
@@ -47,32 +51,71 @@ namespace GammaRay {
  */
 class GAMMARAY_COMMON_EXPORT Message
 {
-  public:
+public:
     /**
-     * Construct a new message to/from @p address and message type @p type.
+     * Construct a new message to/from @p objectAddress and message type @p type.
      */
-    explicit Message(Protocol::ObjectAddress address, Protocol::MessageType type);
-#ifdef Q_COMPILER_RVALUE_REFS
-    Message(Message &&other); //krazy:exclude=explicit
-#else
-    // this is only needed to make readMessage compile (due to RVO there is no actual copy though)
-    // semantically we don't want to support copying, due to the datastream state
-    Message(const Message &other);
-#endif
+    explicit Message(Protocol::ObjectAddress objectAddress, Protocol::MessageType type);
+    Message(Message &&other) Q_DECL_NOEXCEPT; // krazy:exclude=explicit
     ~Message();
 
     Protocol::ObjectAddress address() const;
     Protocol::MessageType type() const;
 
-    /** Access to the message payload. This is read-only for received messages
-     *  and write-only for messages to be sent.
+    /** Read value from the payload
+     *  This operator proxy over payload() allow to do:
+     *   - Run time check on the stream status
      */
-    QDataStream& payload() const;
+    template <typename T>
+    GammaRay::Message &operator>>(T &value)
+    {
+        if (Q_UNLIKELY(payload().status() != QDataStream::Ok)) {
+            qWarning("%s: Attempting to read from a non valid stream: status: %i", Q_FUNC_INFO, int(payload().status()));
+        }
+        payload() >> value;
+        if (Q_UNLIKELY(payload().status() != QDataStream::Ok)) {
+            qWarning("%s: Read from a non valid stream: status: %i", Q_FUNC_INFO, int(payload().status()));
+        }
+        return *this;
+    }
+
+    /** Read value from the payload
+     *  This overload allow to read content from a const Message.
+     */
+    template <typename T>
+    GammaRay::Message &operator>>(T &value) const
+    {
+        return const_cast<GammaRay::Message *>(this)->operator>>(value);
+    }
+
+    /** Write value to the payload.
+     *  This operator proxy over payload() allow to do:
+     *   - Run time check on the stream status
+     */
+    template <typename T>
+    GammaRay::Message &operator<<(const T &value)
+    {
+        if (Q_UNLIKELY(payload().status() != QDataStream::Ok)) {
+            qWarning("%s: Attempting to write to a non valid stream: status: %i", Q_FUNC_INFO, int(payload().status()));
+        }
+        payload() << value;
+        if (Q_UNLIKELY(payload().status() != QDataStream::Ok)) {
+            qWarning("%s: Write to a non valid stream: status: %i", Q_FUNC_INFO, int(payload().status()));
+        }
+        return *this;
+    }
 
     /** Checks if there is a full message waiting in @p device. */
     static bool canReadMessage(QIODevice *device);
     /** Read the next message from @p device. */
     static Message readMessage(QIODevice *device);
+
+    static quint8 lowestSupportedDataVersion();
+    static quint8 highestSupportedDataVersion();
+
+    static quint8 negotiatedDataVersion();
+    static void setNegotiatedDataVersion(quint8 version);
+    static void resetNegotiatedDataVersion();
 
     /** Write this message to @p device. */
     void write(QIODevice *device) const;
@@ -80,16 +123,19 @@ class GAMMARAY_COMMON_EXPORT Message
     /** Size of the uncompressed message payload. */
     int size() const;
 
-  private:
+private:
     Message();
 
-    mutable QByteArray m_buffer;
-    mutable QScopedPointer<QDataStream> m_stream;
+    /** Access to the message payload. This is read-only for received messages
+     *  and write-only for messages to be sent.
+     */
+    QDataStream &payload() const;
 
     Protocol::ObjectAddress m_objectAddress;
     Protocol::MessageType m_messageType;
-};
 
+    std::unique_ptr<MessageBuffer, std::function<void(MessageBuffer *)>> m_buffer;
+};
 }
 
 #endif

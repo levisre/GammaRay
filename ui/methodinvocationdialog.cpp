@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,37 +36,36 @@
 using namespace GammaRay;
 
 MethodInvocationDialog::MethodInvocationDialog(QWidget *parent)
-  : QDialog(parent)
-  , ui(new Ui::MethodInvocationDialog)
-  , m_stateManager(this)
+    : QDialog(parent)
+    , ui(new Ui::MethodInvocationDialog)
+    , m_stateManager(this)
 {
-  ui->setupUi(this);
+    ui->setupUi(this);
 
-  ui->argumentView->header()->setObjectName("argumentViewHeader");
-  ui->argumentView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
-  ui->argumentView->setDeferredResizeMode(1, QHeaderView::Stretch);
-  ui->argumentView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+    ui->argumentView->header()->setObjectName("argumentViewHeader");
+    ui->argumentView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+    ui->argumentView->setDeferredResizeMode(1, QHeaderView::Stretch);
+    ui->argumentView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
 
-  ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Invoke"));
-  connect(ui->buttonBox, SIGNAL(accepted()), SLOT(accept()));
-  connect(ui->buttonBox, SIGNAL(rejected()), SLOT(reject()));
+    ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Invoke"));
+    connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-  ui->connectionTypeComboBox->addItem(tr("Auto"), QVariant::fromValue(Qt::AutoConnection));
-  ui->connectionTypeComboBox->addItem(tr("Direct"), QVariant::fromValue(Qt::DirectConnection));
-  ui->connectionTypeComboBox->addItem(tr("Queued"), QVariant::fromValue(Qt::QueuedConnection));
+    ui->connectionTypeComboBox->addItem(tr("Auto"), QVariant::fromValue(Qt::AutoConnection));
+    ui->connectionTypeComboBox->addItem(tr("Direct"), QVariant::fromValue(Qt::DirectConnection));
+    ui->connectionTypeComboBox->addItem(tr("Queued"), QVariant::fromValue(Qt::QueuedConnection));
 }
 
-MethodInvocationDialog::~MethodInvocationDialog()
-{
-}
+MethodInvocationDialog::~MethodInvocationDialog() = default;
 
 Qt::ConnectionType MethodInvocationDialog::connectionType() const
 {
-  return ui->connectionTypeComboBox->itemData(ui->connectionTypeComboBox->currentIndex()).value<Qt::ConnectionType>();
+    return ui->connectionTypeComboBox->itemData(ui->connectionTypeComboBox->currentIndex()).value<Qt
+                                                                                                  ::
+                                                                                                  ConnectionType>();
 }
 
-void MethodInvocationDialog::setArgumentModel(QAbstractItemModel* model)
+void MethodInvocationDialog::setArgumentModel(QAbstractItemModel *model)
 {
-  ui->argumentView->setModel(model);
+    ui->argumentView->setModel(model);
 }
-

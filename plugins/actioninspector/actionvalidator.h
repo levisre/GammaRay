@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,18 +39,17 @@ class QAction;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class ActionValidator : public QObject
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit ActionValidator(QObject *parent = 0);
+public:
+    explicit ActionValidator(QObject *parent = nullptr);
 
-    QList<QAction*> actions() const;
-    QList<QAction*> actions(const QKeySequence &sequence) const;
+    QList<QAction *> actions() const;
+    QList<QAction *> actions(const QKeySequence &sequence) const;
 
-    void setActions(const QList<QAction*> &actions);
+    void setActions(const QList<QAction *> &actions);
     void clearActions();
 
     void insert(QAction *action);
@@ -58,18 +57,19 @@ class ActionValidator : public QObject
 
     /// helper method to find out if action has an ambiguous shortcut
     bool hasAmbiguousShortcut(const QAction *action) const;
+    bool isAmbigous(const QAction *action, const QKeySequence &sequence) const;
+    QVector<QKeySequence> findAmbiguousShortcuts(const QAction *action) const;
 
-  private Q_SLOTS:
+private Q_SLOTS:
     void handleActionDestroyed(QObject *object);
 
-  private:
+private:
     /// Does not deref the action pointer
     void safeRemove(QAction *action);
 
     // Multi-Map
-    QHash<QKeySequence, QAction*> m_shortcutActionMap;
+    QHash<QKeySequence, QAction *> m_shortcutActionMap;
 };
-
 }
 
 #endif // GAMMARAY_ACTIONVALIDATOR_H

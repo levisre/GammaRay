@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,25 +35,23 @@
 
 using namespace GammaRay;
 
-WidgetAttributeExtension::WidgetAttributeExtension(PropertyController* controller) :
-    PropertyControllerExtension(controller->objectBaseName() + ".widgetAttributes"),
-    m_attributeModel(new AttributeModel<QWidget, Qt::WidgetAttribute>(controller))
+WidgetAttributeExtension::WidgetAttributeExtension(PropertyController *controller)
+    : PropertyControllerExtension(controller->objectBaseName() + ".widgetAttributes")
+    , m_attributeModel(new AttributeModel<QWidget, Qt::WidgetAttribute>(controller))
 {
     m_attributeModel->setAttributeType("WidgetAttribute");
     controller->registerModel(m_attributeModel, QStringLiteral("widgetAttributeModel"));
 }
 
-WidgetAttributeExtension::~WidgetAttributeExtension()
-{
-}
+WidgetAttributeExtension::~WidgetAttributeExtension() = default;
 
-bool WidgetAttributeExtension::setQObject(QObject* object)
+bool WidgetAttributeExtension::setQObject(QObject *object)
 {
-    if (auto widget = qobject_cast<QWidget*>(object)) {
+    if (auto widget = qobject_cast<QWidget *>(object)) {
         m_attributeModel->setObject(widget);
         return true;
     }
 
-    m_attributeModel->setObject(Q_NULLPTR);
+    m_attributeModel->setObject(nullptr);
     return false;
 }

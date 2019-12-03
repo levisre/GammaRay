@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,15 +29,15 @@
 #include <config-gammaray.h>
 
 #include "materialextension.h"
+#include "materialshadermodel.h"
 
 #include <core/aggregatedpropertymodel.h>
 #include <core/objectinstance.h>
 #include <core/propertycontroller.h>
 #include <core/varianthandler.h>
+#include <core/util.h>
 #include <common/metatypedeclarations.h>
 
-#include <QFile>
-#include <QStandardItemModel>
 #include <QSGNode>
 #include <QSGMaterial>
 #include <QSGFlatColorMaterial>
@@ -45,85 +45,53 @@
 #include <QSGVertexColorMaterial>
 
 #include <private/qsgmaterialshader_p.h>
+#include <private/qsgdistancefieldglyphnode_p_p.h>
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 8, 0)
+#include <private/qquickopenglshadereffectnode_p.h>
+#endif
 
 using namespace GammaRay;
 
-class SGMaterialShaderThief : public QSGMaterialShader
-{
-  public:
-    QHash<QOpenGLShader::ShaderType, QStringList> getShaderSources()
-    {
-      return d_func()->m_sourceFiles;
-    }
-};
-
 MaterialExtension::MaterialExtension(PropertyController *controller)
-  : MaterialExtensionInterface(controller->objectBaseName() + ".material", controller),
-    PropertyControllerExtension(controller->objectBaseName() + ".material"),
-    m_node(0),
-    m_materialPropertyModel(new AggregatedPropertyModel(this)),
-    m_shaderModel(new QStandardItemModel(this))
+    : MaterialExtensionInterface(controller->objectBaseName() + ".material", controller)
+    , PropertyControllerExtension(controller->objectBaseName() + ".material")
+    , m_node(nullptr)
+    , m_materialPropertyModel(new AggregatedPropertyModel(this))
+    , m_shaderModel(new MaterialShaderModel(this))
 {
-  controller->registerModel(m_materialPropertyModel, QStringLiteral("materialPropertyModel"));
-  controller->registerModel(m_shaderModel, QStringLiteral("shaderModel"));
+    controller->registerModel(m_materialPropertyModel, QStringLiteral("materialPropertyModel"));
+    controller->registerModel(m_shaderModel, QStringLiteral("shaderModel"));
 }
 
-MaterialExtension::~MaterialExtension()
-{
-}
-
-#include <iostream>
-
-static const char* typeForMaterial(QSGMaterial *material)
-{
-#define MT(type) if (dynamic_cast<type*>(material)) return #type;
-  MT(QSGFlatColorMaterial)
-  MT(QSGTextureMaterial)
-  MT(QSGOpaqueTextureMaterial)
-  MT(QSGVertexColorMaterial)
-#undef MT
-  return "QSGMaterial";
-}
+MaterialExtension::~MaterialExtension() = default;
 
 bool MaterialExtension::setObject(void *object, const QString &typeName)
 {
-  if (typeName == QStringLiteral("QSGGeometryNode")) {
-    m_node = static_cast<QSGGeometryNode*>(object);
+    QSGMaterial *material = nullptr;
+    m_shaderModel->setMaterialShader(nullptr);
+    m_materialShader.reset();
 
-    m_materialPropertyModel->setObject(ObjectInstance(m_node->material(), typeForMaterial(m_node->material())));
+    if (typeName == QStringLiteral("QSGGeometryNode")) {
+        m_node = static_cast<QSGGeometryNode *>(object);
 
-    QSGMaterialShader *materialShader = m_node->material()->createShader();
-    SGMaterialShaderThief *thief = reinterpret_cast<SGMaterialShaderThief*>(materialShader);
-    const QHash<QOpenGLShader::ShaderType, QStringList> shaderSources = thief->getShaderSources();
-
-    m_shaderModel->clear();
-    m_shaderModel->setHorizontalHeaderLabels(QStringList() << QStringLiteral("Shader"));
-    for (auto it = shaderSources.constBegin(); it != shaderSources.constEnd(); ++it) {
-      foreach (const QString &source, it.value()) {
-        auto *item = new QStandardItem(source);
-        item->setEditable(false);
-        item->setToolTip(tr("Shader type: %1").arg(VariantHandler::displayString(it.key())));
-        m_shaderModel->appendRow(item);
-      }
+        material = m_node->material();
     }
 
-    return true;
-  }
+    // the QSG software renderer puts 0x1 into material, so consider that as no material too
+    if (Util::isNullish(material)) {
+        m_materialPropertyModel->setObject(nullptr);
+        return false;
+    }
 
-  m_materialPropertyModel->setObject(0);
-  return false;
+    m_materialPropertyModel->setObject(ObjectInstance(material, "QSGMaterial"));
+
+    m_materialShader.reset(material->createShader());
+    m_shaderModel->setMaterialShader(m_materialShader.get());
+    return true;
 }
 
-void MaterialExtension::getShader(const QString &fileName)
+void MaterialExtension::getShader(int row)
 {
-  QFile shaderFile(fileName);
-  if (!shaderFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    return;
-  }
-
-  QString source(shaderFile.readAll());
-
-  if (!source.isEmpty()) {
-    emit gotShader(source);
-  }
+    emit gotShader(m_shaderModel->shaderForRow(row));
 }

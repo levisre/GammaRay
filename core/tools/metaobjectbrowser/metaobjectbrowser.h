@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,43 +37,49 @@ class QItemSelection;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
+class MetaObjectTreeModel;
 class PropertyController;
 
 class MetaObjectBrowser : public QObject
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit MetaObjectBrowser(ProbeInterface *probe, QObject *parent = 0);
+public:
+    explicit MetaObjectBrowser(Probe *probe, QObject *parent = nullptr);
 
-  private Q_SLOTS:
-    void objectSelected(const QItemSelection &selection);
-    void objectSelected(QObject *obj);
-    void objectSelected(void *obj, const QString &typeName);
+public Q_SLOTS:
+    void rescanMetaTypes();
 
-  private:
-    void metaObjectSelected(const QMetaObject* mo);
+private Q_SLOTS:
+    void objectSelectionChanged(const QItemSelection &selection);
+    void qobjectSelected(QObject *obj);
+    void voidPtrObjectSelected(void *obj, const QString &typeName);
 
-     PropertyController *m_propertyController;
-     QAbstractProxyModel *m_model;
+private:
+    void metaObjectSelected(const QMetaObject *mo);
+
+    static void scanForMetaObjectProblems();
+    static void doProblemScan(const QMetaObject *parent);
+
+    PropertyController *m_propertyController;
+    MetaObjectTreeModel *m_motm;
+    QAbstractProxyModel *m_model;
 };
 
 class MetaObjectBrowserFactory : public QObject,
     public StandardToolFactory<QObject, MetaObjectBrowser>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
 
-  public:
-    explicit MetaObjectBrowserFactory(QObject *parent) : QObject(parent)
+public:
+    explicit MetaObjectBrowserFactory(QObject *parent)
+        : QObject(parent)
     {
     }
 
-    QString name() const Q_DECL_OVERRIDE;
-    QVector<QByteArray> selectableTypes() const Q_DECL_OVERRIDE;
+    QVector<QByteArray> selectableTypes() const override;
 };
-
 }
 
 #endif // GAMMARAY_METAOBJECTBROWSER_METATYPEBROWSER_H

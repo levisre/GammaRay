@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Andreas Holzammer <andreas.holzammer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,40 +41,39 @@
 static inline void *
 page_align(void *addr)
 {
-  assert(addr != 0);
-  return (void *)((size_t)addr & ~(0xFFFF));
+    assert(addr != 0);
+    return (void *)((size_t)addr & ~(0xFFFF));
 }
 
 void writeJmp(void *func, void *replacement)
 {
-  quint8 *cur = (quint8 *) func;
-  quint8 *aligned = (quint8*)page_align(cur);
-  assert(mprotect(aligned, 0xFFFF, PROT_READ|PROT_WRITE|PROT_EXEC) == 0);
+    quint8 *cur = (quint8 *)func;
+    quint8 *aligned = (quint8 *)page_align(cur);
+    assert(mprotect(aligned, 0xFFFF, PROT_READ|PROT_WRITE|PROT_EXEC) == 0);
 
-  *cur = 0xff;
-  *(++cur) = 0x25;
+    *cur = 0xff;
+    *(++cur) = 0x25;
 
-  *((quint32 *) ++cur) = 0;
-  cur += sizeof (quint32);
-  *((quint64*)cur) = (quint64)replacement;
+    *((quint32 *)++cur) = 0;
+    cur += sizeof(quint32);
+    *((quint64 *)cur) = (quint64)replacement;
 
-  assert(mprotect(aligned, 0xFFFF, PROT_READ|PROT_EXEC) == 0);
+    assert(mprotect(aligned, 0xFFFF, PROT_READ|PROT_EXEC) == 0);
 }
 
 void test()
 {
-  qWarning() << "hook test!";
+    qWarning() << "hook test!";
 }
 
 int main(int argc, char *argv[])
 {
+    void *qt_startup_hook_addr = dlsym(RTLD_NEXT, "qt_startup_hook");
+    writeJmp(qt_startup_hook_addr, (void *)test);
 
-  void *qt_startup_hook_addr = dlsym(RTLD_NEXT, "qt_startup_hook");
-  writeJmp(qt_startup_hook_addr, (void *)test);
+    QApplication a(argc, argv);
+    MainWindow w;
+    w.show();
 
-  QApplication a(argc, argv);
-  MainWindow w;
-  w.show();
-
-  return a.exec();
+    return a.exec();
 }

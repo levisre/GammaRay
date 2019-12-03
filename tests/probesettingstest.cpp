@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,8 +26,10 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <launcher/launcher.h>
-#include <launcher/launchoptions.h>
+#include <config-gammaray.h>
+
+#include <launcher/core/launcher.h>
+#include <launcher/core/launchoptions.h>
 #include <common/paths.h>
 
 #include <QtTest/qtest.h>
@@ -46,12 +48,14 @@ private slots:
 
         LaunchOptions options;
         options.setUiMode(LaunchOptions::NoUi);
-        options.setProbeSetting("TestValue", "http://www.kdab.com/");
-        options.setLaunchArguments(QStringList(QCoreApplication::applicationDirPath() + QStringLiteral("/probesettingsclient")));
+        options.setProbeSetting("TestValue", "https://www.kdab.com/");
+        options.setLaunchArguments(QStringList(QCoreApplication::applicationDirPath() +
+                                               QStringLiteral("/probesettingsclient")));
 
         // this will effectively disable injection, so we will just launch the process
         options.setProbePath(QCoreApplication::applicationDirPath());
         options.setInjectorType(QStringLiteral("style"));
+        options.setProbeSetting(QStringLiteral("ServerAddress"), GAMMARAY_DEFAULT_LOCAL_TCP_URL);
 
         Launcher launcher(options);
         QSignalSpy startSpy(&launcher, SIGNAL(started()));
@@ -60,15 +64,11 @@ private slots:
         QVERIFY(finishSpy.isValid());
 
         QVERIFY(launcher.start());
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
         QVERIFY(finishSpy.wait());
-#else
-        QTest::qWait(10000);
-#endif
         QCOMPARE(startSpy.size(), 1);
         QCOMPARE(finishSpy.size(), 1);
 
-        QCOMPARE(launcher.serverAddress(), QUrl(QStringLiteral("http://www.kdab.com/")));
+        QCOMPARE(launcher.serverAddress(), QUrl(QStringLiteral("https://www.kdab.com/")));
     }
 };
 

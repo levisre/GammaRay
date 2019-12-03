@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,20 +35,19 @@
 
 using namespace GammaRay;
 
-ConnectionsClientProxyModel::ConnectionsClientProxyModel(QObject* parent): QSortFilterProxyModel(parent)
+ConnectionsClientProxyModel::ConnectionsClientProxyModel(QObject *parent)
+    : QSortFilterProxyModel(parent)
 {
 }
 
-ConnectionsClientProxyModel::~ConnectionsClientProxyModel()
-{
-}
+ConnectionsClientProxyModel::~ConnectionsClientProxyModel() = default;
 
-QVariant ConnectionsClientProxyModel::data(const QModelIndex& index, int role) const
+QVariant ConnectionsClientProxyModel::data(const QModelIndex &index, int role) const
 {
-  if (role == Qt::DecorationRole && index.column() == 0) {
-    const bool warning = data(index, ConnectionsModelRoles::WarningFlagRole).toBool();
-    if (warning)
-      return qApp->style()->standardIcon(QStyle::SP_MessageBoxWarning);
-  }
-  return QSortFilterProxyModel::data(index, role);
+    if (role == Qt::DecorationRole && index.column() == 0) {
+        const bool warning = data(index, ConnectionsModelRoles::WarningFlagRole).toBool();
+        if (warning)
+            return qApp->style()->standardIcon(QStyle::SP_MessageBoxWarning);
+    }
+    return QSortFilterProxyModel::data(index, role);
 }

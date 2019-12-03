@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -48,16 +48,15 @@ static void connectObjects(QObject *sender, QObject *receiver)
     QObject::connect(sender, SIGNAL(mySignal1()), receiver, SLOT(mySlot1()));
     QObject::connect(sender, SIGNAL(mySignal2()), receiver, SLOT(mySlot2()), Qt::DirectConnection);
     QObject::connect(sender, SIGNAL(mySignal3()), receiver, SLOT(mySlot3()), Qt::QueuedConnection);
-    QObject::connect(sender, SIGNAL(mySignal4()), receiver, SLOT(mySlot4()), Qt::BlockingQueuedConnection);
+    QObject::connect(sender, SIGNAL(mySignal4()), receiver, SLOT(
+                         mySlot4()), Qt::BlockingQueuedConnection);
 }
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 static void dummyFunction()
 {
 }
-#endif
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
 
@@ -93,18 +92,13 @@ int main(int argc, char** argv)
     connectObjects(&doubleSender, &doubleReceiver);
     connectObjects(&doubleSender, &doubleReceiver);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     MyTestObject lambdaSender, lambdaContext;
     lambdaSender.setObjectName(QStringLiteral("lambdaSender"));
     lambdaContext.setObjectName(QStringLiteral("lambdaContext"));
     QObject::connect(&lambdaSender, &MyTestObject::mySignal1, &dummyFunction);
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
     QObject::connect(&lambdaSender, &MyTestObject::mySignal2, &lambdaContext, &dummyFunction);
-#endif
 
     return app.exec();
 }
 
 #include "connectionstest.moc"
-

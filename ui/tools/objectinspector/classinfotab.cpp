@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,25 +38,23 @@
 using namespace GammaRay;
 
 ClassInfoTab::ClassInfoTab(PropertyWidget *parent)
-  : QWidget(parent)
-  , m_ui(new Ui_ClassInfoTab)
+    : QWidget(parent)
+    , m_ui(new Ui_ClassInfoTab)
 {
-  m_ui->setupUi(this);
-  m_ui->classInfoView->header()->setObjectName("classInfoViewHeader");
-  setObjectBaseName(parent->objectBaseName());
+    m_ui->setupUi(this);
+    m_ui->classInfoView->header()->setObjectName("classInfoViewHeader");
+    setObjectBaseName(parent->objectBaseName());
 }
 
-ClassInfoTab::~ClassInfoTab()
-{
-}
+ClassInfoTab::~ClassInfoTab() = default;
 
 void ClassInfoTab::setObjectBaseName(const QString &baseName)
 {
-  QSortFilterProxyModel *proxy = new QSortFilterProxyModel(this);
-  proxy->setDynamicSortFilter(true);
-  proxy->setSourceModel(ObjectBroker::model(baseName + '.' + "classInfo"));
-  m_ui->classInfoView->setModel(proxy);
-  m_ui->classInfoView->sortByColumn(0, Qt::AscendingOrder);
-  m_ui->classInfoView->header()->setResizeMode(QHeaderView::ResizeToContents);
-  new SearchLineController(m_ui->classInfoSearchLine, proxy);
+    auto *proxy = new QSortFilterProxyModel(this);
+    proxy->setDynamicSortFilter(true);
+    proxy->setSourceModel(ObjectBroker::model(baseName + '.' + "classInfo"));
+    m_ui->classInfoView->setModel(proxy);
+    m_ui->classInfoView->sortByColumn(0, Qt::AscendingOrder);
+    m_ui->classInfoView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    new SearchLineController(m_ui->classInfoSearchLine, proxy);
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,26 +28,29 @@
 
 #include "propertybinder.h"
 
+#include <compat/qasconst.h>
+
 #include <QDebug>
 #include <QMetaProperty>
 
 using namespace GammaRay;
 
-PropertyBinder::PropertyBinder(QObject* source, QObject* destination):
-    QObject(source),
-    m_source(source),
-    m_destination(destination),
-    m_lock(false)
+PropertyBinder::PropertyBinder(QObject *source, QObject *destination)
+    : QObject(source)
+    , m_source(source)
+    , m_destination(destination)
+    , m_lock(false)
 {
     Q_ASSERT(source);
     Q_ASSERT(destination);
 }
 
-PropertyBinder::PropertyBinder(QObject* source, const char* sourceProp, QObject* destination, const char* destProp):
-    QObject(source),
-    m_source(source),
-    m_destination(destination),
-    m_lock(false)
+PropertyBinder::PropertyBinder(QObject *source, const char *sourceProp, QObject *destination,
+                               const char *destProp)
+    : QObject(source)
+    , m_source(source)
+    , m_destination(destination)
+    , m_lock(false)
 {
     Q_ASSERT(source);
     Q_ASSERT(destination);
@@ -56,11 +59,9 @@ PropertyBinder::PropertyBinder(QObject* source, const char* sourceProp, QObject*
     syncSourceToDestination();
 }
 
-PropertyBinder::~PropertyBinder()
-{
-}
+PropertyBinder::~PropertyBinder() = default;
 
-void PropertyBinder::add(const char* sourceProp, const char* destProp)
+void PropertyBinder::add(const char *sourceProp, const char *destProp)
 {
     Q_ASSERT(sourceProp);
     Q_ASSERT(destProp);
@@ -70,13 +71,7 @@ void PropertyBinder::add(const char* sourceProp, const char* destProp)
     b.sourceProperty = m_source->metaObject()->property(sourceIndex);
     Q_ASSERT(b.sourceProperty.isValid());
     Q_ASSERT(b.sourceProperty.hasNotifySignal());
-    connect(m_source, QByteArray("2") +
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-        b.sourceProperty.notifySignal().signature()
-#else
-        b.sourceProperty.notifySignal().methodSignature()
-#endif
-        , this, SLOT(syncSourceToDestination()));
+    connect(m_source, QByteArray("2") + b.sourceProperty.notifySignal().methodSignature(), this, SLOT(syncSourceToDestination()));
 
     const auto destIndex = m_destination->metaObject()->indexOfProperty(destProp);
     b.destinationProperty = m_destination->metaObject()->property(destIndex);
@@ -89,13 +84,7 @@ void PropertyBinder::add(const char* sourceProp, const char* destProp)
     if (!b.destinationProperty.hasNotifySignal() || !b.sourceProperty.isWritable())
         return;
 
-    connect(m_destination, QByteArray("2") +
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-        b.destinationProperty.notifySignal().signature()
-#else
-        b.destinationProperty.notifySignal().methodSignature()
-#endif
-        , this, SLOT(syncDestinationToSource()));
+    connect(m_destination, QByteArray("2") + b.destinationProperty.notifySignal().methodSignature(), this, SLOT(syncDestinationToSource()));
 }
 
 void PropertyBinder::syncSourceToDestination()
@@ -104,19 +93,18 @@ void PropertyBinder::syncSourceToDestination()
         return;
 
     m_lock = true;
-    foreach (const auto &b, m_properties) {
+    for (const auto &b : qAsConst(m_properties))
         b.destinationProperty.write(m_destination, b.sourceProperty.read(m_source));
-    }
     m_lock = false;
 }
 
 void PropertyBinder::syncDestinationToSource()
 {
     if (m_lock)
-      return;
+        return;
 
     m_lock = true;
-    foreach (const auto &b, m_properties) {
+    for (const auto &b : qAsConst(m_properties)) {
         if (!b.sourceProperty.isWritable())
             continue;
         b.sourceProperty.write(m_source, b.destinationProperty.read(m_destination));

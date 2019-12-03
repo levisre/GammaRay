@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -29,42 +29,31 @@
 #ifndef GAMMARAY_MODELROLES_H
 #define GAMMARAY_MODELROLES_H
 
-#include <QAbstractItemModel>
-
 /**
  * @file modelroles.h
  * @brief A collection of custom model roles shared between client and server.
  */
 namespace GammaRay {
-
-/** Portable replacement for Qt::UserRole.
+/*! Portable replacement for Qt::UserRole.
  * Qt4 uses 32, Qt5 256, use the latter globally to allow combining Qt4/5 client/servers.
  */
 static const int UserRole = 256;
 
-/** @brief  Custom roles for GammaRay::ToolModel.
+/*! Custom roles for GammaRay::ToolModel.
  * @todo These can be split again, between core tool model and UI tool model.
  */
 namespace ToolModelRole {
-  enum Role {
+/*! Tool model data roles. */
+enum Role {
     ToolFactory = UserRole + 1,
     ToolWidget,
     ToolId,
     ToolWidgetParent,
     ToolEnabled,
-    ToolHasUi
-  };
+    ToolHasUi,
+    ToolFeedbackId
+};
 }
-
-/** @brief Custom roles for GammaRay::ObjectMethodModel. */
-namespace ObjectMethodModelRole {
-  enum Role {
-    MetaMethod = UserRole + 1,
-    MetaMethodType,
-    MethodSignature
-  };
-}
-
 }
 
 #endif

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,7 +39,6 @@ class QPainter;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class StyleInspectorInterface;
 
 /**
@@ -48,27 +47,26 @@ class StyleInspectorInterface;
  */
 class AbstractStyleElementStateTable : public GammaRay::AbstractStyleElementModel
 {
-  Q_OBJECT
-  public:
-    explicit AbstractStyleElementStateTable(QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit AbstractStyleElementStateTable(QObject *parent = nullptr);
 
     QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+                        int role = Qt::DisplayRole) const override;
 
-  protected:
-    int doColumnCount() const Q_DECL_OVERRIDE;
-    QVariant doData(int row, int column, int role) const Q_DECL_OVERRIDE;
+protected:
+    int doColumnCount() const override;
+    QVariant doData(int row, int column, int role) const override;
 
     /// standard setup for the style option used in a cell in column @p column
     void fillStyleOption(QStyleOption *option, int column) const;
 
-  protected:
+protected:
     StyleInspectorInterface *m_interface;
 
-  private slots:
+private slots:
     void cellSizeChanged();
 };
-
 }
 
 #endif // GAMMARAY_ABSTRACTSTYLEELEMENTSTATETABLE_H

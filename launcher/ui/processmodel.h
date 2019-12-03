@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,7 +29,7 @@
 #ifndef GAMMARAY_PROCESSMODEL_H
 #define GAMMARAY_PROCESSMODEL_H
 
-#include <launcher/probeabi.h>
+#include <launcher/core/probeabi.h>
 
 #include <QAbstractTableModel>
 #include <QVector>
@@ -37,13 +37,12 @@
 #include "processlist.h"
 
 namespace GammaRay {
-
 class ProcessModel : public QAbstractTableModel
 {
-  Q_OBJECT
-  public:
-    explicit ProcessModel(QObject *parent = 0);
-    virtual ~ProcessModel();
+    Q_OBJECT
+public:
+    explicit ProcessModel(QObject *parent = nullptr);
+    ~ProcessModel() override;
 
     void setProcesses(const ProcDataList &processes);
     void mergeProcesses(const ProcDataList &processes);
@@ -56,35 +55,34 @@ class ProcessModel : public QAbstractTableModel
     void clear();
 
     enum Columns {
-      PIDColumn,
-      NameColumn,
-      StateColumn,
-      UserColumn,
-      COLUMN_COUNT
+        PIDColumn,
+        NameColumn,
+        StateColumn,
+        UserColumn,
+        COLUMN_COUNT
     };
 
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
     enum CustomRoles {
-      PIDRole = Qt::UserRole,
-      NameRole,
-      StateRole,
-      UserRole,
-      ABIRole
+        PIDRole = Qt::UserRole,
+        NameRole,
+        StateRole,
+        UserRole,
+        ABIRole
     };
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    Qt::ItemFlags flags(const QModelIndex& index) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
 
     QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+                        int role = Qt::DisplayRole) const override;
 
-  private:
+private:
     ProcDataList m_data;
     QVector<ProbeABI> m_availableABIs;
 };
-
 }
 
 #endif // GAMMARAY_PROCESSMODEL_H

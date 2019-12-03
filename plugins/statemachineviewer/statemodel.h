@@ -9,7 +9,7 @@
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   This program is free software; you can redistribute it and/or modify
@@ -28,7 +28,9 @@
 #ifndef GAMMARAY_STATEMACHINEVIEWER_STATEMODEL_H
 #define GAMMARAY_STATEMACHINEVIEWER_STATEMODEL_H
 
-#include <core/objectmodelbase.h>
+#include <common/objectmodel.h>
+
+#include <QAbstractItemModel>
 
 QT_BEGIN_NAMESPACE
 class QAbstractTransition;
@@ -36,40 +38,46 @@ class QStateMachine;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class StateModelPrivate;
+class StateMachineDebugInterface;
 
-class StateModel : public ObjectModelBase<QAbstractItemModel>
+class StateModel : public QAbstractItemModel
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
+public:
     enum Roles {
-      TransitionsRole = ObjectModel::UserRole + 1,
-      IsInitialStateRole,
-      StateObjectRole = ObjectModel::UserRole + 11
+        TransitionsRole = ObjectModel::UserRole + 1, ///< return bool, see StateMachineDebugInterface::transitions()
+        IsInitialStateRole, ///< return bool, see StateMachineDebugInterface::isInitialState()
+        StateValueRole,     ///< return GammaRay::State
+        StateIdRole         ///< return GammaRay::StateId
     };
-    explicit StateModel(QObject *parent = 0);
-    ~StateModel();
 
-    void setStateMachine(QStateMachine *stateMachine);
-    QStateMachine *stateMachine() const;
+    explicit StateModel(QObject *parent = nullptr);
+    ~StateModel() override;
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QModelIndex parent(const QModelIndex &index) const Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    void setStateMachine(StateMachineDebugInterface *stateMachine);
+    StateMachineDebugInterface *stateMachine() const;
 
-  protected:
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QModelIndex index(int row, int column,
+                      const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &index) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
+    QMap<int, QVariant> itemData(const QModelIndex &index) const override;
+    QHash<int, QByteArray> roleNames() const override;
+
+protected:
     Q_DECLARE_PRIVATE(StateModel)
     StateModelPrivate * const d_ptr;
 
-  private:
+private:
     Q_PRIVATE_SLOT(d_func(), void stateConfigurationChanged())
     Q_PRIVATE_SLOT(d_func(), void handleMachineDestroyed(QObject*))
 };
-
 }
 
 #endif

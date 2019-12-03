@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,27 +32,25 @@
 #include <QObject>
 
 namespace GammaRay {
-
 /** @brief Client/Server interface of the material viewer. */
 class MaterialExtensionInterface : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit MaterialExtensionInterface(const QString &name, QObject *parent = 0);
-    virtual ~MaterialExtensionInterface();
+    Q_OBJECT
+public:
+    explicit MaterialExtensionInterface(const QString &name, QObject *parent = nullptr);
+    ~MaterialExtensionInterface() override;
 
     const QString &name() const;
 
-  signals:
+signals:
     void gotShader(const QString &shaderSource);
 
-  public slots:
-    virtual void getShader(const QString &fileName) = 0;
+public slots:
+    virtual void getShader(int row) = 0;
 
-  private:
+private:
     QString m_name;
 };
-
 }
 
 QT_BEGIN_NAMESPACE

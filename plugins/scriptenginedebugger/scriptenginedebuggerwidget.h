@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,33 +39,33 @@ class QScriptEngineDebugger;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 namespace Ui {
-  class ScriptEngineDebuggerWidget;
+class ScriptEngineDebuggerWidget;
 }
 
 class ScriptEngineDebuggerWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit ScriptEngineDebuggerWidget(QWidget *parent = 0);
-    virtual ~ScriptEngineDebuggerWidget();
-  private slots:
+    Q_OBJECT
+public:
+    explicit ScriptEngineDebuggerWidget(QWidget *parent = nullptr);
+    ~ScriptEngineDebuggerWidget() override;
+private slots:
     void scriptEngineSelected(int index);
 
-  private:
+private:
     QScopedPointer<Ui::ScriptEngineDebuggerWidget> ui;
     UIStateManager m_stateManager;
     QScriptEngineDebugger *debugger;
 };
 
-class ScriptEngineDebuggerUiFactory : public QObject, public StandardToolUiFactory<ScriptEngineDebuggerWidget>
+class ScriptEngineDebuggerUiFactory : public QObject,
+    public StandardToolUiFactory<ScriptEngineDebuggerWidget>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolUiFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_scriptenginedebugger.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolUiFactory)
+    Q_PLUGIN_METADATA(
+        IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_scriptenginedebugger.json")
 };
-
 }
 
 #endif // GAMMARAY_SCRIPTENGINEDEBUGGER_H

@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -32,26 +32,24 @@
 #include <common/modelroles.h>
 
 namespace GammaRay {
-
 /** @brief Roles for the object inspector connections models. */
 namespace ConnectionsModelRoles {
-  enum Role {
+enum Role {
     WarningFlagRole = UserRole + 1,
     EndpointRole,
     ActionRole
-  };
+};
 }
 
 /** @brief Connection actions.
  * Returns via ActionRole from the connections models.
  */
 namespace ConnectionsModelActions {
-  enum Action {
+enum Action {
     NoAction = 0,
     NavigateToEndpoint = 1
-  };
+};
 }
-
 }
 
 #endif

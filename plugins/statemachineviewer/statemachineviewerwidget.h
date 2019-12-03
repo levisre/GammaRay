@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -49,62 +49,67 @@ class StateMachineViewerWidget;
 
 class StateMachineViewerWidget : public QWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
-  explicit StateMachineViewerWidget(QWidget* parent = 0, Qt::WindowFlags f = 0);
-  virtual ~StateMachineViewerWidget();
+    explicit StateMachineViewerWidget(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
+    virtual ~StateMachineViewerWidget();
 
-  KDSME::StateMachineView* stateMachineView() const;
-  DeferredTreeView *objectInspector() const;
+    Q_INVOKABLE void saveTargetState(QSettings *settings) const;
+    Q_INVOKABLE void restoreTargetState(QSettings *settings);
+
+    KDSME::StateMachineView *stateMachineView() const;
+    DeferredTreeView *objectInspector() const;
 
 private slots:
-  void showMessage(const QString &message);
-  //cppcheck-suppress passedByValue
-  void stateAdded(const GammaRay::StateId stateId, const GammaRay::StateId parentId, const bool hasChildren,
-                  const QString& label, const GammaRay::StateType type, const bool connectToInitial);
-  void stateConfigurationChanged(const GammaRay::StateMachineConfiguration &config);
-  //cppcheck-suppress passedByValue
-  void transitionAdded(const GammaRay::TransitionId transitionId, const GammaRay::StateId source,
-                         //cppcheck-suppress passedByValue
-                         const GammaRay::StateId target, const QString& label);
-  //cppcheck-suppress passedByValue
-  void statusChanged(const bool haveStateMachine, const bool running);
-  void transitionTriggered(GammaRay::TransitionId transition, const QString &label);
-  void stateModelReset();
+    void showMessage(const QString &message);
+    void stateAdded(const GammaRay::StateId stateId, const GammaRay::StateId parentId,
+                    const bool hasChildren, const QString &label, const GammaRay::StateType type,
+                    const bool connectToInitial);
+    void stateConfigurationChanged(const GammaRay::StateMachineConfiguration &config);
+    void transitionAdded(const GammaRay::TransitionId transitionId,
+                         const GammaRay::StateId sourceId,
+                         const GammaRay::StateId targetId, const QString &label);
+    void statusChanged(const bool haveStateMachine, const bool running);
+    void transitionTriggered(GammaRay::TransitionId transitionId, const QString &label);
+    void stateModelReset();
 
-  void repopulateView();
-  void clearGraph();
+    void repopulateView();
+    void clearGraph();
 
-  void setShowLog(bool show);
+    void setShowLog(bool show);
 
-  void objectInspectorContextMenu(QPoint pos);
+    void objectInspectorContextMenu(QPoint pos);
 
 private:
-  /// Show context menu for index @p index (a object inspector model index) at pos @p pos
-  void showContextMenuForObject(const QModelIndex& index, const QPoint& pos);
+    /**
+     * Show context menu for index @p index (a object inspector model index)
+     * at global position @p globalPos.
+     */
+    void showContextMenuForObject(const QModelIndex &index, const QPoint &globalPos);
 
-  void loadSettings();
-  void saveSettings();
+    void loadSettings();
+    void saveSettings();
 
-  QScopedPointer<Ui::StateMachineViewerWidget> m_ui;
-  UIStateManager m_stateManager;
+    QScopedPointer<Ui::StateMachineViewerWidget> m_ui;
+    UIStateManager m_stateManager;
 
-  KDSME::StateMachineView* m_stateMachineView;
-  StateMachineViewerInterface *m_interface;
+    KDSME::StateMachineView *m_stateMachineView;
+    StateMachineViewerInterface *m_interface;
 
-  QHash<StateId, KDSME::State*> m_idToStateMap;
-  QHash<TransitionId, KDSME::Transition*> m_idToTransitionMap;
-  KDSME::StateMachine* m_machine;
+    QHash<StateId, KDSME::State *> m_idToStateMap;
+    QHash<TransitionId, KDSME::Transition *> m_idToTransitionMap;
+    KDSME::StateMachine *m_machine;
+    bool m_showLog;
 };
 
-class StateMachineViewerUiFactory : public QObject, public StandardToolUiFactory<StateMachineViewerWidget>
+class StateMachineViewerUiFactory : public QObject,
+    public StandardToolUiFactory<StateMachineViewerWidget>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolUiFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_statemachineviewer.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolUiFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_statemachineviewer.json")
 };
-
 }
 
 #endif // STATEMACHINEVIEWERWIDGETNG_H

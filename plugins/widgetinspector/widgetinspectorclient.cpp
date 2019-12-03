@@ -4,7 +4,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Milian Wolff <milian.wolff@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,19 +33,17 @@
 using namespace GammaRay;
 
 WidgetInspectorClient::WidgetInspectorClient(QObject *parent)
-  : WidgetInspectorInterface(parent)
+    : WidgetInspectorInterface(parent)
 {
 }
 
-WidgetInspectorClient::~WidgetInspectorClient()
-{
-}
+WidgetInspectorClient::~WidgetInspectorClient() = default;
 
 #define WRAP_REMOTE(func, type) \
-void WidgetInspectorClient::func(type arg) \
-{ \
-  Endpoint::instance()->invokeObject(objectName(), #func, QVariantList() << arg); \
-}
+    void WidgetInspectorClient::func(type arg) \
+    { \
+        Endpoint::instance()->invokeObject(objectName(), #func, QVariantList() << arg); \
+    }
 
 WRAP_REMOTE(saveAsImage, const QString &)
 WRAP_REMOTE(saveAsPdf, const QString &)
@@ -54,5 +52,5 @@ WRAP_REMOTE(saveAsUiFile, const QString &)
 
 void WidgetInspectorClient::analyzePainting()
 {
-  Endpoint::instance()->invokeObject(objectName(), "analyzePainting");
+    Endpoint::instance()->invokeObject(objectName(), "analyzePainting");
 }

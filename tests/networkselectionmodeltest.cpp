@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,26 +37,19 @@
 #include <QStandardItemModel>
 #include <QtEndian>
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 5, 0)
-Q_DECLARE_METATYPE(QItemSelection)
-Q_DECLARE_METATYPE(QModelIndex)
-#endif
-
 QT_BEGIN_NAMESPACE
 namespace QTest {
-
-template <> bool qCompare(const QPersistentModelIndex &lhs, const QModelIndex &rhs, char const *actual, char const *expected, char const *file, int line)
+template<> bool qCompare(const QPersistentModelIndex &lhs, const QModelIndex &rhs,
+                         char const *actual, char const *expected, char const *file, int line)
 {
     return qCompare(lhs, QPersistentModelIndex(rhs), actual, expected, file, line);
 }
-
 }
 QT_END_NAMESPACE
 
 using namespace GammaRay;
 
 namespace GammaRay {
-
 enum FakeAddress {
     ServerAddress = 23,
     ClientAddress = 42,
@@ -66,31 +59,34 @@ class FakeEndpoint : public Endpoint
 {
     Q_OBJECT
 public:
-    explicit FakeEndpoint(QObject *parent = Q_NULLPTR) :
-        Endpoint(parent)
+    explicit FakeEndpoint(QObject *parent = nullptr)
+        : Endpoint(parent)
     {
-       setDevice(new QBuffer(this));
+        setDevice(new QBuffer(this));
     }
 
 protected:
-    void doSendMessage(const Message& msg) Q_DECL_OVERRIDE
+    void doSendMessage(const Message &msg) override
     {
         QByteArray ba;
         QBuffer buffer(&ba);
         buffer.open(QIODevice::ReadWrite);
         msg.write(&buffer);
         buffer.seek(sizeof(Protocol::PayloadSize));
-        Protocol::ObjectAddress addr = qToBigEndian(static_cast<Protocol::ObjectAddress>(msg.address() == ServerAddress ? ClientAddress : ServerAddress));
-        buffer.write((char*)&addr, sizeof(addr));
+        Protocol::ObjectAddress addr
+            = qToBigEndian(static_cast<Protocol::ObjectAddress>(msg.address()
+                                                                == ServerAddress ? ClientAddress :
+                                                                ServerAddress));
+        buffer.write((char *)&addr, sizeof(addr));
         buffer.seek(0);
         emit message(Message::readMessage(&buffer));
     }
 
-    bool isRemoteClient() const Q_DECL_OVERRIDE { return true; }
-    void messageReceived(const GammaRay::Message&) Q_DECL_OVERRIDE {}
-    QUrl serverAddress() const Q_DECL_OVERRIDE { return QUrl(); }
-    void handlerDestroyed(Protocol::ObjectAddress, const QString&) Q_DECL_OVERRIDE {}
-    void objectDestroyed(Protocol::ObjectAddress, const QString&, QObject*) Q_DECL_OVERRIDE {}
+    bool isRemoteClient() const override { return true; }
+    void messageReceived(const GammaRay::Message &) override {}
+    QUrl serverAddress() const override { return QUrl(); }
+    void handlerDestroyed(Protocol::ObjectAddress, const QString &) override {}
+    void objectDestroyed(Protocol::ObjectAddress, const QString &, QObject *) override {}
 
 signals:
     void message(const GammaRay::Message &msg);
@@ -100,12 +96,14 @@ class FakeNetworkSelectionModel : public NetworkSelectionModel
 {
     Q_OBJECT
 public:
-    explicit FakeNetworkSelectionModel(Protocol::ObjectAddress address, QAbstractItemModel *model, QObject *parent = Q_NULLPTR) :
-        NetworkSelectionModel(QStringLiteral("com.kdab.GammaRay.UnitTest.Model"), model, parent)
+    explicit FakeNetworkSelectionModel(Protocol::ObjectAddress address, QAbstractItemModel *model,
+                                       QObject *parent = nullptr)
+        : NetworkSelectionModel(QStringLiteral("com.kdab.GammaRay.UnitTest.Model"), model, parent)
     {
         m_myAddress = address;
 
-        connect(Endpoint::instance(), SIGNAL(message(GammaRay::Message)), this, SLOT(dispatchMessage(GammaRay::Message)));
+        connect(Endpoint::instance(), SIGNAL(message(GammaRay::Message)), this,
+                SLOT(dispatchMessage(GammaRay::Message)));
     }
 
     void applyPendingSelection() { NetworkSelectionModel::applyPendingSelection(); }
@@ -121,7 +119,6 @@ private slots:
 };
 }
 
-
 class NetworkSelectionModelTest : public QObject
 {
     Q_OBJECT
@@ -134,6 +131,7 @@ private:
         model->appendRow(new QStandardItem(QStringLiteral("Row 4")));
         model->appendRow(new QStandardItem(QStringLiteral("Row 5")));
     }
+
 private slots:
     void initTestCase()
     {

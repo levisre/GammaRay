@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,110 +30,94 @@
 #include "inboundconnectionsmodel.h"
 #include "core/probe.h"
 
-#ifdef HAVE_PRIVATE_QT_HEADERS
 #include <private/qobject_p.h>
-#endif
 
 using namespace GammaRay;
 
-InboundConnectionsModel::InboundConnectionsModel(QObject* parent):
-  AbstractConnectionsModel(parent)
+InboundConnectionsModel::InboundConnectionsModel(QObject *parent)
+    : AbstractConnectionsModel(parent)
 {
 }
 
-InboundConnectionsModel::~InboundConnectionsModel()
+InboundConnectionsModel::~InboundConnectionsModel() = default;
+
+void InboundConnectionsModel::setObject(QObject *object)
 {
+    clear();
+    m_object = object;
+    if (!object)
+        return;
+
+    setConnections(inboundConnectionsForObject(object));
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0) && defined(HAVE_PRIVATE_QT_HEADERS)
-static int signalIndexForConnection(QObjectPrivate::Connection *connection, QObject *sender)
+QVector<AbstractConnectionsModel::Connection> InboundConnectionsModel::inboundConnectionsForObject(QObject *object)
 {
-  QObjectPrivate *d = QObjectPrivate::get(sender);
-  if (!d->connectionLists)
-    return -1;
-
-  // HACK: the declaration of d->connectionsLists is not accessible for us...
-  const QVector<QObjectPrivate::ConnectionList> *cl = reinterpret_cast<QVector<QObjectPrivate::ConnectionList>*>(d->connectionLists);
-  for (int signalIndex = 0; signalIndex < cl->count(); ++signalIndex) {
-    const QObjectPrivate::Connection *c = cl->at(signalIndex).first;
-    while (c) {
-      if (c == connection)
-        return signalIndex;
-      c = c->nextConnectionList;
-      continue;
-    }
-  }
-
-  return -1;
-}
-#endif
-
-void InboundConnectionsModel::setObject(QObject* object)
-{
-  clear();
-  m_object = object;
-  if (!object)
-    return;
-
-  QVector<Connection> connections;
-#ifdef HAVE_PRIVATE_QT_HEADERS
-  QObjectPrivate *d = QObjectPrivate::get(object);
-  if (d->senders) {
-    for (QObjectPrivate::Connection *s = d->senders; s; s = s->next) {
-      if (!s->sender || Probe::instance()->filterObject(s->sender))
-        continue;
-
-      Connection conn;
-      conn.endpoint = s->sender;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-      conn.signalIndex = signalIndexToMethodIndex(s->sender, s->signal_index);
-      if (s->isSlotObject) {
-        conn.slotIndex = -1;
-      } else {
-        conn.slotIndex = s->method();
-      }
+    QVector<Connection> connections;
+    QObjectPrivate *d = QObjectPrivate::get(object);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QObjectPrivate::ConnectionData *cd = d->connections.load();
+    if (cd && cd->senders) {
+        auto *senders = cd->senders;
 #else
-      conn.slotIndex = s->method();
-      conn.signalIndex = signalIndexToMethodIndex(s->sender, signalIndexForConnection(s, s->sender));
+    if (d->senders) {
+        auto *senders = d->senders;
 #endif
-      conn.type = s->connectionType;
-      connections.push_back(conn);
+        for (QObjectPrivate::Connection *s = senders; s; s = s->next) {
+            if (!s->sender || Probe::instance()->filterObject(s->sender))
+                continue;
+
+            Connection conn;
+            conn.endpoint = s->sender;
+            conn.signalIndex = signalIndexToMethodIndex(s->sender, s->signal_index);
+            if (s->isSlotObject) {
+                conn.slotIndex = -1;
+            } else {
+                conn.slotIndex = s->method();
+            }
+            conn.type = s->connectionType;
+            connections.push_back(conn);
+        }
     }
-  }
-#endif
-  setConnections(connections);
+
+    return connections;
 }
 
-QVariant InboundConnectionsModel::data(const QModelIndex& index, int role) const
+QVariant InboundConnectionsModel::data(const QModelIndex &index, int role) const
 {
-  if (!index.isValid() || !m_object)
-    return QVariant();
+    if (!index.isValid() || !m_object)
+        return QVariant();
 
-  if (role == Qt::DisplayRole) {
-    const Connection &conn = m_connections.at(index.row());
-    switch (index.column()) {
-      case 0:
-        return displayString(conn.endpoint);
-      case 1:
-        return displayString(conn.endpoint, conn.signalIndex);
-      case 2:
-        if (conn.slotIndex < 0)
-          return tr("<slot object context>");
-        return displayString(m_object, conn.slotIndex);
+    if (role == Qt::DisplayRole) {
+        const Connection &conn = m_connections.at(index.row());
+        switch (index.column()) {
+        case 0:
+            return displayString(conn.endpoint);
+        case 1:
+            return displayString(conn.endpoint, conn.signalIndex);
+        case 2:
+            if (conn.slotIndex < 0) {
+                return tr("<slot object context>");
+            }
+            return displayString(m_object, conn.slotIndex);
+        }
     }
-  }
 
-  return AbstractConnectionsModel::data(index, role);
+    return AbstractConnectionsModel::data(index, role);
 }
 
-QVariant InboundConnectionsModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant InboundConnectionsModel::headerData(int section, Qt::Orientation orientation,
+                                             int role) const
 {
-  if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
-    switch (section) {
-      case 0: return tr("Sender");
-      case 1: return tr("Signal");
-      case 2: return tr("Slot");
+    if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
+        switch (section) {
+        case 0:
+            return tr("Sender");
+        case 1:
+            return tr("Signal");
+        case 2:
+            return tr("Slot");
+        }
     }
-  }
-  return AbstractConnectionsModel::headerData(section, orientation, role);
+    return AbstractConnectionsModel::headerData(section, orientation, role);
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,34 +30,34 @@
 
 using namespace GammaRay;
 
-ToolFactory::ToolFactory()
-{
-}
+ToolFactory::ToolFactory() = default;
 
-ToolFactory::~ToolFactory()
-{
-}
+ToolFactory::~ToolFactory() = default;
 
 const QVector<QByteArray> &ToolFactory::supportedTypes() const
 {
-  return m_types;
+    return m_types;
 }
 
 void ToolFactory::setSupportedTypes(const QVector<QByteArray> &types)
 {
-  m_types = types;
+    m_types = types;
 }
 
 QString ToolFactory::supportedTypesString() const
 {
-  QStringList typesString;
-  for (auto it = m_types.constBegin(), end = m_types.constEnd(); it != end; ++it) {
-    typesString << QLatin1String(*it);
-  }
-  return typesString.join(QByteArrayLiteral(", "));
+    QStringList typesString;
+    for (auto it = m_types.constBegin(), end = m_types.constEnd(); it != end; ++it)
+        typesString << QLatin1String(*it);
+    return typesString.join(QStringLiteral(", "));
 }
 
 QVector<QByteArray> ToolFactory::selectableTypes() const
 {
-  return QVector<QByteArray>();
+    return QVector<QByteArray>();
+}
+
+bool ToolFactory::isHidden() const
+{
+    return false;
 }

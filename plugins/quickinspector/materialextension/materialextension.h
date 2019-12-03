@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,37 +32,39 @@
 #include <core/propertycontrollerextension.h>
 #include "materialextensioninterface.h"
 
+#include <memory>
+
 QT_BEGIN_NAMESPACE
 class QSGGeometryNode;
-class QStandardItemModel;
+class QSGMaterialShader;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class AggregatedPropertyModel;
+class MaterialShaderModel;
 class PropertyController;
 class ObjectEnumModel;
 
 class MaterialExtension : public MaterialExtensionInterface, public PropertyControllerExtension
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::MaterialExtensionInterface)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::MaterialExtensionInterface)
 
-  public:
+public:
     explicit MaterialExtension(PropertyController *controller);
-    ~MaterialExtension();
+    ~MaterialExtension() override;
 
-    bool setObject(void *object, const QString &typeName) Q_DECL_OVERRIDE;
+    bool setObject(void *object, const QString &typeName) override;
 
-  public slots:
-    void getShader(const QString &fileName) Q_DECL_OVERRIDE;
+public slots:
+    void getShader(int row) override;
 
-  private:
+private:
     QSGGeometryNode *m_node;
     AggregatedPropertyModel *m_materialPropertyModel;
-    QStandardItemModel *m_shaderModel;
+    MaterialShaderModel *m_shaderModel;
+    std::unique_ptr<QSGMaterialShader> m_materialShader;
 };
-
 }
 
 #endif // MATERIALEXTENSION_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,21 +33,21 @@
 
 using namespace GammaRay;
 
-ConnectionsExtensionClient::ConnectionsExtensionClient(const QString& name, QObject* parent):
-  ConnectionsExtensionInterface(name, parent)
+ConnectionsExtensionClient::ConnectionsExtensionClient(const QString &name, QObject *parent)
+    : ConnectionsExtensionInterface(name, parent)
 {
 }
 
-ConnectionsExtensionClient::~ConnectionsExtensionClient()
-{
-}
+ConnectionsExtensionClient::~ConnectionsExtensionClient() = default;
 
 void ConnectionsExtensionClient::navigateToSender(int modelRow)
 {
-  Endpoint::instance()->invokeObject(name(), "navigateToSender", QVariantList() << QVariant::fromValue(modelRow));
+    Endpoint::instance()->invokeObject(name(), "navigateToSender",
+                                       QVariantList() << QVariant::fromValue(modelRow));
 }
 
 void ConnectionsExtensionClient::navigateToReceiver(int modelRow)
 {
-  Endpoint::instance()->invokeObject(name(), "navigateToReceiver", QVariantList() << QVariant::fromValue(modelRow));
+    Endpoint::instance()->invokeObject(name(), "navigateToReceiver",
+                                       QVariantList() << QVariant::fromValue(modelRow));
 }

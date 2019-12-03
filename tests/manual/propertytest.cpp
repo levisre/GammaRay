@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,13 +31,14 @@
 
 #include "../shared/propertytestobject.h"
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
-  QCoreApplication app(argc, argv);
-  PropertyTestObject obj;
-  QTimer timer;
-  QObject::connect(&timer, SIGNAL(timeout()), obj.changingPropertyObject(), SLOT(changeProperties()));
-  timer.start(5000);
+    QCoreApplication app(argc, argv);
+    PropertyTestObject obj;
+    QTimer timer;
+    QObject::connect(&timer, &QTimer::timeout, obj.changingPropertyObject(),
+                     &ChangingPropertyObject::changeProperties);
+    timer.start(5000);
 
-  return app.exec();
+    return app.exec();
 }

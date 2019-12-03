@@ -1,5 +1,11 @@
 {
     "id": "gammaray_actioninspector",
     "name": "Actions",
-    "types": [ "QAction" ]
+    "name[de]": "Aktionen",
+    "selectableTypes": [
+        "QAction"
+    ],
+    "types": [
+        "QAction"
+    ]
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,46 +28,46 @@
 
 #include "probeabimodel.h"
 
-#include <probefinder.h>
+#include <launcher/core/probefinder.h>
 
 using namespace GammaRay;
 
-
-ProbeABIModel::ProbeABIModel(QObject* parent): QAbstractListModel(parent)
+ProbeABIModel::ProbeABIModel(QObject *parent)
+    : QAbstractListModel(parent)
 {
-  m_abis = ProbeFinder::listProbeABIs();
+    m_abis = ProbeFinder::listProbeABIs();
 }
 
-ProbeABIModel::~ProbeABIModel()
-{
-}
+ProbeABIModel::~ProbeABIModel() = default;
 
-QVariant ProbeABIModel::data(const QModelIndex& index, int role) const
+QVariant ProbeABIModel::data(const QModelIndex &index, int role) const
 {
-  if (!index.isValid())
+    if (!index.isValid())
+        return QVariant();
+
+    const ProbeABI &abi = m_abis.at(index.row());
+    switch (role) {
+    case Qt::DisplayRole:
+        return abi.displayString();
+    case Qt::UserRole:
+        return QVariant::fromValue(abi);
+    }
+
     return QVariant();
-
-  const ProbeABI &abi = m_abis.at(index.row());
-  switch (role) {
-    case Qt::DisplayRole: return abi.displayString();
-    case Qt::UserRole: return QVariant::fromValue(abi);
-  }
-
-  return QVariant();
 }
 
-int ProbeABIModel::rowCount(const QModelIndex& parent) const
+int ProbeABIModel::rowCount(const QModelIndex &parent) const
 {
-  if (parent.isValid())
-    return 0;
-  return m_abis.count();
+    if (parent.isValid())
+        return 0;
+    return m_abis.count();
 }
 
-int ProbeABIModel::indexOfBestMatchingABI(const ProbeABI& targetABI) const
+int ProbeABIModel::indexOfBestMatchingABI(const ProbeABI &targetABI) const
 {
-  if (!targetABI.isValid())
-    return -1;
+    if (!targetABI.isValid())
+        return -1;
 
-  const ProbeABI bestMatchingABI = ProbeFinder::findBestMatchingABI(targetABI, m_abis);
-  return m_abis.indexOf(bestMatchingABI);
+    const ProbeABI bestMatchingABI = ProbeFinder::findBestMatchingABI(targetABI, m_abis);
+    return m_abis.indexOf(bestMatchingABI);
 }

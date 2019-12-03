@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,12 +31,7 @@
 
 #include <QWidget>
 
-QT_BEGIN_NAMESPACE
-class QItemSelection;
-QT_END_NAMESPACE
-
 namespace GammaRay {
-
 class MaterialExtensionInterface;
 
 class Ui_MaterialTab;
@@ -44,23 +39,23 @@ class PropertyWidget;
 
 class MaterialTab : public QWidget
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     explicit MaterialTab(PropertyWidget *parent);
-    virtual ~MaterialTab();
+    ~MaterialTab() override;
 
-  private:
+private:
     void setObjectBaseName(const QString &baseName);
+    void propertyContextMenu(QPoint pos);
 
-  private slots:
-    void shaderSelectionChanged(const QItemSelection &selection);
+private slots:
+    void shaderSelectionChanged(int idx);
     void showShader(const QString &shaderSource);
 
-  private:
+private:
     QScopedPointer<Ui_MaterialTab> m_ui;
     MaterialExtensionInterface *m_interface;
 };
-
 }
 
 #endif // MATERIALTAB_H

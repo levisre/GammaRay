@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,16 +33,14 @@
 using namespace GammaRay;
 
 MaterialExtensionClient::MaterialExtensionClient(const QString &name, QObject *parent)
-  : MaterialExtensionInterface(name, parent)
+    : MaterialExtensionInterface(name, parent)
 {
 }
 
-MaterialExtensionClient::~MaterialExtensionClient()
-{
-}
+MaterialExtensionClient::~MaterialExtensionClient() = default;
 
-void MaterialExtensionClient::getShader(const QString &fileName)
+void MaterialExtensionClient::getShader(int row)
 {
-  Endpoint::instance()->invokeObject(
-    name(), "getShader", QVariantList() << QVariant::fromValue(fileName));
+    Endpoint::instance()->invokeObject(
+        name(), "getShader", QVariantList() << QVariant::fromValue(row));
 }

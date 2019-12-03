@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Jan Dalheimer <jan.dalheimer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -49,44 +49,44 @@ class FallbackTranslator;
 
 class TranslatorInspector : public TranslatorInspectorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::TranslatorInspectorInterface)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::TranslatorInspectorInterface)
 
-  public:
-    explicit TranslatorInspector(GammaRay::ProbeInterface *probe,
-                                QObject *parent = 0);
+public:
+    explicit TranslatorInspector(Probe *probe, QObject *parent = nullptr);
 
-  public slots:
-    void sendLanguageChangeEvent() Q_DECL_OVERRIDE;
-    void resetTranslations() Q_DECL_OVERRIDE;
+public slots:
+    void sendLanguageChangeEvent() override;
+    void resetTranslations() override;
 
-  private slots:
+private slots:
     void selectionChanged(const QItemSelection &selection);
+    void objectSelected(QObject *obj);
 
-  protected:
-    bool eventFilter(QObject *object, QEvent *event) Q_DECL_OVERRIDE;
+protected:
+    bool eventFilter(QObject *object, QEvent *event) override;
 
-  private:
+private:
+    void registerMetaTypes();
+
     QItemSelectionModel *m_selectionModel;
     QItemSelectionModel *m_translationsSelectionModel;
     TranslatorsModel *m_translatorsModel;
     QAbstractProxyModel *m_translationsModel;
-    ProbeInterface *m_probe;
+    Probe *m_probe;
     TranslatorWrapper *m_fallbackWrapper;
 };
 
-class TranslatorInspectorFactory
-    : public QObject,
-      public StandardToolFactory<QTranslator, TranslatorInspector>
+class TranslatorInspectorFactory : public QObject,
+    public StandardToolFactory<QTranslator, TranslatorInspector>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_translatorinspector.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_translatorinspector.json")
 
-  public:
-    explicit TranslatorInspectorFactory(QObject *parent = 0) : QObject(parent) {}
-
-    QString name() const Q_DECL_OVERRIDE;
+public:
+    explicit TranslatorInspectorFactory(QObject *parent = nullptr)
+        : QObject(parent) {}
 };
 }
 

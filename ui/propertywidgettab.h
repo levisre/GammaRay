@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,26 +35,26 @@
 #include <QString>
 
 namespace GammaRay {
-
 class PropertyWidget;
 
-/** @brief Priority values for property widget extension tabs.
+/*! Priority values for property widget extension tabs.
  *  It is recommended to specify tab priorities relating to these
  *  constants.
  */
 namespace PropertyWidgetTabPriority {
-    enum Priority {
-        First = 0, ///< the main property inspector, the left-most one.
-        Basic = 100, ///< QObject data that is of common use
-        Advanced = 200, ///< tools with common and high value use for a small sub-set of classes
-        Exotic = 300 ///< rarely used information, or data that is only valuable to a small amount of users.
-    };
+/*! Tab priority constants. */
+enum Priority {
+    First = 0,     ///< The main property inspector, the left-most one.
+    Basic = 100,     ///< QObject data that is of common use.
+    Advanced = 200,     ///< Tools with common and high value use for a small sub-set of classes.
+    Exotic = 300     ///< Rarely used information, or data that is only valuable to a small amount of users.
+};
 }
 
-/** @brief Interface for tabs in the property widget. */
+/*! Interface for tabs in the property widget. */
 class GAMMARAY_UI_EXPORT PropertyWidgetTabFactoryBase
 {
-  public:
+public:
     explicit PropertyWidgetTabFactoryBase(const QString &name, const QString &label, int priority);
     virtual ~PropertyWidgetTabFactoryBase();
 
@@ -64,7 +64,7 @@ class GAMMARAY_UI_EXPORT PropertyWidgetTabFactoryBase
     QString label() const;
     int priority() const;
 
-  private:
+private:
     Q_DISABLE_COPY(PropertyWidgetTabFactoryBase)
 
     QString m_name;
@@ -72,20 +72,19 @@ class GAMMARAY_UI_EXPORT PropertyWidgetTabFactoryBase
     int m_priority;
 };
 
-/** @brief Template implementation of PropertyWidgetTabFactoryBase. */
-template <typename T>
+/*! Template implementation of PropertyWidgetTabFactoryBase. */
+template<typename T>
 class PropertyWidgetTabFactory : public PropertyWidgetTabFactoryBase
 {
-  public:
-    explicit PropertyWidgetTabFactory(const QString &name, const QString &label, int priority) :
-        GammaRay::PropertyWidgetTabFactoryBase(name, label, priority) {}
+public:
+    explicit PropertyWidgetTabFactory(const QString &name, const QString &label, int priority)
+        : GammaRay::PropertyWidgetTabFactoryBase(name, label, priority) {}
 
-    QWidget *createWidget(PropertyWidget *parent) Q_DECL_OVERRIDE
+    QWidget *createWidget(PropertyWidget *parent) override
     {
-      return new T(parent);
+        return new T(parent);
     }
 };
-
 }
 
 #endif // PROPERTYWIDGETTAB_H

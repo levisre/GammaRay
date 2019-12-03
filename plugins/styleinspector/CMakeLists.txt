@@ -1,4 +1,5 @@
 # probe part
+if (NOT GAMMARAY_CLIENT_ONLY_BUILD)
 set(gammaray_styleinspector_plugin_srcs
   styleinspector.cpp
   pixelmetricmodel.cpp
@@ -11,21 +12,21 @@ set(gammaray_styleinspector_plugin_srcs
   complexcontrolmodel.cpp
   dynamicproxystyle.cpp
   styleinspectorinterface.cpp
+  stylehintmodel.cpp
 
   ${CMAKE_SOURCE_DIR}/ui/palettemodel.cpp
 )
 
 gammaray_add_plugin(gammaray_styleinspector_plugin
-  DESKTOP gammaray_styleinspector.desktop.in
   JSON gammaray_styleinspector.json
   SOURCES ${gammaray_styleinspector_plugin_srcs}
 )
 
 target_link_libraries(gammaray_styleinspector_plugin
-  ${QT_QTGUI_LIBRARIES}
+  Qt5::Gui Qt5::Widgets
   gammaray_core
 )
-
+endif()
 
 # ui part
 if(GAMMARAY_BUILD_UI)
@@ -36,19 +37,12 @@ if(GAMMARAY_BUILD_UI)
     styleinspectorclient.cpp
   )
 
-  qt4_wrap_ui(gammaray_styleinspector_ui_plugin_srcs
-    styleinspectorwidget.ui
-    styleelementstatetablepage.ui
-  )
-
   gammaray_add_plugin(gammaray_styleinspector_ui_plugin
-    DESKTOP gammaray_styleinspector_ui.desktop.in
     JSON gammaray_styleinspector.json
     SOURCES ${gammaray_styleinspector_ui_plugin_srcs}
   )
 
   target_link_libraries(gammaray_styleinspector_ui_plugin
-    ${QT_QTGUI_LIBRARIES}
     gammaray_ui
   )
 endif()

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,6 +28,8 @@
 
 #include "promolabel.h"
 
+#include <ui/uiresources.h>
+
 #include <QDesktopServices>
 #include <QUrl>
 #include <QDebug>
@@ -36,49 +38,34 @@
 using namespace GammaRay;
 
 PromoLabel::PromoLabel(QWidget *parent, Qt::WindowFlags f)
-: QLabel(parent, f)
+    : ThemedImageLabel(parent, f)
 {
-  updatePixmap();
-
-  setCursor(QCursor(Qt::PointingHandCursor));
-  setToolTip(tr("Visit KDAB Website"));
+    setCursor(QCursor(Qt::PointingHandCursor));
+    setToolTip(tr("Visit KDAB Website"));
+    setThemeFileName(QStringLiteral("kdab-products.png"));
 }
 
 bool PromoLabel::event(QEvent *e)
 {
-  if (e->type() == QEvent::PaletteChange) {
-    updatePixmap();
-  }
-  return QLabel::event(e);
+    if (e->type() == QEvent::PaletteChange)
+        updatePixmap();
+    return ThemedImageLabel::event(e);
 }
 
 void PromoLabel::mouseReleaseEvent(QMouseEvent *ev)
 {
-  if (ev->button() == Qt::LeftButton && ev->modifiers() == Qt::NoModifier) {
-    QDesktopServices::openUrl(QUrl(QStringLiteral("http://www.kdab.com")));
-    ev->accept();
-    return;
-  }
+    if (ev->button() == Qt::LeftButton && ev->modifiers() == Qt::NoModifier) {
+        QDesktopServices::openUrl(QUrl(QStringLiteral("https://www.kdab.com")));
+        ev->accept();
+        return;
+    }
 
-  QLabel::mouseReleaseEvent(ev);
-}
-
-QImage PromoLabel::tintedImage(const QString &image, const QColor &color)
-{
-  QImage img(image);
-  img = img.alphaChannel();
-  QColor newColor = color;
-  for (int i = 0; i < img.colorCount(); ++i) {
-    newColor.setAlpha(qGray(img.color(i)));
-    img.setColor(i, newColor.rgba());
-  }
-  return img;
+    ThemedImageLabel::mouseReleaseEvent(ev);
 }
 
 void PromoLabel::updatePixmap()
 {
-  // load image and adapt it to user's foreground color
-  setPixmap(QPixmap::fromImage(tintedImage(QStringLiteral(":gammaray/kdabproducts.png"),
-                                           palette().foreground().color())));
+    // load image and adapt it to user's foreground color
+    const QImage image = UIResources::themedImage(themeFileName(), this);
+    setPixmap(UIResources::tintedPixmap(image, palette().foreground().color()));
 }
-

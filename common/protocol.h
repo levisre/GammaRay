@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -30,107 +30,150 @@
 #define GAMMARAY_PROTOCOL_H
 
 #include "gammaray_common_export.h"
+
 #include <QAbstractItemModel>
+#include <QDataStream>
+#include <QDebug>
 #include <QVector>
 #include <QModelIndex>
-#include <QPair>
 
 #include <limits>
 
 namespace GammaRay {
-
-/** @brief Helper functions and constants defining the communication protocol between client and server. */
+/*! Helper functions and constants defining the communication protocol between client and server. */
 namespace Protocol {
+/*! Message payload size type. */
+using PayloadSize = qint32;
+/*! Remote object address type. */
+using ObjectAddress = quint16;
+/*! Message type type. */
+using MessageType = quint8;
 
-typedef qint32 PayloadSize;
-typedef quint16 ObjectAddress;
-typedef quint8 MessageType;
-
+/*! Invalid object address. */
 static const ObjectAddress InvalidObjectAddress = 0;
+/*! Address of the launcher remote object for probe <-> launcher communication. */
 static const ObjectAddress LauncherAddress = std::numeric_limits<ObjectAddress>::max();
+/*! Invalid message type. */
 static const MessageType InvalidMessageType = 0;
 
+/*! Protocol message types. */
 enum BuildInMessageType {
-  // object management
-  // client -> server
-  ObjectMonitored = InvalidMessageType + 1,
-  ObjectUnmonitored,
+    // object management
+    // client -> server
+    ObjectMonitored = InvalidMessageType + 1,
+    ObjectUnmonitored,
 
-  // server -> client
-  ServerVersion,
+    // server -> client
+    ServerVersion,
+    ServerDataVersionNegotiated,
 
-  ObjectMapReply,
-  ObjectAdded,
-  ObjectRemoved,
+    ObjectMapReply,
+    ObjectAdded,
+    ObjectRemoved,
 
-  // remote model messages
-  // client -> server
-  ModelRowColumnCountRequest,
-  ModelContentRequest,
-  ModelHeaderRequest,
-  ModelSetDataRequest,
-  ModelSortRequest,
-  ModelSyncBarrier,
-  SelectionModelStateRequest,
+    // remote model messages
+    // client -> server
+    ClientDataVersionNegotiated,
+    ModelRowColumnCountRequest,
+    ModelContentRequest,
+    ModelHeaderRequest,
+    ModelSetDataRequest,
+    ModelSortRequest,
+    ModelSyncBarrier,
+    SelectionModelStateRequest,
 
-  // server -> client
-  ModelRowColumnCountReply,
-  ModelContentReply,
-  ModelContentChanged,
-  ModelHeaderReply,
-  ModelHeaderChanged,
-  ModelRowsAdded,
-  ModelRowsMoved,
-  ModelRowsRemoved,
-  ModelColumnsAdded,
-  ModelColumnsMoved,
-  ModelColumnsRemoved,
-  ModelReset,
-  ModelLayoutChanged,
+    // server -> client
+    ModelRowColumnCountReply,
+    ModelContentReply,
+    ModelContentChanged,
+    ModelHeaderReply,
+    ModelHeaderChanged,
+    ModelRowsAdded,
+    ModelRowsMoved,
+    ModelRowsRemoved,
+    ModelColumnsAdded,
+    ModelColumnsMoved,
+    ModelColumnsRemoved,
+    ModelReset,
+    ModelLayoutChanged,
 
-  // server <-> client
-  SelectionModelSelect,
-  SelectionModelCurrent,
+    // server <-> client
+    SelectionModelSelect,
+    SelectionModelCurrent,
 
-  MethodCall,
-  PropertySyncRequest,
-  PropertyValuesChanged,
+    MethodCall,
+    PropertySyncRequest,
+    PropertyValuesChanged,
 
-  ServerInfo,
+    ServerInfo,
 
-  // probe settings provided by the launcher
-  ProbeSettings,
-  ServerAddress,
+    // probe settings provided by the launcher
+    ProbeSettings,
+    ServerAddress,
+    ServerLaunchError,
 
-  MESSAGE_TYPE_COUNT // NOTE when changing this enum, also update MessageStatisticsModel!
+    MESSAGE_TYPE_COUNT // NOTE when changing this enum, also update MessageStatisticsModel!
 };
 
-typedef QVector<QPair<qint32, qint32> > ModelIndex;
+///@cond internal
+/*! Transport protocol representation of a model index element. */
+class ModelIndexData
+{
+public:
+    explicit ModelIndexData(qint32 row_ = 0, qint32 column_ = 0)
+        : row(row_), column(column_) {}
 
-/** @brief Protocol representation of an QItemSelectionRange. */
+    qint32 row;
+    qint32 column;
+};
+/*! Transport protocol representation of a QModelIndex. */
+using ModelIndex = QVector<ModelIndexData>;
+
+/*! Protocol representation of an QItemSelectionRange. */
 struct ItemSelectionRange {
     ModelIndex topLeft;
     ModelIndex bottomRight;
 };
-typedef QVector<ItemSelectionRange> ItemSelection;
+/*! Protocol representation of an QItemSelection. */
+using ItemSelection = QVector<ItemSelectionRange>;
 
-/** Serializes a QModelIndex. */
+/*! Serializes a QModelIndex. */
 GAMMARAY_COMMON_EXPORT ModelIndex fromQModelIndex(const QModelIndex &index);
 
-/** Deserializes a QModelIndex. */
-GAMMARAY_COMMON_EXPORT QModelIndex toQModelIndex(const QAbstractItemModel *model, const ModelIndex &index);
+/*! Deserializes a QModelIndex. */
+GAMMARAY_COMMON_EXPORT QModelIndex toQModelIndex(const QAbstractItemModel *model,
+                                                 const ModelIndex &index);
+///@endcond
 
-/** Protocol version, must match exactly between client and server. */
+/*! Protocol version, must match exactly between client and server. */
 GAMMARAY_COMMON_EXPORT qint32 version();
 
-/** Broadcast format version. */
+/*! Broadcast format version. */
 GAMMARAY_COMMON_EXPORT qint32 broadcastFormatVersion();
-
+}
 }
 
-}
-
+///@cond internal
 QT_BEGIN_NAMESPACE
+inline QDataStream& operator>>(QDataStream& s, GammaRay::Protocol::ModelIndexData& data)
+{
+    s >> data.row >> data.column;
+    return s;
+}
+inline QDataStream& operator<<(QDataStream& s, const GammaRay::Protocol::ModelIndexData& data)
+{
+    s << data.row << data.column;
+    return s;
+}
+
+inline QDebug& operator<<(QDebug &s, const GammaRay::Protocol::ModelIndexData &data)
+{
+    s << '(' << data.row << ',' << data.column << ')';
+    return s;
+}
+///@endcond
+
+Q_DECLARE_TYPEINFO(GammaRay::Protocol::ModelIndexData, Q_MOVABLE_TYPE);
 Q_DECLARE_TYPEINFO(GammaRay::Protocol::ItemSelectionRange, Q_MOVABLE_TYPE);
 QT_END_NAMESPACE
 

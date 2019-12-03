@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,25 +37,24 @@ class QStyle;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /**
  * Base class for all models showing style elements.
  */
 class AbstractStyleElementModel : public QAbstractTableModel
 {
-  Q_OBJECT
-  public:
-    explicit AbstractStyleElementModel(QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit AbstractStyleElementModel(QObject *parent = nullptr);
 
     void setStyle(QStyle *style);
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
-  protected:
+protected:
     virtual QVariant doData(int row, int column, int role) const = 0;
     virtual int doColumnCount() const = 0;
     virtual int doRowCount() const = 0;
@@ -65,10 +64,14 @@ class AbstractStyleElementModel : public QAbstractTableModel
      */
     bool isMainStyle() const;
 
-  protected:
+    /*! Returns the style of which we display the values, ie. the one set via
+     *  setStyle, or if present its wrapping DynamicProxyStyle.
+     */
+    QStyle* effectiveStyle() const;
+
+protected:
     QPointer<QStyle> m_style;
 };
-
 }
 
 #endif // GAMMARAY_ABSTRACTSTYLEELEMENTMODEL_H

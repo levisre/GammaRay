@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,49 +33,57 @@
 
 #include <core/remote/serverproxymodel.h>
 
+#include <common/objectbroker.h>
+#include <common/objectid.h>
+
+#include <QItemSelectionModel>
 #include <QTimer>
 
 using namespace GammaRay;
 
-SignalMonitor::SignalMonitor(ProbeInterface *probe, QObject *parent)
-  : SignalMonitorInterface(parent)
+SignalMonitor::SignalMonitor(Probe *probe, QObject *parent)
+    : SignalMonitorInterface(parent)
 {
-  StreamOperators::registerSignalMonitorStreamOperators();
+    StreamOperators::registerSignalMonitorStreamOperators();
 
-  SignalHistoryModel *model = new SignalHistoryModel(probe, this);
-  auto proxy = new ServerProxyModel<QSortFilterProxyModel>(this);
-  proxy->setDynamicSortFilter(true);
-  proxy->setSourceModel(model);
-  probe->registerModel(QStringLiteral("com.kdab.GammaRay.SignalHistoryModel"), proxy);
+    auto *model = new SignalHistoryModel(probe, this);
+    auto proxy = new ServerProxyModel<QSortFilterProxyModel>(this);
+    proxy->setDynamicSortFilter(true);
+    proxy->setSourceModel(model);
+    m_objModel = proxy;
+    probe->registerModel(QStringLiteral("com.kdab.GammaRay.SignalHistoryModel"), proxy);
+    m_objSelectionModel = ObjectBroker::selectionModel(proxy);
 
-  m_clock = new QTimer(this);
-  m_clock->setInterval(1000/25); // update frequency of the delegate, we could slow this down a lot, and let the client interpolate, if necessary
-  m_clock->setSingleShot(false);
-  connect(m_clock, SIGNAL(timeout()), this, SLOT(timeout()));
+    m_clock = new QTimer(this);
+    m_clock->setInterval(1000/25); // update frequency of the delegate, we could slow this down a lot, and let the client interpolate, if necessary
+    m_clock->setSingleShot(false);
+    connect(m_clock, &QTimer::timeout, this, &SignalMonitor::timeout);
+
+    connect(probe, &Probe::objectSelected, this, &SignalMonitor::objectSelected);
 }
 
-SignalMonitor::~SignalMonitor()
-{
-}
+SignalMonitor::~SignalMonitor() = default;
 
 void SignalMonitor::timeout()
 {
-  emit clock(RelativeClock::sinceAppStart()->mSecs());
+    emit clock(RelativeClock::sinceAppStart()->mSecs());
 }
 
 void SignalMonitor::sendClockUpdates(bool enabled)
 {
-  if (enabled)
-    m_clock->start();
-  else
-    m_clock->stop();
+    if (enabled)
+        m_clock->start();
+    else
+        m_clock->stop();
 }
 
-QString SignalMonitorFactory::name() const
+void SignalMonitor::objectSelected(QObject* obj)
 {
-  return tr("Signals");
-}
+    const auto indexList = m_objModel->match(m_objModel->index(0, 0), ObjectModel::ObjectIdRole,
+        QVariant::fromValue<ObjectId>(ObjectId(obj)), 1, Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
+    if (indexList.isEmpty())
+        return;
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(SignalMonitorFactory)
-#endif
+    const auto index = indexList.first();
+    m_objSelectionModel->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+}

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,25 +37,23 @@ class QTreeView;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** Auto-expand the visible item sub-tree. */
 class QuickItemTreeWatcher : public QObject
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit QuickItemTreeWatcher(QTreeView *view, QTreeView *sgView, QObject *parent = 0);
-    ~QuickItemTreeWatcher();
+public:
+    explicit QuickItemTreeWatcher(QTreeView *itemView, QTreeView *sgView, QObject *parent = nullptr);
+    ~QuickItemTreeWatcher() override;
 
-  private slots:
+private slots:
     void itemModelRowsInserted(const QModelIndex &parent, int start, int end);
     void sgModelRowsInserted(const QModelIndex &parent, int start, int end);
 
-  private:
+private:
     QTreeView *m_itemView;
     QTreeView *m_sgView;
 };
-
 }
 
 #endif // GAMMARAY_QUICKITEMTREEWATCHER_H

@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -33,33 +33,33 @@
 #include <QStringList>
 
 namespace GammaRay {
-
 /** @brief Client/Server interface of the property editor. */
 class PropertyControllerInterface : public QObject
 {
-  Q_OBJECT
-  Q_PROPERTY(QStringList availableExtensions READ availableExtensions WRITE setAvailableExtensions NOTIFY availableExtensionsChanged)
-  public:
-    explicit PropertyControllerInterface(const QString &name, QObject *parent = 0);
-    virtual ~PropertyControllerInterface();
+    Q_OBJECT
+    Q_PROPERTY(
+        QStringList availableExtensions READ availableExtensions WRITE setAvailableExtensions NOTIFY availableExtensionsChanged)
+public:
+    explicit PropertyControllerInterface(const QString &name, QObject *parent = nullptr);
+    ~PropertyControllerInterface() override;
 
     QString name() const;
 
     QStringList availableExtensions() const;
     void setAvailableExtensions(const QStringList &availableExtensions);
 
-  signals:
+signals:
     void availableExtensionsChanged();
 
-  private:
+private:
     QString m_name;
     QStringList m_availableExtensions;
 };
-
 }
 
 QT_BEGIN_NAMESPACE
-Q_DECLARE_INTERFACE(GammaRay::PropertyControllerInterface, "com.kdab.GammaRay.PropertyControllerInterface")
+Q_DECLARE_INTERFACE(GammaRay::PropertyControllerInterface,
+                    "com.kdab.GammaRay.PropertyControllerInterface")
 QT_END_NAMESPACE
 
 #endif // GAMMARAY_PROPERTYCONTROLLERINTERFACE_H

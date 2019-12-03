@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,87 +33,122 @@
 #include "signalmonitorclient.h"
 #include "signalmonitorcommon.h"
 
+#include <ui/clientdecorationidentityproxymodel.h>
+#include <ui/contextmenuextension.h>
 #include <ui/searchlinecontroller.h>
 
 #include <common/objectbroker.h>
+
+#include <QMenu>
 
 #include <cmath>
 
 using namespace GammaRay;
 
-static QObject* signalMonitorClientFactory(const QString&, QObject *parent)
+static QObject *signalMonitorClientFactory(const QString &, QObject *parent)
 {
-  return new SignalMonitorClient(parent);
+    return new SignalMonitorClient(parent);
 }
 
 SignalMonitorWidget::SignalMonitorWidget(QWidget *parent)
-  : QWidget(parent)
-  , ui(new Ui::SignalMonitorWidget)
-  , m_stateManager(this)
+    : QWidget(parent)
+    , ui(new Ui::SignalMonitorWidget)
+    , m_stateManager(this)
 {
-  StreamOperators::registerSignalMonitorStreamOperators();
+    StreamOperators::registerSignalMonitorStreamOperators();
 
-  ObjectBroker::registerClientObjectFactoryCallback<SignalMonitorInterface*>(signalMonitorClientFactory);
+    ObjectBroker::registerClientObjectFactoryCallback<SignalMonitorInterface *>(
+        signalMonitorClientFactory);
 
-  ui->setupUi(this);
-  ui->pauseButton->setIcon(qApp->style()->standardIcon(QStyle::SP_MediaPause));
+    ui->setupUi(this);
+    ui->pauseButton->setIcon(qApp->style()->standardIcon(QStyle::SP_MediaPause));
 
-  QAbstractItemModel *const signalHistory = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SignalHistoryModel"));
-  new SearchLineController(ui->objectSearchLine, signalHistory);
+    QAbstractItemModel * const signalHistory
+        = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SignalHistoryModel"));
+    auto *signalHistoryProxyModel = new ClientDecorationIdentityProxyModel(this);
+    signalHistoryProxyModel->setSourceModel(signalHistory);
+    new SearchLineController(ui->objectSearchLine, signalHistoryProxyModel);
 
-  ui->objectTreeView->header()->setObjectName("objectTreeViewHeader");
-  ui->objectTreeView->setModel(signalHistory);
-  ui->objectTreeView->setEventScrollBar(ui->eventScrollBar);
+    ui->objectTreeView->header()->setObjectName("objectTreeViewHeader");
+    ui->objectTreeView->setModel(signalHistoryProxyModel);
+    ui->objectTreeView->setEventScrollBar(ui->eventScrollBar);
+    connect(ui->objectTreeView, &QWidget::customContextMenuRequested, this, &SignalMonitorWidget::contextMenu);
+    auto selectionModel = ObjectBroker::selectionModel(signalHistoryProxyModel);
+    ui->objectTreeView->setSelectionModel(selectionModel);
+    connect(selectionModel, &QItemSelectionModel::selectionChanged, this, &SignalMonitorWidget::selectionChanged);
 
-  connect(ui->pauseButton, SIGNAL(toggled(bool)), this, SLOT(pauseAndResume(bool)));
-  connect(ui->intervalScale, SIGNAL(valueChanged(int)), this, SLOT(intervalScaleValueChanged(int)));
-  connect(ui->objectTreeView->eventDelegate(), SIGNAL(isActiveChanged(bool)),  this, SLOT(eventDelegateIsActiveChanged(bool)));
-  connect(ui->objectTreeView->header(), SIGNAL(sectionResized(int,int,int)), this, SLOT(adjustEventScrollBarSize()));
+    connect(ui->pauseButton, &QAbstractButton::toggled, this, &SignalMonitorWidget::pauseAndResume);
+    connect(ui->intervalScale, &QAbstractSlider::valueChanged, this,
+            &SignalMonitorWidget::intervalScaleValueChanged);
+    connect(ui->objectTreeView->eventDelegate(), &SignalHistoryDelegate::isActiveChanged, this,
+            &SignalMonitorWidget::eventDelegateIsActiveChanged);
+    connect(ui->objectTreeView->header(), &QHeaderView::sectionResized, this,
+            &SignalMonitorWidget::adjustEventScrollBarSize);
 
-  m_stateManager.setDefaultSizes(ui->objectTreeView->header(), UISizeVector() << 200 << 200 << -1);
+    m_stateManager.setDefaultSizes(ui->objectTreeView->header(),
+                                   UISizeVector() << 200 << 200 << -1);
 }
 
-SignalMonitorWidget::~SignalMonitorWidget()
-{
-}
+SignalMonitorWidget::~SignalMonitorWidget() = default;
 
 void SignalMonitorWidget::intervalScaleValueChanged(int value)
 {
-  // FIXME: Define a more reasonable formula.
-  qint64 i = 5000 / std::pow(1.07, value);
-  ui->objectTreeView->eventDelegate()->setVisibleInterval(i);
+    // FIXME: Define a more reasonable formula.
+    qint64 i = 5000 / std::pow(1.07, value);
+    ui->objectTreeView->eventDelegate()->setVisibleInterval(i);
 }
 
 void SignalMonitorWidget::adjustEventScrollBarSize()
 {
-  // FIXME: Would like to have this in SignalHistoryView, but letting that
-  // widget manage layouts of this widget would be nasty. Still I also I don't
-  // feel like hooking a custom scrollbar into QTreeView. Sleeping between a
-  // rock and a hard place.
-  const QWidget *const scrollBar = ui->objectTreeView->verticalScrollBar();
-  const QWidget *const viewport = ui->objectTreeView->viewport();
+    // FIXME: Would like to have this in SignalHistoryView, but letting that
+    // widget manage layouts of this widget would be nasty. Still I also I don't
+    // feel like hooking a custom scrollbar into QTreeView. Sleeping between a
+    // rock and a hard place.
+    const QWidget * const scrollBar = ui->objectTreeView->verticalScrollBar();
+    const QWidget * const viewport = ui->objectTreeView->viewport();
 
-  const int eventColumnLeft = ui->objectTreeView->eventColumnPosition();
-  const int scrollBarLeft = scrollBar->mapTo(this, scrollBar->pos()).x();
-  const int viewportLeft = viewport->mapTo(this, viewport->pos()).x();
-  const int viewportRight = viewportLeft + viewport->width();
+    const int eventColumnLeft = ui->objectTreeView->eventColumnPosition();
+    const int scrollBarLeft = scrollBar->mapTo(this, scrollBar->pos()).x();
+    const int viewportLeft = viewport->mapTo(this, viewport->pos()).x();
+    const int viewportRight = viewportLeft + viewport->width();
 
-  ui->eventScrollBarLayout->setContentsMargins(eventColumnLeft,
-                                               scrollBarLeft - viewportRight,
-                                               width() - viewportRight,
-                                               0);
+    ui->eventScrollBarLayout->setContentsMargins(eventColumnLeft,
+                                                 scrollBarLeft - viewportRight,
+                                                 width() - viewportRight,
+                                                 0);
 }
 
 void SignalMonitorWidget::pauseAndResume(bool pause)
 {
-  ui->objectTreeView->eventDelegate()->setActive(!pause);
+    ui->objectTreeView->eventDelegate()->setActive(!pause);
 }
 
 void SignalMonitorWidget::eventDelegateIsActiveChanged(bool active)
 {
-  ui->pauseButton->setChecked(!active);
+    ui->pauseButton->setChecked(!active);
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(SignalMonitorUiFactory)
-#endif
+void SignalMonitorWidget::contextMenu(QPoint pos)
+{
+    auto index = ui->objectTreeView->indexAt(pos);
+    if (!index.isValid())
+        return;
+    index = index.sibling(index.row(), 0);
+
+    const auto objectId = index.data(ObjectModel::ObjectIdRole).value<ObjectId>();
+    if (objectId.isNull())
+        return;
+
+    QMenu menu;
+    ContextMenuExtension ext(objectId);
+    ext.populateMenu(&menu);
+    menu.exec(ui->objectTreeView->viewport()->mapToGlobal(pos));
+}
+
+void SignalMonitorWidget::selectionChanged(const QItemSelection& selection)
+{
+    if (selection.isEmpty())
+        return;
+    const auto idx = selection.at(0).topLeft();
+    ui->objectTreeView->scrollTo(idx);
+}

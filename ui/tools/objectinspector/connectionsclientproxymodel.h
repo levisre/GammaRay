@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,18 +32,16 @@
 #include <QSortFilterProxyModel>
 
 namespace GammaRay {
-
 /** Client-side part of the connections model. */
 class ConnectionsClientProxyModel : public QSortFilterProxyModel
 {
     Q_OBJECT
 public:
-    explicit ConnectionsClientProxyModel(QObject* parent = 0);
-    virtual ~ConnectionsClientProxyModel();
+    explicit ConnectionsClientProxyModel(QObject *parent = nullptr);
+    ~ConnectionsClientProxyModel() override;
 
-    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 };
-
 }
 
 #endif // GAMMARAY_CONNECTIONSCLIENTPROXYMODEL_H

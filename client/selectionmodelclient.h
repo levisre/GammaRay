@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,26 +36,24 @@ class QTimer;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** Client side of the network transparent QItemSelectionModel. */
 class SelectionModelClient : public NetworkSelectionModel
 {
-  Q_OBJECT
+    Q_OBJECT
 public:
-  SelectionModelClient(const QString& objectName, QAbstractItemModel* model, QObject* parent);
-  ~SelectionModelClient();
+    SelectionModelClient(const QString &objectName, QAbstractItemModel *model, QObject *parent);
+    ~SelectionModelClient() override;
 
 private slots:
-  void timeout();
-  void serverRegistered(const QString &objectName, Protocol::ObjectAddress objectAddress);
-  void serverUnregistered(const QString &objectName, Protocol::ObjectAddress objectAddress);
+    void timeout();
+    void serverRegistered(const QString &objectName, Protocol::ObjectAddress objectAddress);
+    void serverUnregistered(const QString &objectName, Protocol::ObjectAddress objectAddress);
 
 private:
-  void connectToServer();
+    void connectToServer();
 
-  QTimer *m_timer;
+    QTimer *m_timer;
 };
-
 }
 
 #endif // GAMMARAY_SELECTIONMODELCLIENT_H

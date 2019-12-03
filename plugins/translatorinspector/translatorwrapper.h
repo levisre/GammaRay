@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Jan Dalheimer <jan.dalheimer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,79 +29,85 @@
 #ifndef TRANSLATORWRAPPER_H
 #define TRANSLATORWRAPPER_H
 
+#include <common/modelroles.h>
+
 #include <QAbstractItemModel>
 #include <QTranslator>
+
+QT_BEGIN_NAMESPACE
+class QItemSelection;
+QT_END_NAMESPACE
 
 namespace GammaRay {
 class TranslatorWrapper;
 
-class TranslationsModel : public QAbstractListModel
+class TranslationsModel : public QAbstractTableModel
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
+public:
+    enum CustomRoles {
+        IsOverriddenRole = GammaRay::UserRole
+    };
+
     explicit TranslationsModel(TranslatorWrapper *translator);
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int columnCount(const QModelIndex &) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex &index, int role) const Q_DECL_OVERRIDE;
-    bool setData(const QModelIndex &index, const QVariant &value,
-                 int role) Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation,
-                        int role) const Q_DECL_OVERRIDE;
-    Qt::ItemFlags flags(const QModelIndex &index) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role) override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
+    QMap<int, QVariant> itemData(const QModelIndex &index) const override;
 
-    void resetTranslations(const QModelIndex &first, const QModelIndex &last);
-    QString translation(const char *context, const char *sourceText,
-                        const char *disambiguation, const int n,
-                        const QString &default_);
+    void resetTranslations(const QItemSelection &selection);
+    QString translation(const char *context, const char *sourceText, const char *disambiguation,
+                        const int n, const QString &default_);
 
     void resetAllUnchanged();
 
     TranslatorWrapper *translator() const
     {
-      return m_translator;
+        return m_translator;
     }
 
-  signals:
+signals:
     void rowCountChanged();
 
-  private:
+private:
     friend class TranslatorWrapper;
     TranslatorWrapper *m_translator;
 
     struct Row
     {
-      Row() : isOverriden(false) {}
-      QByteArray context;
-      QByteArray sourceText;
-      QByteArray disambiguation;
-      QString translation;
-      bool isOverriden;
+        Row() = default;
+        QByteArray context;
+        QByteArray sourceText;
+        QByteArray disambiguation;
+        QString translation;
+        bool isOverridden = false;
     };
     QVector<Row> m_nodes;
 
-    QModelIndex findNode(const char *context, const char *sourceText,
-                         const char *disambiguation, const int n,
-                         const bool create);
+    QModelIndex findNode(const char *context, const char *sourceText, const char *disambiguation,
+                         const int n, const bool create);
     void setTranslation(const QModelIndex &index, const QString &translation);
 };
 
 class TranslatorWrapper : public QTranslator
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit TranslatorWrapper(QTranslator *wrapped, QObject *parent = 0);
+public:
+    explicit TranslatorWrapper(QTranslator *wrapped, QObject *parent = nullptr);
 
     TranslationsModel *model() const { return m_model; }
 
-    bool isEmpty() const Q_DECL_OVERRIDE;
-    QString translate(const char *context, const char *sourceText,
-                      const char *disambiguation, int n) const Q_DECL_OVERRIDE;
-    const QTranslator *translator() const;
+    bool isEmpty() const override;
+    QString translate(const char *context, const char *sourceText, const char *disambiguation,
+                      int n) const override;
+    QTranslator *translator() const;
 
-  private:
+private:
     QTranslator *m_wrapped;
     TranslationsModel *m_model;
 
@@ -111,26 +117,25 @@ class TranslatorWrapper : public QTranslator
 
 class FallbackTranslator : public QTranslator
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit FallbackTranslator(QObject *parent = 0);
+public:
+    explicit FallbackTranslator(QObject *parent = nullptr);
 
-    bool isEmpty() const Q_DECL_OVERRIDE
+    bool isEmpty() const override
     {
-      return false;
+        return false;
     }
 
-    QString translate(const char *context, const char *sourceText,
-                      const char *disambiguation, int n) const Q_DECL_OVERRIDE;
+    QString translate(const char *context, const char *sourceText, const char *disambiguation,
+                      int n) const override;
 
-  private:
+private:
 #ifndef Q_NO_USING_KEYWORD
     // hide
     using QTranslator::load;
 #endif
 };
-
 }
 
 #endif

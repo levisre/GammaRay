@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,51 +36,28 @@
 
 using namespace GammaRay;
 
-WebInspectorWidget::WebInspectorWidget(QWidget* parent)
-  : QWidget(parent), ui(new Ui::WebInspectorWidget)
+WebInspectorWidget::WebInspectorWidget(QWidget *parent)
+    : QWidget(parent)
+    , ui(new Ui::WebInspectorWidget)
 {
-  ui->setupUi(this);
-  ui->webPageComboBox->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.WebPages")));
-  connect(ui->webPageComboBox, SIGNAL(activated(int)), SLOT(webPageSelected(int)));
+    ui->setupUi(this);
+    ui->webPageComboBox->setModel(ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.WebPages")));
+    connect(ui->webPageComboBox, static_cast<void(QComboBox::*)(int)>(&QComboBox::activated),
+            this, &WebInspectorWidget::webPageSelected);
+    webPageSelected(0);
 }
 
-WebInspectorWidget::~WebInspectorWidget()
-{
-}
+WebInspectorWidget::~WebInspectorWidget() = default;
 
 void WebInspectorWidget::webPageSelected(int index)
 {
-  QObject *obj = ui->webPageComboBox->itemData(index, ObjectModel::ObjectRole).value<QObject*>();
-
-  // Wk 1, local
-  if (QWebPage *page = qobject_cast<QWebPage*>(obj)) {
-    page->settings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, true);
-    ui->webInspector->setPage(page);
-    // webinspector needs a show event to actually show anything, just setting the page is not enough...
-    ui->webInspector->hide();
-    ui->webInspector->show();
-
-    ui->stack->setCurrentWidget(ui->wk1LocalPage);
-  }
-
-  else if (ui->webPageComboBox->itemData(index, WebViewModelRoles::WebKitVersionRole).toInt() == 2) {
+    Q_UNUSED(index);
     const QUrl serverUrl = Endpoint::instance()->serverAddress();
     if (serverUrl.scheme() == QLatin1String("tcp")) {
-      QUrl inspectorUrl;
-      inspectorUrl.setScheme(QStringLiteral("http"));
-      inspectorUrl.setHost(serverUrl.host());
-      inspectorUrl.setPort(Endpoint::defaultPort() + 1);
-      ui->webView->setUrl(inspectorUrl);
-      ui->stack->setCurrentWidget(ui->wk2Page);
+        QUrl inspectorUrl;
+        inspectorUrl.setScheme(QStringLiteral("http"));
+        inspectorUrl.setHost(serverUrl.host());
+        inspectorUrl.setPort(Endpoint::defaultPort() + 1);
+        ui->webView->setUrl(inspectorUrl);
     }
-  }
-
-  // WK1, remote
-  else {
-    ui->stack->setCurrentWidget(ui->wk1RemotePage);
-  }
 }
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(WebInspectorUiFactory)
-#endif

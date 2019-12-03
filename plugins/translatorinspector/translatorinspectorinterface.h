@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Jan Dalheimer <jan.dalheimer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,27 +31,24 @@
 
 #include <QObject>
 
-namespace GammaRay
-{
-
+namespace GammaRay {
 class TranslatorInspectorInterface : public QObject
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
+public:
     explicit TranslatorInspectorInterface(const QString &name, QObject *parent);
-    virtual ~TranslatorInspectorInterface();
+    ~TranslatorInspectorInterface() override;
 
     const QString &name() const { return m_name; }
 
-  public slots:
+public slots:
     virtual void sendLanguageChangeEvent() = 0;
     virtual void resetTranslations() = 0;
 
-  private:
+private:
     QString m_name;
 };
-
 }
 
 QT_BEGIN_NAMESPACE

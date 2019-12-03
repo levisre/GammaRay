@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,7 +39,6 @@ class QStandardItemModel;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class PropertyController;
 class ObjectMethodModel;
 class MethodArgumentModel;
@@ -47,32 +46,31 @@ class MultiSignalMapper;
 
 class MethodsExtension : public MethodsExtensionInterface, public PropertyControllerExtension
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::MethodsExtensionInterface)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::MethodsExtensionInterface)
 
-  public:
+public:
     explicit MethodsExtension(PropertyController *controller);
-    ~MethodsExtension();
+    ~MethodsExtension() override;
 
-    bool setQObject(QObject *object) Q_DECL_OVERRIDE;
-    bool setMetaObject(const QMetaObject *metaObject) Q_DECL_OVERRIDE;
+    bool setQObject(QObject *object) override;
+    bool setMetaObject(const QMetaObject *metaObject) override;
 
-  public slots:
-    void activateMethod() Q_DECL_OVERRIDE;
-    void invokeMethod(Qt::ConnectionType type) Q_DECL_OVERRIDE;
-    void connectToSignal() Q_DECL_OVERRIDE;
+public slots:
+    void activateMethod() override;
+    void invokeMethod(Qt::ConnectionType connectionType) override;
+    void connectToSignal() override;
 
-  private slots:
+private slots:
     void signalEmitted(QObject *sender, int signalIndex, const QVector<QVariant> &args);
 
-  private:
+private:
     ObjectMethodModel *m_model;
     QStandardItemModel *m_methodLogModel;
     MethodArgumentModel *m_methodArgumentModel;
     MultiSignalMapper *m_signalMapper;
     QPointer<QObject> m_object;
 };
-
 }
 
 #endif // METHODSEXTENSION_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,16 +37,15 @@ class QIODevice;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** Adapter for the various different client socket classes (TCP, local, etc). */
 class ClientDevice : public QObject
 {
     Q_OBJECT
 public:
-    explicit ClientDevice(QObject* parent = 0);
+    explicit ClientDevice(QObject *parent = nullptr);
     ~ClientDevice();
 
-    static ClientDevice* create(const QUrl& url, QObject* parent);
+    static ClientDevice *create(const QUrl &url, QObject *parent);
 
     void setTryAgain(int tries);
     virtual void connectToHost() = 0;
@@ -65,23 +64,24 @@ protected:
     int m_tries;
 };
 
-template <typename ClientT>
+template<typename ClientT>
 class ClientDeviceImpl : public ClientDevice
 {
 public:
-    explicit ClientDeviceImpl(QObject *parent = 0) : ClientDevice(parent), m_socket(0)
+    explicit ClientDeviceImpl(QObject *parent = nullptr)
+        : ClientDevice(parent)
+        , m_socket(nullptr)
     {
     }
 
-    QIODevice* device() const Q_DECL_OVERRIDE
+    QIODevice *device() const override
     {
         return m_socket;
     }
 
 protected:
-    ClientT* m_socket;
+    ClientT *m_socket;
 };
-
 }
 
 #endif // GAMMARAY_CLIENTDEVICE_H

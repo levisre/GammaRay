@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -45,21 +45,22 @@
 #include <QSortFilterProxyModel>
 
 namespace GammaRay {
-
 /**
  * @brief A QSortFilterProxyModel for generic Objects.
  */
 class GAMMARAY_CORE_EXPORT ObjectFilterProxyModelBase : public QSortFilterProxyModel
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     /**
      * Constructor.
      * @param parent is the parent object for this instance.
      */
-    explicit ObjectFilterProxyModelBase(QObject *parent = Q_NULLPTR);
+    explicit ObjectFilterProxyModelBase(QObject *parent = nullptr);
 
-  protected:
+    QMap<int, QVariant> itemData(const QModelIndex& index) const override;
+
+protected:
     /**
      * Determines if the item in the specified row can be included in the model.
      * @param source_row is a non-zero integer representing the row of the item.
@@ -67,7 +68,7 @@ class GAMMARAY_CORE_EXPORT ObjectFilterProxyModelBase : public QSortFilterProxyM
      * @return true if the item in the row can be included in the model;
      *         otherwise returns false.
      */
-    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const Q_DECL_OVERRIDE;
+    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;
 
     /**
      * Determines if the specified QObject can be included in the model.
@@ -80,23 +81,23 @@ class GAMMARAY_CORE_EXPORT ObjectFilterProxyModelBase : public QSortFilterProxyM
 /**
  * @brief A templated generic ObjectFilterProxyModelBase for some data type.
  */
-template <typename T>
+template<typename T1, typename T2 = T1>
 class ObjectTypeFilterProxyModel : public ObjectFilterProxyModelBase
 {
-  public:
+public:
     /**
      * Constructor.
      * @param parent is the parent object for this instance.
      */
-    explicit ObjectTypeFilterProxyModel(QObject *parent = 0)
-      : ObjectFilterProxyModelBase(parent)
+    explicit ObjectTypeFilterProxyModel(QObject *parent = nullptr)
+        : ObjectFilterProxyModelBase(parent)
     {
     }
 
-  protected:
-    bool filterAcceptsObject(QObject *object) const Q_DECL_OVERRIDE
+protected:
+    bool filterAcceptsObject(QObject *object) const override
     {
-      return qobject_cast<T*>(object);
+        return qobject_cast<T1 *>(object) || qobject_cast<T2 *>(object);
     }
 };
 

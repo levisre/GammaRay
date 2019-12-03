@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,17 +38,16 @@
 #include <QVariant>
 
 namespace GammaRay {
-
 class RemoteViewFrame;
 
-QDataStream& operator<<(QDataStream &stream, const GammaRay::RemoteViewFrame &frame);
-QDataStream& operator>>(QDataStream &stream, GammaRay::RemoteViewFrame &frame);
+QDataStream &operator<<(QDataStream &stream, const GammaRay::RemoteViewFrame &frame);
+QDataStream &operator>>(QDataStream &stream, GammaRay::RemoteViewFrame &frame);
 
 /** Data of a single frame displayed in the RemoteViewWidget. */
 class GAMMARAY_COMMON_EXPORT RemoteViewFrame
 {
 public:
-    RemoteViewFrame();
+    RemoteViewFrame() = default;
     ~RemoteViewFrame();
 
     bool isValid() const;
@@ -61,21 +60,22 @@ public:
     void setSceneRect(const QRectF &sceneRect);
 
     QImage image() const;
+    QTransform transform() const;
     void setImage(const QImage &image);
+    void setImage(const QImage &image, const QTransform &transform);
 
     /// tool specific frame data
     QVariant data() const;
     void setData(const QVariant &data);
 
 private:
-    friend QDataStream& operator<<(QDataStream &stream, const RemoteViewFrame &frame);
-    friend QDataStream& operator>>(QDataStream &stream, RemoteViewFrame &frame);
+    friend QDataStream &operator<<(QDataStream &stream, const RemoteViewFrame &frame);
+    friend QDataStream &operator>>(QDataStream &stream, RemoteViewFrame &frame);
     TransferImage m_image;
     QVariant m_data;
     QRectF m_viewRect;
     QRectF m_sceneRect;
 };
-
 }
 
 Q_DECLARE_METATYPE(GammaRay::RemoteViewFrame)

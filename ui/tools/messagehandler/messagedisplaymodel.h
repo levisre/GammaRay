@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,18 +32,16 @@
 #include <QIdentityProxyModel>
 
 namespace GammaRay {
-
 /** Client side additions to the message model. */
 class MessageDisplayModel : public QIdentityProxyModel
 {
     Q_OBJECT
 public:
-    explicit MessageDisplayModel(QObject* parent = 0);
-    ~MessageDisplayModel();
+    explicit MessageDisplayModel(QObject *parent = nullptr);
+    ~MessageDisplayModel() override;
 
-    QVariant data(const QModelIndex& proxyIndex, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &proxyIndex, int role = Qt::DisplayRole) const override;
 };
-
 }
 
 #endif // GAMMARAY_MESSAGEDISPLAYMODEL_H

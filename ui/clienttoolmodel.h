@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,48 +29,48 @@
 #ifndef GAMMARAY_CLIENTTOOLMODEL_H
 #define GAMMARAY_CLIENTTOOLMODEL_H
 
-#include "gammaray_ui_export.h"
-
-#include <QHash>
-#include <QPointer>
-#include <QSortFilterProxyModel>
-#include <QSet>
-
-QT_BEGIN_NAMESPACE
-class QWidget;
-QT_END_NAMESPACE
+#include <QAbstractListModel>
+#include <QItemSelectionModel>
 
 namespace GammaRay {
 
-class ToolUiFactory;
+class ClientToolManager;
 
-/** @brief Tool model for the client that implements the custom roles that return widget/factory pointers.
- *
- *  This is needed when implementing your own client UI embedded into a different application.
- */
-class GAMMARAY_UI_EXPORT ClientToolModel : public QSortFilterProxyModel
+/*! Model of all selectable client tools. */
+class ClientToolModel : public QAbstractListModel
 {
-  Q_OBJECT
+    Q_OBJECT
 public:
-  explicit ClientToolModel(QObject* parent = 0);
-  ~ClientToolModel();
+    explicit ClientToolModel(ClientToolManager *manager);
+    ~ClientToolModel() override;
 
-  QVariant data(const QModelIndex& index, int role) const Q_DECL_OVERRIDE;
-  bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) Q_DECL_OVERRIDE;
-  Qt::ItemFlags flags(const QModelIndex &index) const Q_DECL_OVERRIDE;
-
-  void setSourceModel(QAbstractItemModel * sourceModel) Q_DECL_OVERRIDE;
-
-protected:
-  bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
 private slots:
-  void updateToolInitialization(const QModelIndex & topLeft, const QModelIndex & bottomRight);
+    void startReset();
+    void finishReset();
+    void toolEnabled(int toolIndex);
 
 private:
-  typedef QHash<QString, QPointer<QWidget>> WidgetsHash;
-  mutable WidgetsHash m_widgets; // ToolId -> Widget
-  QPointer<QWidget> m_parentWidget;
+    ClientToolManager *m_toolManager;
+};
+
+/*! Selection model that automatically syncs ClientToolModel with ClientToolManager. */
+class ClientToolSelectionModel : public QItemSelectionModel
+{
+    Q_OBJECT
+public:
+    explicit ClientToolSelectionModel(ClientToolManager *manager);
+    ~ClientToolSelectionModel() override;
+
+private slots:
+    void selectTool(int index);
+    void selectDefaultTool();
+
+private:
+    ClientToolManager *m_toolManager;
 };
 
 }

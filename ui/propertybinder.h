@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,7 +37,6 @@
 #include <QVector>
 
 namespace GammaRay {
-
 /** Helper class to bind two properties together, similar to QML. */
 class GAMMARAY_UI_EXPORT PropertyBinder : public QObject
 {
@@ -54,9 +53,10 @@ public:
      *  This is a convenience overload for syncing a single property pair, initial synchronization
      *  from source to destination happens automatically.
      */
-    explicit PropertyBinder(QObject *source, const char *sourceProp, QObject *destination, const char *destProp);
+    explicit PropertyBinder(QObject *source, const char *sourceProp, QObject *destination,
+                            const char *destProp);
 
-    ~PropertyBinder();
+    ~PropertyBinder() override;
 
     /** Adds another binding between @p sourceProp and @p destProp.
      *  At least the source property must have a change notification signal.
@@ -72,11 +72,11 @@ private slots:
     void syncDestinationToSource();
 
 private:
-    QObject* m_source;
+    QObject *m_source;
     QPointer<QObject> m_destination;
     struct Binding {
-      QMetaProperty sourceProperty;
-      QMetaProperty destinationProperty;
+        QMetaProperty sourceProperty;
+        QMetaProperty destinationProperty;
     };
     QVector<Binding> m_properties;
     bool m_lock;

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,9 +35,7 @@
 #include <QWidget>
 
 namespace GammaRay {
-
-namespace Ui
-{
+namespace Ui {
 class NetworkWidget;
 }
 
@@ -45,8 +43,8 @@ class NetworkWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit NetworkWidget(QWidget *parent = Q_NULLPTR);
-    ~NetworkWidget();
+    explicit NetworkWidget(QWidget *parent = nullptr);
+    ~NetworkWidget() override;
 
 private:
     QScopedPointer<Ui::NetworkWidget> ui;
@@ -58,9 +56,8 @@ class NetworkWidgetFactory : public QObject, public StandardToolUiFactory<Networ
     Q_INTERFACES(GammaRay::ToolUiFactory)
     Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_network.json")
 public:
-    void initUi() Q_DECL_OVERRIDE;
+    void initUi() override;
 };
-
 }
 
 #endif // GAMMARAY_NETWORKWIDGET_H

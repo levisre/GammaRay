@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,15 +27,17 @@
 #include "actioninspector.h"
 #include "actionmodel.h"
 
-#include <common/objectmodel.h>
-#include <common/objectbroker.h>
-#include <core/probeinterface.h>
 #include <core/metaobject.h>
 #include <core/metaobjectrepository.h>
 #include <core/remote/serverproxymodel.h>
 
+#include <common/objectmodel.h>
+#include <common/objectbroker.h>
+#include <common/objectid.h>
+
 #include <QtPlugin>
 #include <QGraphicsWidget>
+#include <QItemSelectionModel>
 #include <QMenu>
 
 #include <iostream>
@@ -43,71 +45,79 @@
 using namespace GammaRay;
 using namespace std;
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_DECLARE_METATYPE(QActionGroup*)
-Q_DECLARE_METATYPE(QMenu*)
-#endif
-
-ActionInspector::ActionInspector(ProbeInterface *probe, QObject *parent)
-  : QObject(parent)
+ActionInspector::ActionInspector(Probe *probe, QObject *parent)
+    : QObject(parent)
 {
-  registerMetaTypes();
-  ObjectBroker::registerObject(QStringLiteral("com.kdab.GammaRay.ActionInspector"), this);
+    registerMetaTypes();
+    ObjectBroker::registerObject(QStringLiteral("com.kdab.GammaRay.ActionInspector"), this);
 
-  ActionModel *actionModel = new ActionModel(this);
-  connect(probe->probe(), SIGNAL(objectCreated(QObject*)), actionModel, SLOT(objectAdded(QObject*)));
-  connect(probe->probe(), SIGNAL(objectDestroyed(QObject*)), actionModel, SLOT(objectRemoved(QObject*)));
+    auto *actionModel = new ActionModel(this);
+    connect(probe, &Probe::objectCreated, actionModel,
+            &ActionModel::objectAdded);
+    connect(probe, &Probe::objectDestroyed, actionModel,
+            &ActionModel::objectRemoved);
+    connect(probe, &Probe::objectSelected,
+            this, &ActionInspector::objectSelected);
 
-  auto proxy = new ServerProxyModel<QSortFilterProxyModel>(this);
-  proxy->setSourceModel(actionModel);
-  probe->registerModel(QStringLiteral("com.kdab.GammaRay.ActionModel"), proxy);
+    auto proxy = new ServerProxyModel<QSortFilterProxyModel>(this);
+    proxy->setSourceModel(actionModel);
+    proxy->addRole(ActionModel::ObjectIdRole);
+    probe->registerModel(QStringLiteral("com.kdab.GammaRay.ActionModel"), proxy);
+
+    m_selectionModel = ObjectBroker::selectionModel(proxy);
 }
 
-ActionInspector::~ActionInspector()
-{
-}
+ActionInspector::~ActionInspector() = default;
 
 void ActionInspector::triggerAction(int row)
 {
-  QAbstractItemModel *model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ActionModel"));
-  const QModelIndex index = model->index(row, 0);
-  if (!index.isValid()) {
-    return;
-  }
+    auto model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ActionModel"));
+    const QModelIndex index = model->index(row, 0);
+    if (!index.isValid())
+        return;
 
-  QObject *obj = index.data(ObjectModel::ObjectRole).value<QObject*>();
-  QAction *action = qobject_cast<QAction*>(obj);
+    QObject *obj = index.data(ActionModel::ObjectRole).value<QObject*>();
+    QAction *action = qobject_cast<QAction*>(obj);
 
-  if (action) {
-    action->trigger();
-  }
+    if (action)
+        action->trigger();
+}
+
+void GammaRay::ActionInspector::objectSelected(QObject *obj)
+{
+    QAction *action = qobject_cast<QAction *>(obj);
+    if (!action)
+        return;
+
+    const QAbstractItemModel *model = m_selectionModel->model();
+
+    const auto indexList = model->match(model->index(0, 0),
+                       ActionModel::ObjectIdRole,
+                       QVariant::fromValue(ObjectId(action)), 1,
+                       Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
+    if (indexList.isEmpty())
+        return;
+
+    const QModelIndex index = indexList.first();
+    m_selectionModel->select(index,
+                             QItemSelectionModel::Select
+                             |QItemSelectionModel::Clear
+                             |QItemSelectionModel::Rows
+                             |QItemSelectionModel::Current);
 }
 
 void ActionInspector::registerMetaTypes()
 {
-  MetaObject *mo = 0;
-  MO_ADD_METAOBJECT1(QAction, QObject);
-  MO_ADD_PROPERTY_RO(QAction, QActionGroup*, actionGroup);
-  MO_ADD_PROPERTY_CR(QAction, QVariant, data, setData);
-  MO_ADD_PROPERTY   (QAction, bool, isSeparator, setSeparator);
-  MO_ADD_PROPERTY_RO(QAction, QMenu*, menu);
-  MO_ADD_PROPERTY_RO(QAction, QWidget*, parentWidget);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
-  MO_ADD_PROPERTY_RO(QAction, QList<QGraphicsWidget*>, associatedGraphicsWidgets);
-  MO_ADD_PROPERTY_RO(QAction, QList<QWidget*>, associatedWidgets);
-#endif
+    MetaObject *mo = nullptr;
+    MO_ADD_METAOBJECT1(QAction, QObject);
+    MO_ADD_PROPERTY_RO(QAction, actionGroup);
+    MO_ADD_PROPERTY(QAction, data, setData);
+    MO_ADD_PROPERTY(QAction, isSeparator, setSeparator);
+    MO_ADD_PROPERTY_RO(QAction, menu);
+    MO_ADD_PROPERTY_RO(QAction, parentWidget);
+    MO_ADD_PROPERTY_RO(QAction, associatedGraphicsWidgets);
+    MO_ADD_PROPERTY_RO(QAction, associatedWidgets);
 
-  MO_ADD_METAOBJECT1(QActionGroup, QObject);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
-  MO_ADD_PROPERTY_RO(QActionGroup, QList<QAction*>, actions);
-#endif
+    MO_ADD_METAOBJECT1(QActionGroup, QObject);
+    MO_ADD_PROPERTY_RO(QActionGroup, actions);
 }
-
-QString ActionInspectorFactory::name() const
-{
-  return tr("Action Inspector");
-}
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(ActionInspectorFactory)
-#endif

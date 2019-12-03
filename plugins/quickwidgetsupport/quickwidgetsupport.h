@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,45 +32,35 @@
 #include <core/toolfactory.h>
 
 #include <QQuickWidget>
-#include <QHash>
 
 namespace GammaRay {
-
 class QuickWidgetSupport : public QObject
 {
     Q_OBJECT
 public:
-    explicit QuickWidgetSupport(ProbeInterface *probe, QObject *parent = 0);
-    ~QuickWidgetSupport();
-
-    typedef bool (*GrabWindowCallback)(QQuickWindow*);
-    bool grabWindow(QQuickWindow* window) const;
+    explicit QuickWidgetSupport(Probe *probe, QObject *parent = nullptr);
+    ~QuickWidgetSupport() override;
 
 private slots:
-    void objectAdded(QObject* obj);
-    void registerWindowGrabber();
+    void objectAdded(QObject *obj);
 
 private:
-    QHash<QQuickWindow*, QQuickWidget*> m_windowMap;
-    QObject *m_quickInspector;
-    ProbeInterface *m_probe;
+    Probe *m_probe;
 };
 
-class QuickWidgetSupportFactory : public QObject, public StandardToolFactory<QQuickWidget, QuickWidgetSupport>
+class QuickWidgetSupportFactory : public QObject,
+    public StandardToolFactory<QQuickWidget, QuickWidgetSupport>
 {
     Q_OBJECT
     Q_INTERFACES(GammaRay::ToolFactory)
     Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_quickwidgetsupport.json")
 
 public:
-    explicit QuickWidgetSupportFactory(QObject *parent = 0) : QObject(parent)
+    explicit QuickWidgetSupportFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif
-

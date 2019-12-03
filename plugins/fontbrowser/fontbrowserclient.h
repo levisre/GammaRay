@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,23 +32,21 @@
 #include "fontbrowserinterface.h"
 
 namespace GammaRay {
-
 class FontBrowserClient : public FontBrowserInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::FontBrowserInterface)
-  public:
-    explicit FontBrowserClient(QObject *parent = 0);
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::FontBrowserInterface)
+public:
+    explicit FontBrowserClient(QObject *parent = nullptr);
 
-  public slots:
-    void setPointSize(int size) Q_DECL_OVERRIDE;
-    void toggleBoldFont(bool bold) Q_DECL_OVERRIDE;
-    void toggleItalicFont(bool italic) Q_DECL_OVERRIDE;
-    void toggleUnderlineFont(bool underline) Q_DECL_OVERRIDE;
-    void updateText(const QString &text) Q_DECL_OVERRIDE;
-    void setColors(const QColor &foreground, const QColor &background) Q_DECL_OVERRIDE;
+public slots:
+    void setPointSize(int size) override;
+    void toggleBoldFont(bool bold) override;
+    void toggleItalicFont(bool italic) override;
+    void toggleUnderlineFont(bool underline) override;
+    void updateText(const QString &text) override;
+    void setColors(const QColor &foreground, const QColor &background) override;
 };
-
 }
 
 #endif // GAMMARAY_FONTBROWSERCLIENT_H

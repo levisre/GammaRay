@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,54 +38,53 @@ class QSGGeometry;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-class SGGeometryModel : public QAbstractTableModel
+class SGVertexModel : public QAbstractTableModel
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
 
     enum Role {
-      IsCoordinateRole = 257,
-      RenderRole = 258
+        IsCoordinateRole = 257,
+        RenderRole = 258
     };
 
-    explicit SGGeometryModel(QObject *parent = 0);
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QMap<int, QVariant> itemData(const QModelIndex &index) const Q_DECL_OVERRIDE;
+    explicit SGVertexModel (QObject *parent = nullptr);
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
+    QMap<int, QVariant> itemData(const QModelIndex &index) const override;
 
-    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    QModelIndex index(int row, int column,
+                      const QModelIndex &parent = QModelIndex()) const override;
 
     void setNode(QSGGeometryNode *node);
 
-    template <typename T>
-    static QStringList toStringList(void *data, int size) {
-      QStringList list;
-      T* typedData = static_cast<T*>(data);
-      for (int i = 0; i < size; i++) {
-        list << QString::number(*typedData);
-        ++typedData;
-      }
-      return list;
-    }
-    template <typename T>
-    static QVariantList toVariantList(void *data, int size) {
-      QVariantList list;
-      T* typedData = static_cast<T*>(data);
-      for (int i = 0; i < size; i++) {
-        list << QVariant::fromValue<T>(*typedData);
-        ++typedData;
-      }
-      return list;
-    }
-
-  private:
+private:
     QSGGeometry *m_geometry;
     QSGGeometryNode *m_node;
 };
 
+class SGAdjacencyModel : public QAbstractListModel
+{
+    Q_OBJECT
+public:
+    enum Role {
+        DrawingModeRole = 257,
+        RenderRole = 258
+    };
+    explicit SGAdjacencyModel (QObject *parent = nullptr);
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QMap<int, QVariant> itemData(const QModelIndex &index) const override;
+
+    void setNode(QSGGeometryNode *node);
+
+private:
+    QSGGeometry *m_geometry;
+    QSGGeometryNode *m_node;
+};
 }
 
 #endif // GAMMARAY_SGGEOMETRYMODEL_H

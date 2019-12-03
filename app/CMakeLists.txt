@@ -11,10 +11,10 @@ if(APPLE)
     add_executable(gammaray-app ${gammaray_app_srcs})
 
     target_link_libraries(gammaray-app
-      ${QT_QTGUI_LIBRARIES}
+      Qt5::Gui Qt5::Widgets
       gammaray_common
       gammaray_launcher
-      gammaray_launcher_ui_internal
+      gammaray_launcher_ui
       gammaray_client
     )
 
@@ -35,7 +35,7 @@ if(APPLE)
     set(GAMMARAY_BUNDLE_SHORT_VERSION_STRING "${GAMMARAY_VERSION}")
     set(GAMMARAY_BUNDLE_LONG_VERSION_STRING "${GAMMARAY_VERSION_STRING}")
     set(GAMMARAY_BUNDLE_INFO_STRING "GammaRay ${GAMMARAY_VERSION}")
-    set(GAMMARAY_BUNDLE_COPYRIGHT "Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com")
+    set(GAMMARAY_BUNDLE_COPYRIGHT "Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com")
 
     configure_file("${GAMMARAY_BUNDLE_INFO_PLIST_IN}" "${GAMMARAY_BUNDLE_INFO_PLIST_OUT}")
 

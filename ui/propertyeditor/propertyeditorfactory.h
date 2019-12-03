@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,34 +35,30 @@
 #include <QVector>
 
 namespace GammaRay {
-
 /** Item editor factory with support for extra types while keeping support for the built-in ones. */
 class GAMMARAY_UI_EXPORT PropertyEditorFactory : public QItemEditorFactory
 {
-  public:
+public:
     static PropertyEditorFactory *instance();
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-    typedef QVariant::Type TypeId;
-#else
     typedef int TypeId;
-#endif
 
-    QWidget *createEditor(TypeId type, QWidget *parent) const Q_DECL_OVERRIDE;
+    QWidget *createEditor(TypeId type, QWidget *parent) const override;
 
     static QVector<int> supportedTypes();
+    static bool hasExtendedEditor(int typeId);
 
-  protected:
+protected:
     PropertyEditorFactory();
 
-  private:
+private:
     Q_DISABLE_COPY(PropertyEditorFactory)
     void initBuiltInTypes();
-    void addEditor(TypeId type, QItemEditorCreatorBase *creator);
+    void addEditor(TypeId type, QItemEditorCreatorBase *creator, bool extended = false);
 
     QVector<int> m_supportedTypes;
+    QVector<int> m_extendedTypes;
 };
-
 }
 
 #endif // GAMMARAY_PROPERTYEDITORFACTORY_H

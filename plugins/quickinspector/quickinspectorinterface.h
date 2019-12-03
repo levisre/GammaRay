@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -43,46 +43,70 @@ class QImage;
 QT_END_NAMESPACE
 
 namespace GammaRay {
+struct QuickDecorationsSettings;
 
 class QuickInspectorInterface : public QObject
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+    Q_PROPERTY(bool serverSideDecoration READ serverSideDecorationEnabled WRITE setServerSideDecorationsEnabled NOTIFY serverSideDecorationChanged)
+public:
     enum Feature {
-      NoFeatures = 0,
-      CustomRenderModeClipping = 1,
-      CustomRenderModeOverdraw = 2,
-      CustomRenderModeBatches = 4,
-      CustomRenderModeChanges = 8,
-      AllCustomRenderModes = CustomRenderModeClipping | CustomRenderModeOverdraw | CustomRenderModeBatches | CustomRenderModeChanges
+        NoFeatures = 0,
+        CustomRenderModeClipping = 1,
+        CustomRenderModeOverdraw = 2,
+        CustomRenderModeBatches = 4,
+        CustomRenderModeChanges = 8,
+        CustomRenderModeTraces = 16,
+        AllCustomRenderModes = CustomRenderModeClipping | CustomRenderModeOverdraw
+                               | CustomRenderModeBatches | CustomRenderModeChanges
+                               | CustomRenderModeTraces,
+        AnalyzePainting
     };
 
     enum RenderMode {
-      NormalRendering,
-      VisualizeClipping,
-      VisualizeOverdraw,
-      VisualizeBatches,
-      VisualizeChanges
+        NormalRendering,
+        VisualizeClipping,
+        VisualizeOverdraw,
+        VisualizeBatches,
+        VisualizeChanges,
+        VisualizeTraces,
     };
 
     Q_ENUMS(RenderMode)
     Q_DECLARE_FLAGS(Features, Feature)
 
-    explicit QuickInspectorInterface(QObject *parent = 0);
-    ~QuickInspectorInterface();
+    explicit QuickInspectorInterface(QObject *parent = nullptr);
+    ~QuickInspectorInterface() override;
 
-  public slots:
+    bool serverSideDecorationEnabled() const;
+    void setServerSideDecorationsEnabled(bool enabled);
+
+public slots:
     virtual void selectWindow(int index) = 0;
 
     virtual void setCustomRenderMode(
-      GammaRay::QuickInspectorInterface::RenderMode customRenderMode) = 0;
+        GammaRay::QuickInspectorInterface::RenderMode customRenderMode) = 0;
 
     virtual void checkFeatures() = 0;
 
-  signals:
-    void features(GammaRay::QuickInspectorInterface::Features features);
-};
+    virtual void setOverlaySettings(const GammaRay::QuickDecorationsSettings &settings) = 0;
 
+    virtual void checkOverlaySettings() = 0;
+
+    virtual void analyzePainting() = 0;
+
+    virtual void checkSlowMode() = 0;
+    virtual void setSlowMode(bool slow) = 0;
+
+signals:
+    void features(GammaRay::QuickInspectorInterface::Features features);
+    void serverSideDecorationChanged(bool enabled);
+    void overlaySettings(const GammaRay::QuickDecorationsSettings &settings);
+    void slowModeChanged(bool slow);
+
+private:
+    bool m_serverSideDecoration;
+};
 }
 
 Q_DECLARE_METATYPE(GammaRay::QuickInspectorInterface::Features)

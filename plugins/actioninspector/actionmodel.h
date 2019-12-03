@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,49 +32,61 @@
 #include <QAbstractTableModel>
 #include <QVector>
 
+#include <common/modelroles.h>
+
 QT_BEGIN_NAMESPACE
 class QAction;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class ActionValidator;
 
 class ActionModel : public QAbstractTableModel
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
+public:
     enum Column {
-      AddressColumn,
-      NameColumn,
-      CheckablePropColumn,
-      CheckedPropColumn,
-      PriorityPropColumn,
-      ShortcutsPropColumn,
-      /** Mark column count */
-      ColumnCount
+        AddressColumn,
+        NameColumn,
+        CheckablePropColumn,
+        CheckedPropColumn,
+        PriorityPropColumn,
+        ShortcutsPropColumn,
+        /** Mark column count */
+        ColumnCount
     };
 
-    explicit ActionModel(QObject *parent = 0);
-    ~ActionModel();
+    enum Role {
+        ObjectIdRole = UserRole + 1,
+        ObjectRole,
+        ShortcutConflictRole
+    };
 
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex& parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    explicit ActionModel(QObject *parent = nullptr);
+    ~ActionModel() override;
 
-  public slots:
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    Qt::ItemFlags flags(const QModelIndex& index) const override;
+    bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
+
+public slots:
     void objectAdded(QObject *object);
     void objectRemoved(QObject *object);
 
-  private:
+private slots:
+    void actionChanged();
+
+private:
+    void scanForShortcutDuplicates() const;
+
     // sorted vector of QActions
-    QVector<QAction*> m_actions;
+    QVector<QAction *> m_actions;
 
     ActionValidator *m_duplicateFinder;
 };
-
 }
 
 #endif // GAMMARAY_ACTIONMODEL_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,24 +38,24 @@ class QAbstractItemModel;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-namespace Ui { class MethodInvocationDialog; }
+namespace Ui {
+class MethodInvocationDialog;
+}
 
 class MethodInvocationDialog : public QDialog
 {
-  Q_OBJECT
-  public:
-    explicit MethodInvocationDialog(QWidget *parent = 0);
-    ~MethodInvocationDialog();
+    Q_OBJECT
+public:
+    explicit MethodInvocationDialog(QWidget *parent = nullptr);
+    ~MethodInvocationDialog() override;
 
     Qt::ConnectionType connectionType() const;
     void setArgumentModel(QAbstractItemModel *model);
 
-  private:
+private:
     QScopedPointer<Ui::MethodInvocationDialog> ui;
     UIStateManager m_stateManager;
 };
-
 }
 
 #endif // GAMMARAY_METHODINVOCATIONDIALOG_H

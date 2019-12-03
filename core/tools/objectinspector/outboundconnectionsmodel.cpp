@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,91 +30,100 @@
 #include "outboundconnectionsmodel.h"
 #include "core/probe.h"
 
-#ifdef HAVE_PRIVATE_QT_HEADERS
 #include <private/qobject_p.h>
-#endif
 
 using namespace GammaRay;
 
-OutboundConnectionsModel::OutboundConnectionsModel(QObject* parent):
-  AbstractConnectionsModel(parent)
+OutboundConnectionsModel::OutboundConnectionsModel(QObject *parent)
+    : AbstractConnectionsModel(parent)
 {
 }
 
-OutboundConnectionsModel::~OutboundConnectionsModel()
+OutboundConnectionsModel::~OutboundConnectionsModel() = default;
+
+void OutboundConnectionsModel::setObject(QObject *object)
 {
+    clear();
+    m_object = object;
+    if (!object) {
+        return;
+    }
+    setConnections(outboundConnectionsForObject(object));
 }
 
-void OutboundConnectionsModel::setObject(QObject* object)
+QVector<AbstractConnectionsModel::Connection> OutboundConnectionsModel::outboundConnectionsForObject(QObject *object)
 {
-  clear();
-  m_object = object;
-  if (!object)
-    return;
+    QVector<Connection> connections;
+    QObjectPrivate *d = QObjectPrivate::get(object);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QObjectPrivate::ConnectionData *cd = d->connections.load();
+    if (cd) {
+        auto &cl = *(cd->signalVector.load());
+#else
+    if (d->connectionLists) {
+        // HACK: the declaration of d->connectionsLists is not accessible for us...
+        const auto &cl = *reinterpret_cast<QVector<QObjectPrivate::ConnectionList> *>(d->connectionLists);
+#endif
+        for (int signalIndex = 0; signalIndex < cl.count(); ++signalIndex) {
+            const QObjectPrivate::Connection *c = cl.at(signalIndex).first;
+            while (c) {
+                if (!c->receiver || Probe::instance()->filterObject(c->receiver)) {
+                    c = c->nextConnectionList;
+                    continue;
+                }
 
-  QVector<Connection> connections;
-#ifdef HAVE_PRIVATE_QT_HEADERS
-  QObjectPrivate *d = QObjectPrivate::get(object);
-  if (d->connectionLists) {
-    // HACK: the declaration of d->connectionsLists is not accessible for us...
-    const QVector<QObjectPrivate::ConnectionList> *cl = reinterpret_cast<QVector<QObjectPrivate::ConnectionList>*>(d->connectionLists);
-    for (int signalIndex = 0; signalIndex < cl->count(); ++signalIndex) {
-      const QObjectPrivate::Connection *c = cl->at(signalIndex).first;
-      while (c) {
-        if (!c->receiver || Probe::instance()->filterObject(c->receiver)) {
-          c = c->nextConnectionList;
-          continue;
+                Connection conn;
+                conn.endpoint = c->receiver;
+                conn.signalIndex = signalIndexToMethodIndex(object, signalIndex);
+                if (c->isSlotObject)
+                    conn.slotIndex = -1;
+                else
+                conn.slotIndex = c->method();
+                conn.type = c->connectionType;
+                c = c->nextConnectionList;
+                connections.push_back(conn);
+            }
         }
-
-        Connection conn;
-        conn.endpoint = c->receiver;
-        conn.signalIndex = signalIndexToMethodIndex(m_object, signalIndex);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-        if (c->isSlotObject)
-          conn.slotIndex = -1;
-        else
-#endif
-          conn.slotIndex = c->method();
-        conn.type = c->connectionType;
-        c = c->nextConnectionList;
-        connections.push_back(conn);
-      }
     }
-  }
-#endif
-  setConnections(connections);
+
+    return connections;
 }
 
-QVariant OutboundConnectionsModel::data(const QModelIndex& index, int role) const
+QVariant OutboundConnectionsModel::data(const QModelIndex &index, int role) const
 {
-  if (!index.isValid() || !m_object)
-    return QVariant();
+    if (!index.isValid() || !m_object)
+        return QVariant();
 
-  if (role == Qt::DisplayRole) {
-    const Connection &conn = m_connections.at(index.row());
-    switch (index.column()) {
-      case 0:
-        return displayString(m_object, conn.signalIndex);
-      case 1:
-        return displayString(conn.endpoint);
-      case 2:
-        if (conn.slotIndex < 0)
-          return tr("<slot object>");
-        return displayString(conn.endpoint, conn.slotIndex);
+    if (role == Qt::DisplayRole) {
+        const Connection &conn = m_connections.at(index.row());
+        switch (index.column()) {
+        case 0:
+            return displayString(m_object, conn.signalIndex);
+        case 1:
+            return displayString(conn.endpoint);
+        case 2:
+            if (conn.slotIndex < 0) {
+                return tr("<slot object>");
+            }
+            return displayString(conn.endpoint, conn.slotIndex);
+        }
     }
-  }
 
-  return AbstractConnectionsModel::data(index, role);
+    return AbstractConnectionsModel::data(index, role);
 }
 
-QVariant OutboundConnectionsModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant OutboundConnectionsModel::headerData(int section, Qt::Orientation orientation,
+                                              int role) const
 {
-  if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
-    switch (section) {
-      case 0: return tr("Signal");
-      case 1: return tr("Receiver");
-      case 2: return tr("Slot");
+    if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
+        switch (section) {
+        case 0:
+            return tr("Signal");
+        case 1:
+            return tr("Receiver");
+        case 2:
+            return tr("Slot");
+        }
     }
-  }
-  return AbstractConnectionsModel::headerData(section, orientation, role);
+    return AbstractConnectionsModel::headerData(section, orientation, role);
 }

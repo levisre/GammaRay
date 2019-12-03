@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,47 +39,37 @@ QT_BEGIN_NAMESPACE
 GAMMARAY_ENUM_STREAM_OPERATORS(Qt3DRender::QAttribute::AttributeType)
 GAMMARAY_ENUM_STREAM_OPERATORS(Qt3DRender::QAttribute::VertexBaseType)
 GAMMARAY_ENUM_STREAM_OPERATORS(Qt3DRender::QBuffer::BufferType)
-QT_END_NAMESPACE
 
 static QDataStream &operator<<(QDataStream &out, const Qt3DGeometryAttributeData &data)
 {
-    out << data.name << data.attributeType << data.byteOffset << data.byteStride << data.count << data.divisor << data.vertexBaseType << data.vertexSize << data.bufferIndex;
+    out << data.name << data.attributeType << data.byteOffset << data.byteStride << data.count
+        << data.divisor << data.vertexBaseType << data.vertexSize << data.bufferIndex;
     return out;
 }
 
 static QDataStream &operator>>(QDataStream &in, Qt3DGeometryAttributeData &data)
 {
-    in >> data.name >> data.attributeType >> data.byteOffset >> data.byteStride >> data.count >> data.divisor >> data.vertexBaseType >> data.vertexSize >> data.bufferIndex;
+    in >> data.name >> data.attributeType >> data.byteOffset >> data.byteStride >> data.count
+       >> data.divisor >> data.vertexBaseType >> data.vertexSize >> data.bufferIndex;
     return in;
 }
+QT_END_NAMESPACE
 
-Qt3DGeometryAttributeData::Qt3DGeometryAttributeData() :
-    attributeType(Qt3DRender::QAttribute::VertexAttribute),
-    byteOffset(0),
-    byteStride(0),
-    count(0),
-    divisor(0),
-    vertexBaseType(Qt3DRender::QAttribute::UnsignedShort),
-    vertexSize(0),
-    bufferIndex(0)
-{
-}
-
-bool Qt3DGeometryAttributeData::operator==(const Qt3DGeometryAttributeData& rhs) const
+bool Qt3DGeometryAttributeData::operator==(const Qt3DGeometryAttributeData &rhs) const
 {
     return
-        name == rhs.name &&
-        attributeType == rhs.attributeType &&
-        byteOffset == rhs.byteOffset &&
-        byteStride == rhs.byteStride &&
-        count == rhs.count &&
-        divisor == rhs.divisor &&
-        vertexBaseType == rhs.vertexBaseType &&
-        vertexSize == rhs.vertexSize &&
-        bufferIndex == rhs.bufferIndex;
+        name == rhs.name
+        && attributeType == rhs.attributeType
+        && byteOffset == rhs.byteOffset
+        && byteStride == rhs.byteStride
+        && count == rhs.count
+        && divisor == rhs.divisor
+        && vertexBaseType == rhs.vertexBaseType
+        && vertexSize == rhs.vertexSize
+        && bufferIndex == rhs.bufferIndex;
 }
 
-
+QT_BEGIN_NAMESPACE
 static QDataStream &operator<<(QDataStream &out, const Qt3DGeometryBufferData &data)
 {
     out << data.name << data.data << data.type;
@@ -91,18 +81,14 @@ static QDataStream &operator>>(QDataStream &in, Qt3DGeometryBufferData &data)
     in >> data.name >> data.data >> data.type;
     return in;
 }
+QT_END_NAMESPACE
 
-Qt3DGeometryBufferData::Qt3DGeometryBufferData() :
-    type(Qt3DRender::QBuffer::VertexBuffer)
-{
-}
-
-bool Qt3DGeometryBufferData::operator==(const Qt3DGeometryBufferData& rhs) const
+bool Qt3DGeometryBufferData::operator==(const Qt3DGeometryBufferData &rhs) const
 {
     return name == rhs.name && data == rhs.data;
 }
 
-
+QT_BEGIN_NAMESPACE
 static QDataStream &operator<<(QDataStream &out, const Qt3DGeometryData &data)
 {
     out << data.attributes << data.buffers;
@@ -114,15 +100,15 @@ static QDataStream &operator>>(QDataStream &in, Qt3DGeometryData &data)
     in >> data.attributes >> data.buffers;
     return in;
 }
+QT_END_NAMESPACE
 
 bool Qt3DGeometryData::operator==(const Qt3DGeometryData &rhs) const
 {
     return attributes == rhs.attributes && buffers == rhs.buffers;
 }
 
-
-Qt3DGeometryExtensionInterface::Qt3DGeometryExtensionInterface(const QString& name, QObject* parent) :
-    QObject(parent)
+Qt3DGeometryExtensionInterface::Qt3DGeometryExtensionInterface(const QString &name, QObject *parent)
+    : QObject(parent)
 {
     qRegisterMetaType<Qt3DGeometryData>();
     qRegisterMetaTypeStreamOperators<Qt3DGeometryData>();
@@ -138,7 +124,7 @@ Qt3DGeometryData Qt3DGeometryExtensionInterface::geometryData() const
     return m_data;
 }
 
-void Qt3DGeometryExtensionInterface::setGeometryData(const Qt3DGeometryData& data)
+void Qt3DGeometryExtensionInterface::setGeometryData(const Qt3DGeometryData &data)
 {
     if (m_data == data)
         return;

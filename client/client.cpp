@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,221 +41,247 @@
 
 using namespace GammaRay;
 
-Client::Client(QObject* parent)
-  : Endpoint(parent)
-  , m_clientDevice(0)
-  , m_statModel(new MessageStatisticsModel)
-  , m_initState(0)
+Client::Client(QObject *parent)
+    : Endpoint(parent)
+    , m_clientDevice(nullptr)
+    , m_statModel(new MessageStatisticsModel(this))
+    , m_initState(0)
 {
-  connect(this, SIGNAL(disconnected()), SLOT(socketDisconnected()));
+    Message::resetNegotiatedDataVersion();
 
-  m_propertySyncer->setRequestInitialSync(true);
+    connect(this, &Endpoint::disconnected, this, &Client::socketDisconnected);
 
-  ObjectBroker::registerModelInternal(QStringLiteral("com.kdab.GammaRay.MessageStatisticsModel"), m_statModel);
+    m_propertySyncer->setRequestInitialSync(true);
+
+    ObjectBroker::registerModelInternal(QStringLiteral(
+                                            "com.kdab.GammaRay.MessageStatisticsModel"),
+                                        m_statModel);
 }
 
-Client::~Client()
-{
-}
+Client::~Client() = default;
 
-Client* Client::instance()
+Client *Client::instance()
 {
-  return static_cast<Client*>(s_instance);
+    return static_cast<Client *>(s_instance);
 }
 
 bool Client::isRemoteClient() const
 {
-  return true;
+    return true;
 }
 
 QUrl Client::serverAddress() const
 {
-  return m_serverAddress;
+    return m_serverAddress;
 }
 
 void Client::connectToHost(const QUrl &url, int tryAgain)
 {
-  m_serverAddress = url;
-  m_initState = 0;
+    m_serverAddress = url;
+    m_initState = 0;
 
-  m_statModel->clear();
-  m_clientDevice = ClientDevice::create(m_serverAddress, this);
-  if (!m_clientDevice) {
-    emit persisitentConnectionError(tr("Unsupported transport protocol."));
-    return;
-  }
+    m_statModel->clear();
+    m_clientDevice = ClientDevice::create(m_serverAddress, this);
+    if (!m_clientDevice) {
+        emit persisitentConnectionError(tr("Unsupported transport protocol."));
+        return;
+    }
 
-  connect(m_clientDevice, SIGNAL(connected()), this, SLOT(socketConnected()));
-  connect(m_clientDevice, SIGNAL(transientError()), this, SIGNAL(transientConnectionError()));
-  connect(m_clientDevice, SIGNAL(persistentError(QString)), this, SIGNAL(persisitentConnectionError(QString)));
-  connect(m_clientDevice, SIGNAL(transientError()), this, SLOT(socketError()));
-  connect(m_clientDevice, SIGNAL(persistentError(QString)), this, SLOT(socketError()));
-  m_clientDevice->setTryAgain(tryAgain);
-  m_clientDevice->connectToHost();
+    connect(m_clientDevice, &ClientDevice::connected, this, &Client::socketConnected);
+    connect(m_clientDevice, &ClientDevice::transientError, this, &Client::transientConnectionError);
+    connect(m_clientDevice, &ClientDevice::persistentError, this, &Client::persisitentConnectionError);
+    connect(m_clientDevice, &ClientDevice::transientError, this, &Client::resetClientDevice);
+    connect(m_clientDevice, &ClientDevice::persistentError, this, &Client::resetClientDevice);
+    m_clientDevice->setTryAgain(tryAgain);
+    m_clientDevice->connectToHost();
 }
 
 void Client::disconnectFromHost()
 {
     if (m_clientDevice) {
         m_clientDevice->disconnectFromHost();
-        if (m_clientDevice) {
-            m_clientDevice->deleteLater();
-            m_clientDevice = 0;
-        }
     }
 }
 
 void Client::socketConnected()
 {
-  Q_ASSERT(m_clientDevice->device());
-  setDevice(m_clientDevice->device());
+    Q_ASSERT(m_clientDevice->device());
+    setDevice(m_clientDevice->device());
 }
 
-void Client::socketError()
+void Client::resetClientDevice()
 {
     if (m_clientDevice) {
         m_clientDevice->deleteLater();
-        m_clientDevice = 0;
+        m_clientDevice = nullptr;
     }
 }
 
 void Client::socketDisconnected()
 {
-  foreach (const auto &objInfo, objectAddresses()) {
-    removeObjectNameAddressMapping(objInfo.second);
-  }
-  ObjectBroker::clear();
+    foreach (const auto &objInfo, objectAddresses())
+        removeObjectNameAddressMapping(objInfo.second);
+    ObjectBroker::clear();
+    resetClientDevice();
 }
 
-void Client::messageReceived(const Message& msg)
+void Client::messageReceived(const Message &msg)
 {
-  m_statModel->addMessage(msg.address(), msg.type(), msg.size());
-  // server version must be the very first message we get
-  if (!(m_initState & VersionChecked)) {
-    if (msg.address() != endpointAddress() || msg.type() != Protocol::ServerVersion) {
-      emit persisitentConnectionError(tr("Protocol violation, first message is not the server version."));
-      disconnectFromHost();
-    }
-    qint32 serverVersion;
-    msg.payload() >> serverVersion;
-    if (serverVersion != Protocol::version()) {
-      emit persisitentConnectionError(tr("Server version is %1, was expecting %2.").arg(serverVersion).arg(Protocol::version()));
-      disconnectFromHost();
-    }
-    m_initState |= VersionChecked;
-    return;
-  }
-
-  if (msg.address() == endpointAddress()) {
-    switch (msg.type()) {
-      case Protocol::ObjectAdded:
-      {
-        QString name;
-        Protocol::ObjectAddress addr;
-        msg.payload() >> name >> addr;
-        addObjectNameAddressMapping(name, addr);
-        m_statModel->addObject(addr, name);
-        break;
-      }
-      case Protocol::ObjectRemoved:
-      {
-        QString name;
-        msg.payload() >> name;
-        removeObjectNameAddressMapping(name);
-        break;
-      }
-      case Protocol::ObjectMapReply:
-      {
-        QVector<QPair<Protocol::ObjectAddress, QString> > objects;
-        msg.payload() >> objects;
-        for (QVector<QPair<Protocol::ObjectAddress, QString> >::const_iterator it = objects.constBegin(); it != objects.constEnd(); ++it) {
-          if (it->first != endpointAddress()) {
-            addObjectNameAddressMapping(it->second, it->first);
-          }
-          m_statModel->addObject(it->first, it->second);
+    m_statModel->addMessage(msg.address(), msg.type(), msg.size());
+    // server version must be the very first message we get
+    if (!(m_initState & VersionChecked)) {
+        if (msg.address() != endpointAddress() || msg.type() != Protocol::ServerVersion) {
+            emit persisitentConnectionError(tr(
+                                                "Protocol violation, first message is not the server version."));
+            disconnectFromHost();
         }
-
-        m_propertySyncer->setAddress(objectAddress(QStringLiteral("com.kdab.GammaRay.PropertySyncer")));
-        Q_ASSERT(m_propertySyncer->address() != Protocol::InvalidObjectAddress  );
-        Endpoint::registerMessageHandler(m_propertySyncer->address(), m_propertySyncer, "handleMessage");
-
-        m_initState |= ObjectMapReceived;
-        break;
-      }
-      case Protocol::ServerInfo:
-      {
-        QString label;
-        msg.payload() >> label;
-        setLabel(label);
-        m_initState |= ServerInfoReceived;
-        break;
-      }
-      default:
-        qWarning() << Q_FUNC_INFO << "Got unhandled message:" << msg.type();
+        qint32 serverVersion;
+        msg >> serverVersion;
+        if (serverVersion != Protocol::version()) {
+            emit persisitentConnectionError(tr("Gammaray Protocol Mismatch.\n" \
+                                               "Probe version is %1, was expecting %2.").arg(
+                                                serverVersion).arg(Protocol::version()));
+            disconnectFromHost();
+        }
+        m_initState |= VersionChecked;
         return;
     }
-    if (m_initState == InitComplete) {
-      m_initState |= ConnectionEstablished;
-      emit connectionEstablished();
+
+    if (msg.address() == endpointAddress()) {
+        switch (msg.type()) {
+        case Protocol::ObjectAdded:
+        {
+            QString name;
+            Protocol::ObjectAddress addr;
+            msg >> name >> addr;
+            addObjectNameAddressMapping(name, addr);
+            m_statModel->addObject(addr, name);
+            break;
+        }
+        case Protocol::ObjectRemoved:
+        {
+            QString name;
+            msg >> name;
+            removeObjectNameAddressMapping(name);
+            break;
+        }
+        case Protocol::ObjectMapReply:
+        {
+            QVector<QPair<Protocol::ObjectAddress, QString> > objects;
+            msg >> objects;
+            for (auto it = objects.constBegin(); it != objects.constEnd(); ++it) {
+                if (it->first != endpointAddress())
+                    addObjectNameAddressMapping(it->second, it->first);
+                m_statModel->addObject(it->first, it->second);
+            }
+
+            m_propertySyncer->setAddress(objectAddress(QStringLiteral(
+                                                           "com.kdab.GammaRay.PropertySyncer")));
+            Q_ASSERT(m_propertySyncer->address() != Protocol::InvalidObjectAddress);
+            Endpoint::registerMessageHandler(
+                m_propertySyncer->address(), m_propertySyncer, "handleMessage");
+
+            m_initState |= ObjectMapReceived;
+            break;
+        }
+        case Protocol::ServerInfo:
+        {
+            QString label;
+            QString key;
+            qint64 pid;
+            quint8 dataVersion;
+            msg >> label >> key >> pid >> dataVersion;
+            setLabel(label);
+            setKey(key);
+            setPid(pid);
+
+            {
+                const quint8 version = qMin(dataVersion, Message::highestSupportedDataVersion());
+                Message msg(endpointAddress(), Protocol::ClientDataVersionNegotiated);
+                msg << version;
+                send(msg);
+            }
+
+            m_initState |= ServerInfoReceived;
+            break;
+        }
+        case Protocol::ServerDataVersionNegotiated:
+        {
+            quint8 version;
+            msg >> version;
+            Message::setNegotiatedDataVersion(version);
+
+            m_initState |= ServerDataVersionNegotiated;
+            break;
+        }
+        default:
+            qWarning() << Q_FUNC_INFO << "Got unhandled message:" << msg.type();
+            return;
+        }
+        if (m_initState == InitComplete) {
+            m_initState |= ConnectionEstablished;
+            emit connectionEstablished();
+        }
+    } else {
+        dispatchMessage(msg);
     }
-  } else {
-    dispatchMessage(msg);
-  }
 }
 
 Protocol::ObjectAddress Client::registerObject(const QString &name, QObject *object)
 {
-  Q_ASSERT(isConnected());
-  Protocol::ObjectAddress address = Endpoint::registerObject(name, object);
-  m_propertySyncer->addObject(address, object);
-  m_propertySyncer->setObjectEnabled(address, true);
+    Q_ASSERT(isConnected());
+    Protocol::ObjectAddress address = Endpoint::registerObject(name, object);
+    m_propertySyncer->addObject(address, object);
+    m_propertySyncer->setObjectEnabled(address, true);
 
-  monitorObject(address);
-  return address;
+    monitorObject(address);
+    return address;
 }
 
-void Client::registerMessageHandler(Protocol::ObjectAddress objectAddress, QObject* receiver, const char* messageHandlerName)
+void Client::registerMessageHandler(Protocol::ObjectAddress objectAddress, QObject *receiver,
+                                    const char *messageHandlerName)
 {
-  Q_ASSERT(isConnected());
-  Endpoint::registerMessageHandler(objectAddress, receiver, messageHandlerName);
-  monitorObject(objectAddress);
+    Q_ASSERT(isConnected());
+    Endpoint::registerMessageHandler(objectAddress, receiver, messageHandlerName);
+    monitorObject(objectAddress);
 }
 
 void Client::unregisterMessageHandler(Protocol::ObjectAddress objectAddress)
 {
-  Endpoint::unregisterMessageHandler(objectAddress);
-  unmonitorObject(objectAddress);
+    Endpoint::unregisterMessageHandler(objectAddress);
+    unmonitorObject(objectAddress);
 }
 
-void Client::objectDestroyed(Protocol::ObjectAddress objectAddress, const QString &/*objectName*/, QObject * /*object*/)
+void Client::objectDestroyed(Protocol::ObjectAddress objectAddress, const QString & /*objectName*/,
+                             QObject * /*object*/)
 {
-  unmonitorObject(objectAddress);
+    unmonitorObject(objectAddress);
 }
 
-void Client::handlerDestroyed(Protocol::ObjectAddress objectAddress, const QString& /*objectName*/)
+void Client::handlerDestroyed(Protocol::ObjectAddress objectAddress, const QString & /*objectName*/)
 {
-  unmonitorObject(objectAddress);
+    unmonitorObject(objectAddress);
 }
 
 void Client::monitorObject(Protocol::ObjectAddress objectAddress)
 {
-  if (!isConnected())
-    return;
-  Message msg(endpointAddress(), Protocol::ObjectMonitored);
-  msg.payload() << objectAddress;
-  send(msg);
+    if (!isConnected())
+        return;
+    Message msg(endpointAddress(), Protocol::ObjectMonitored);
+    msg << objectAddress;
+    send(msg);
 }
 
 void Client::unmonitorObject(Protocol::ObjectAddress objectAddress)
 {
-  if (!isConnected())
-    return;
-  Message msg(endpointAddress(), Protocol::ObjectUnmonitored);
-  msg.payload() << objectAddress;
-  send(msg);
+    if (!isConnected())
+        return;
+    Message msg(endpointAddress(), Protocol::ObjectUnmonitored);
+    msg << objectAddress;
+    send(msg);
 }
 
-void Client::doSendMessage(const GammaRay::Message& msg)
+void Client::doSendMessage(const GammaRay::Message &msg)
 {
     m_statModel->addMessage(msg.address(), msg.type(), msg.size());
     Endpoint::doSendMessage(msg);

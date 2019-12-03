@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,19 +32,22 @@
 #include <QStyledItemDelegate>
 
 namespace GammaRay {
-
 class SignalHistoryDelegate : public QStyledItemDelegate
 {
-  Q_OBJECT
-  Q_PROPERTY(qint64 visibleInterval READ visibleInterval WRITE setVisibleInterval NOTIFY visibleIntervalChanged)
-  Q_PROPERTY(qint64 visibleOffset READ visibleOffset NOTIFY setVisibleOffset NOTIFY visibleOffsetChanged)
-  Q_PROPERTY(bool isActive READ isActive WRITE setActive NOTIFY isActiveChanged)
+    Q_OBJECT
+    Q_PROPERTY(
+        qint64 visibleInterval READ visibleInterval WRITE setVisibleInterval NOTIFY visibleIntervalChanged)
+    Q_PROPERTY(
+        qint64 visibleOffset READ visibleOffset NOTIFY setVisibleOffset NOTIFY visibleOffsetChanged)
+    Q_PROPERTY(bool isActive READ isActive WRITE setActive NOTIFY isActiveChanged)
 
-  public:
-    explicit SignalHistoryDelegate(QObject *parent = 0);
+public:
+    explicit SignalHistoryDelegate(QObject *parent = nullptr);
 
-    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const Q_DECL_OVERRIDE;
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const Q_DECL_OVERRIDE;
+    void paint(QPainter *painter, const QStyleOptionViewItem &option,
+               const QModelIndex &index) const override;
+    QSize sizeHint(const QStyleOptionViewItem &option,
+                   const QModelIndex &index) const override;
 
     void setVisibleInterval(qint64 interval);
     qint64 visibleInterval() const { return m_visibleInterval; }
@@ -54,28 +57,27 @@ class SignalHistoryDelegate : public QStyledItemDelegate
 
     qint64 totalInterval() const { return m_totalInterval; }
 
-    void setActive(bool isActive);
+    void setActive(bool active);
     bool isActive() const;
 
     QString toolTipAt(const QModelIndex &index, int position, int width);
 
-  signals:
+signals:
     void visibleIntervalChanged(qint64 value);
     void visibleOffsetChanged(qint64 value);
     void isActiveChanged(bool value);
     void totalIntervalChanged();
 
-  private slots:
+private slots:
     void onUpdateTimeout();
     void onServerClockChanged(qlonglong msecs);
 
-  private:
-    QTimer *const m_updateTimer;
+private:
+    QTimer * const m_updateTimer;
     qint64 m_visibleOffset;
     qint64 m_visibleInterval;
     qint64 m_totalInterval;
 };
-
 } // namespace GammaRay
 
 #endif // GAMMARAY_SIGNALHISTORYDELEGATE_H

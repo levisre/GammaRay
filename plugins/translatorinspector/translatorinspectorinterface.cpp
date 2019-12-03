@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Jan Dalheimer <jan.dalheimer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,10 +32,11 @@
 
 using namespace GammaRay;
 
-TranslatorInspectorInterface::TranslatorInspectorInterface(const QString &name,
-                                                         QObject *parent)
-    : QObject(parent), m_name(name)
+TranslatorInspectorInterface::TranslatorInspectorInterface(const QString &name, QObject *parent)
+    : QObject(parent)
+    , m_name(name)
 {
-  ObjectBroker::registerObject(name, this);
+    ObjectBroker::registerObject(name, this);
 }
-TranslatorInspectorInterface::~TranslatorInspectorInterface() {}
+
+TranslatorInspectorInterface::~TranslatorInspectorInterface() = default;

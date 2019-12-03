@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,11 +41,13 @@ QString QmlSupportUiFactory::id() const
 
 void QmlSupportUiFactory::initUi()
 {
-    PropertyWidget::registerTab<QmlContextTab>(QStringLiteral("qmlContext"), tr("QML Context"), PropertyWidgetTabPriority::Advanced);
-    PropertyWidget::registerTab<QmlTypeTab>(QStringLiteral("qmlType"), tr("QML Type"), PropertyWidgetTabPriority::Exotic);
+    PropertyWidget::registerTab<QmlContextTab>(QStringLiteral("qmlContext"), tr("QML Context"),
+                                               PropertyWidgetTabPriority::Advanced);
+    PropertyWidget::registerTab<QmlTypeTab>(QStringLiteral("qmlType"), tr("QML Type"),
+                                            PropertyWidgetTabPriority::Exotic);
 }
 
-QWidget* GammaRay::QmlSupportUiFactory::createWidget(QWidget*)
+QWidget *GammaRay::QmlSupportUiFactory::createWidget(QWidget *)
 {
-    return Q_NULLPTR;
+    return nullptr;
 }

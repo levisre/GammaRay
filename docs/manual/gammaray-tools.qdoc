@@ -3,7 +3,7 @@
 
     This file is part of the GammaRay documentation.
 
-    Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+    Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
     Author: Volker Krause <volker.krause@kdab.com>
 
     Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -12,45 +12,47 @@
     Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
     This work is also licensed under the Creative Commons Attribution-ShareAlike 4.0
-    International License. See <http://creativecommons.org/licenses/by-sa/4.0/>.
+    International License. See <https://creativecommons.org/licenses/by-sa/4.0/>.
 */
 
 /*!
-    \contentspage {Tools}
+    \contentspage {GammaRay User Manual}
     \nextpage {Qt Quick 2 Inspector}
-    \previouspage {Getting Started}
+    \previouspage {Command Line Interface}
     \page gammaray-tools.html
 
     \title Tools
 
     \section1 Overview
 
-    GammaRay consists of a number of specialized tools for various aspects of Qt. Those can be selected via the tool selector on the very left of the GammaRay window.
+    GammaRay consists of a number of specialized tools to inspect various aspects of Qt. You can select these using the tool selector on the left of the GammaRay window.
 
     \section2 User Interface Inspection
 
-    The following tools can be used for insepcting graphical user interface issues, such as layouting, rendering or event handling.
+    The following tools can be used for inspecting graphical user interface issues, such as layouting, rendering, or event handling.
 
     \list
         \li \l{Qt Quick 2 Inspector}
         \li \l{Widget Inspector}
         \li \l{Graphics Scene Inspector}
+        \li \l{Qt3D Inspector}
         \li \l{Styles}
-        \li Web Inspector
+        \li \l{Web Inspector}
     \endlist
 
     \section2 Application Behavior Inspection
 
-    The following tools can be used to obeserve application behavior live at runtime.
+    The following tools can be used to observe application behavior at runtime.
 
     \list
         \li \l{State Machine Debugger}
+        \li \l{Network}
         \li \l{Messages}
-        \li Resources
         \li \l{Signal Plotter}
-        \li Timers
-        \li Wayland Compositors
-        \li Script Enginge Debugger
+        \li \l{Timers}
+        \li \l{Events}
+        \li \l{Wayland Compositors}
+        \li Script Engine Debugger
     \endlist
 
     \section2 Model and Data Structure Inspection
@@ -58,25 +60,28 @@
     The following tools allow you to inspect and manipulate models and data structures of your application at runtime.
 
     \list
-        \li \l{Object Inspector}
-        \li Actions
-        \li Models
-        \li Selection Models
-        \li Text Documents
-        \li Translations
+        \li \l{Object Browser}
+        \li \l{Actions}
+        \li \l{Models}
+        \li \l{Text Documents}
+        \li \l{Resources}
+        \li \l{Translations}
         \li \l{Meta Object Browser}
-        \li Meta Type Browser
+        \li \l{Meta Type Browser}
+        \li \l{Geo Positioning}
+        \li QtIvi Inspector
     \endlist
 
     \section2 System Information
 
-    The following tools allow you to inspect information of the Qt installation and the system it's deplyoed on.
+    The following tools allow you to inspect information of the Qt installation and the system it's deployed on.
 
     \list
-        \li Fonts
-        \li Locales
-        \li Mime Types
-        \li Network
-        \li Standard Paths
+        \li \l{Font Browser}
+        \li \l{Locales}
+        \li \l{Mime Types}
+        \li \l{Network}
+        \li \l{Text Codecs}
+        \li \l{System Information}
     \endlist
 */

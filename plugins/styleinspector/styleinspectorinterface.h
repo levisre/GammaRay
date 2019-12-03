@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,33 +36,31 @@ class QSize;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class StyleInspectorInterface : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit StyleInspectorInterface(QObject *parent = 0);
-    virtual ~StyleInspectorInterface();
+    Q_OBJECT
+public:
+    explicit StyleInspectorInterface(QObject *parent = nullptr);
+    ~StyleInspectorInterface() override;
 
     int cellHeight() const;
     int cellWidth() const;
     int cellZoom() const;
     QSize cellSizeHint() const;
 
-  signals:
+signals:
     void cellSizeChanged();
 
-  public slots:
+public slots:
     virtual void setCellHeight(int height);
     virtual void setCellWidth(int width);
     virtual void setCellZoom(int zoom);
 
-  private:
+private:
     int m_cellHeight;
     int m_cellWidth;
     int m_cellZoom;
 };
-
 }
 
 QT_BEGIN_NAMESPACE

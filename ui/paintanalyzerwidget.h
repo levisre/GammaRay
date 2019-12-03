@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,27 +32,32 @@
 #include <QWidget>
 
 namespace GammaRay {
-
 namespace Ui {
-  class PaintAnalyzerWidget;
+class PaintAnalyzerWidget;
 }
+class PaintAnalyzerInterface;
 
 /**
  * A widget to look at the command list in a QPaintBuffer.
  */
 class GAMMARAY_UI_EXPORT PaintAnalyzerWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit PaintAnalyzerWidget(QWidget *parent = Q_NULLPTR);
-    ~PaintAnalyzerWidget();
+    Q_OBJECT
+public:
+    explicit PaintAnalyzerWidget(QWidget *parent = nullptr);
+    ~PaintAnalyzerWidget() override;
 
     void setBaseName(const QString &name);
 
-  private:
-    QScopedPointer<Ui::PaintAnalyzerWidget> ui;
-};
+private slots:
+    void detailsChanged();
+    void commandContextMenu(QPoint pos);
+    void stackTraceContextMenu(QPoint pos);
 
+private:
+    QScopedPointer<Ui::PaintAnalyzerWidget> ui;
+    PaintAnalyzerInterface *m_iface;
+};
 }
 
 #endif

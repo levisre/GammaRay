@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,15 +34,15 @@
 using namespace GammaRay;
 
 GraphWidget::GraphWidget(QWidget *parent)
-  : QWidget(parent)
+    : QWidget(parent)
 {
-  QVBoxLayout *vbox = new QVBoxLayout(this);
+    QVBoxLayout *vbox = new QVBoxLayout(this);
 
-  m_vtkWidget = new VtkWidget(this);
+    m_vtkWidget = new VtkWidget(this);
 
-  m_vtkPanel = new VtkPanel(m_vtkWidget, this);
-  vbox->addWidget(m_vtkPanel);
-  vbox->addWidget(m_vtkWidget);
+    m_vtkPanel = new VtkPanel(m_vtkWidget, this);
+    vbox->addWidget(m_vtkPanel);
+    vbox->addWidget(m_vtkWidget);
 }
 
 GraphWidget::~GraphWidget()

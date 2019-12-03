@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,98 +32,45 @@
 #include <core/metaobjectrepository.h>
 
 #include <common/metatypedeclarations.h>
-#include <common/objectbroker.h>
 
 #include <QDebug>
-#include <QMetaObject>
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QQuickItem>
 
 using namespace GammaRay;
 
-static QuickWidgetSupport* s_quickWidgetSupportInstance = Q_NULLPTR;
+static QuickWidgetSupport *s_quickWidgetSupportInstance = nullptr;
 
-static bool quickWidgetGrabWindowCallback(QQuickWindow* window)
+QuickWidgetSupport::QuickWidgetSupport(Probe *probe, QObject *parent)
+    : QObject(parent)
+    , m_probe(probe)
 {
-    if (!s_quickWidgetSupportInstance)
-        return false;
-    return s_quickWidgetSupportInstance->grabWindow(window);
-}
-
-QuickWidgetSupport::QuickWidgetSupport(ProbeInterface* probe, QObject* parent) :
-    QObject(parent),
-    m_quickInspector(Q_NULLPTR),
-    m_probe(probe)
-{
-    Q_ASSERT(s_quickWidgetSupportInstance == Q_NULLPTR);
+    Q_ASSERT(s_quickWidgetSupportInstance == nullptr);
     s_quickWidgetSupportInstance = this;
 
-    connect(probe->probe(), SIGNAL(objectCreated(QObject*)), this, SLOT(objectAdded(QObject*)));
+    connect(probe, &Probe::objectCreated, this, &QuickWidgetSupport::objectAdded);
 
-    MetaObject *mo = 0;
+    MetaObject *mo = nullptr;
     MO_ADD_METAOBJECT1(QQuickWidget, QWidget);
-    MO_ADD_PROPERTY_RO(QQuickWidget, QQmlEngine*, engine);
-    MO_ADD_PROPERTY_RO(QQuickWidget, QSurfaceFormat, format);
-    MO_ADD_PROPERTY_RO(QQuickWidget, QSize, initialSize);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
-    MO_ADD_PROPERTY_RO(QQuickWidget, QQuickWindow*, quickWindow);
-#endif
-    MO_ADD_PROPERTY_RO(QQuickWidget, QQmlContext*, rootContext);
-    MO_ADD_PROPERTY_RO(QQuickWidget, QQuickItem*, rootObject);
+    MO_ADD_PROPERTY_RO(QQuickWidget, engine);
+    MO_ADD_PROPERTY_RO(QQuickWidget, format);
+    MO_ADD_PROPERTY_RO(QQuickWidget, initialSize);
+    MO_ADD_PROPERTY_RO(QQuickWidget, quickWindow);
+    MO_ADD_PROPERTY_RO(QQuickWidget, rootContext);
+    MO_ADD_PROPERTY_RO(QQuickWidget, rootObject);
 }
 
 GammaRay::QuickWidgetSupport::~QuickWidgetSupport()
 {
-    s_quickWidgetSupportInstance = Q_NULLPTR;
+    s_quickWidgetSupportInstance = nullptr;
 }
 
-void GammaRay::QuickWidgetSupport::objectAdded(QObject* obj)
+void GammaRay::QuickWidgetSupport::objectAdded(QObject *obj)
 {
-    auto qqw = qobject_cast<QQuickWidget*>(obj);
+    auto qqw = qobject_cast<QQuickWidget *>(obj);
     if (!qqw)
         return;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
-    m_windowMap.insert(qqw->quickWindow(), qqw);
     if (m_probe->needsObjectDiscovery())
         m_probe->discoverObject(qqw->quickWindow());
-#endif
-    registerWindowGrabber();
-}
-
-void GammaRay::QuickWidgetSupport::registerWindowGrabber()
-{
-    if (m_quickInspector)
-        return;
-
-    if (!ObjectBroker::hasObject(QStringLiteral("com.kdab.GammaRay.QuickInspectorInterface/1.0"))) {
-        // the QQ2 inspector can be activated after ourselves, so try again
-        QMetaObject::invokeMethod(this, "registerWindowGrabber", Qt::QueuedConnection);
-        return;
-    }
-
-    m_quickInspector = ObjectBroker::objectInternal(QStringLiteral("com.kdab.GammaRay.QuickInspectorInterface/1.0"));
-    Q_ASSERT(m_quickInspector);
-    QMetaObject::invokeMethod(m_quickInspector, "registerGrabWindowCallback", Q_ARG(GrabWindowCallback, quickWidgetGrabWindowCallback));
-}
-
-bool GammaRay::QuickWidgetSupport::grabWindow(QQuickWindow* window) const
-{
-    const auto it = m_windowMap.constFind(window);
-    if (it == m_windowMap.constEnd())
-        return false;
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
-    auto image = it.value()->grabFramebuffer();
-    QMetaObject::invokeMethod(m_quickInspector, "sendRenderedScene", Q_ARG(QImage, image));
-    return true;
-#else
-    return false;
-#endif
-}
-
-
-QString QuickWidgetSupportFactory::name() const
-{
-  return tr("Quick Widget Support");
 }

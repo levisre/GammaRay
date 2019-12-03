@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Filipe Azevedo <filipe.azevedo@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,62 +30,98 @@
 
 #include "ui_propertytexteditor.h"
 
-#include <QToolButton>
-
 using namespace GammaRay;
 
 PropertyTextEditorDialog::PropertyTextEditorDialog(const QString &text, QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::PropertyTextEditorDialog)
+    , m_bytes(text.toUtf8())
+    , m_mode(NoMode)
 {
     ui->setupUi(this);
-    ui->plainTextEdit->setPlainText(text);
+    setMode(StringMode);
+    connect(ui->modeButton, &QAbstractButton::clicked, this, &PropertyTextEditorDialog::toggleMode);
 }
 
-PropertyTextEditorDialog::~PropertyTextEditorDialog()
+PropertyTextEditorDialog::PropertyTextEditorDialog(const QByteArray &bytes, QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::PropertyTextEditorDialog)
+    , m_bytes(bytes)
+    , m_mode(NoMode)
 {
+    ui->setupUi(this);
+    setMode(StringMode);
+    connect(ui->modeButton, &QAbstractButton::clicked, this, &PropertyTextEditorDialog::toggleMode);
+}
+
+PropertyTextEditorDialog::~PropertyTextEditorDialog() = default;
+
+void PropertyTextEditorDialog::setReadOnly(bool readOnly)
+{
+    ui->plainTextEdit->setReadOnly(readOnly);
 }
 
 QString PropertyTextEditorDialog::text() const
 {
-    return ui->plainTextEdit->toPlainText();
+    if (m_mode == StringMode)
+        return ui->plainTextEdit->toPlainText();
+    else
+        return QString::fromUtf8(bytes());
+}
+
+QByteArray PropertyTextEditorDialog::bytes() const
+{
+    if (m_mode == StringMode)
+        return ui->plainTextEdit->toPlainText().toUtf8();
+    else
+        return QByteArray::fromHex(ui->plainTextEdit->toPlainText().toUtf8());
+}
+
+void PropertyTextEditorDialog::setMode(PropertyTextEditorDialog::Mode mode)
+{
+    if (m_mode != mode) {
+        m_mode = mode;
+        if (m_mode == StringMode) {
+            ui->modeButton->setText(tr("Switch to Hex mode"));
+            ui->plainTextEdit->setPlainText(QString::fromUtf8(m_bytes));
+        } else {
+            ui->modeButton->setText(tr("Switch to String mode"));
+            ui->plainTextEdit->setPlainText(m_bytes.toHex());
+        }
+    }
+}
+
+void PropertyTextEditorDialog::toggleMode()
+{
+    setMode(m_mode == StringMode ? HexMode : StringMode);
 }
 
 PropertyTextEditor::PropertyTextEditor(QWidget *parent)
-    : QLineEdit(parent)
+    : PropertyExtendedEditor(parent)
 {
-    QHBoxLayout *hl = new QHBoxLayout(this);
-    hl->setMargin(0);
-    hl->setSpacing(1);
-
-    QToolButton *editButton = new QToolButton(this);
-    editButton->setText(QStringLiteral("..."));
-
-    QMargins margins(textMargins());
-    margins.setRight(editButton->sizeHint().width() + hl->spacing());
-
-    setFrame(false);
-    setTextMargins(margins);
-
-    hl->addStretch();
-    hl->addWidget(editButton);
-
-    connect(editButton, SIGNAL(clicked()), SLOT(edit()));
+    setInlineEditable(true);
 }
 
-void PropertyTextEditor::save(const QString &text)
+void PropertyTextEditor::showEditor(QWidget* parent)
 {
-    setText(text);
-
-    // The user already pressed Apply, don't force her/him to do again
-    QKeyEvent event(QEvent::KeyPress, Qt::Key_Enter, Qt::NoModifier);
-    QApplication::sendEvent(this, &event);
+    PropertyTextEditorDialog dlg(value().toString(), parent);
+    dlg.setReadOnly(isReadOnly());
+    if (dlg.exec() == QDialog::Accepted)
+        save(dlg.text());
+    emit editorClosed();
 }
 
-void PropertyTextEditor::edit()
+PropertyByteArrayEditor::PropertyByteArrayEditor(QWidget *parent)
+    : PropertyExtendedEditor(parent)
 {
-    PropertyTextEditorDialog dlg(text(), this);
-    if (dlg.exec() == QDialog::Accepted) {
-      save(dlg.text());
-    }
 }
+
+void PropertyByteArrayEditor::showEditor(QWidget* parent)
+{
+    PropertyTextEditorDialog dlg(value().toByteArray(), parent);
+    dlg.setReadOnly(isReadOnly());
+    if (dlg.exec() == QDialog::Accepted)
+        save(dlg.bytes());
+    emit editorClosed();
+}
+

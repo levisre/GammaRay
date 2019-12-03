@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,22 +33,20 @@
 #include <QVector>
 
 namespace GammaRay {
-
 /** All types we have edit widgets for. */
 class EditableTypesModel : public QAbstractListModel
 {
     Q_OBJECT
-  public:
-    explicit EditableTypesModel(QObject *parent = 0);
-    ~EditableTypesModel();
+public:
+    explicit EditableTypesModel(QObject *parent = nullptr);
+    ~EditableTypesModel() override;
 
-    int rowCount(const QModelIndex& parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-  private:
+private:
     QVector<int> m_types;
 };
-
 }
 
 #endif // GAMMARAY_EDITABLETYPESMODEL_H

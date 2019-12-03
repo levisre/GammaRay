@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,19 +32,17 @@
 #include <core/objecttypefilterproxymodel.h>
 
 namespace GammaRay {
-
 class WebViewModel : public ObjectFilterProxyModelBase
 {
     Q_OBJECT
 public:
-    explicit WebViewModel(QObject *parent = 0);
-    ~WebViewModel();
+    explicit WebViewModel(QObject *parent = nullptr);
+    ~WebViewModel() override;
 
-    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QMap< int, QVariant > itemData(const QModelIndex& index) const Q_DECL_OVERRIDE;
-    bool filterAcceptsObject(QObject* object) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QMap< int, QVariant > itemData(const QModelIndex &index) const override;
+    bool filterAcceptsObject(QObject *object) const override;
 };
-
 }
 
 #endif // GAMMARAY_WEBVIEWMODEL_H

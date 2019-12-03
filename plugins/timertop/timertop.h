@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Thomas McGuire <thomas.mcguire@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,39 +28,48 @@
 #ifndef GAMMARAY_TIMERTOP_TIMERTOP_H
 #define GAMMARAY_TIMERTOP_TIMERTOP_H
 
+#include "timertopinterface.h"
+
 #include <core/toolfactory.h>
 
 #include <QTimer>
 
-namespace GammaRay {
+QT_BEGIN_NAMESPACE
+class QItemSelectionModel;
+QT_END_NAMESPACE
 
+namespace GammaRay {
 namespace Ui {
-  class TimerTop;
+class TimerTop;
 }
 
-class TimerTop : public QObject
+class TimerTop : public TimerTopInterface
 {
-  Q_OBJECT
-  public:
-    explicit TimerTop(ProbeInterface *probe, QObject *parent = 0);
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::TimerTopInterface)
 
-  private:
-    QTimer *m_updateTimer;
+public:
+    explicit TimerTop(Probe *probe, QObject *parent = nullptr);
+
+public slots:
+    void clearHistory() override;
+
+private slots:
+    void objectSelected(QObject *obj);
+
+private:
+    QItemSelectionModel *m_selectionModel;
 };
 
-class TimerTopFactory : public QObject,
-                        public StandardToolFactory<QTimer, TimerTop>
+class TimerTopFactory : public QObject, public StandardToolFactory<QTimer, TimerTop>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_timertop.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_timertop.json")
 
-  public:
-    explicit TimerTopFactory(QObject *parent = 0);
-
-    QString name() const Q_DECL_OVERRIDE;
+public:
+    explicit TimerTopFactory(QObject *parent = nullptr);
 };
-
 }
 
 #endif // GAMMARAY_SCENEINSPECTOR_H

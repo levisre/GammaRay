@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,35 +32,39 @@
 #include <core/propertyadaptor.h>
 #include <core/propertyadaptorfactory.h>
 
-namespace GammaRay {
+#include <qqmlprivate.h>
 
+namespace GammaRay {
 class QmlAttachedPropertyAdaptor : public PropertyAdaptor
 {
     Q_OBJECT
 public:
-    explicit QmlAttachedPropertyAdaptor(QObject* parent = 0);
-    ~QmlAttachedPropertyAdaptor();
+    explicit QmlAttachedPropertyAdaptor(QObject *parent = nullptr);
+    ~QmlAttachedPropertyAdaptor() override;
 
-    int count() const Q_DECL_OVERRIDE;
-    PropertyData propertyData(int index) const Q_DECL_OVERRIDE;
+    int count() const override;
+    PropertyData propertyData(int index) const override;
 
 protected:
-    void doSetObject(const ObjectInstance& oi) Q_DECL_OVERRIDE;
+    void doSetObject(const ObjectInstance &oi) override;
 
 private:
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 4)
+    QVector<QQmlAttachedPropertiesFunc> m_attachedTypes;
+#else
     QVector<int> m_attachedTypes;
+#endif
 };
 
 /** QML attached property adaptor. */
 class QmlAttachedPropertyAdaptorFactory : public AbstractPropertyAdaptorFactory
 {
 public:
-    PropertyAdaptor* create(const ObjectInstance& oi, QObject* parent = 0) const Q_DECL_OVERRIDE;
-    static QmlAttachedPropertyAdaptorFactory* instance();
+    PropertyAdaptor *create(const ObjectInstance &oi, QObject *parent = nullptr) const override;
+    static QmlAttachedPropertyAdaptorFactory *instance();
 private:
-    static QmlAttachedPropertyAdaptorFactory* s_instance;
+    static QmlAttachedPropertyAdaptorFactory *s_instance;
 };
-
 }
 
 #endif // GAMMARAY_QMLATTACHEDPROPERTYADAPTOR_H

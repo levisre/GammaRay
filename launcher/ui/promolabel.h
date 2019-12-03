@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,27 +29,23 @@
 #ifndef GAMMARAY_PROMOLABEL_H
 #define GAMMARAY_PROMOLABEL_H
 
-#include <QLabel>
+#include <ui/themedimagelabel.h>
 
 namespace GammaRay {
-
-class PromoLabel : public QLabel
+class PromoLabel : public ThemedImageLabel
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit PromoLabel(QWidget *parent = 0, Qt::WindowFlags f = 0);
+public:
+    explicit PromoLabel(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
 
-    static QImage tintedImage(const QString &image, const QColor &color);
+protected:
+    bool event(QEvent *e) override;
+    void mouseReleaseEvent(QMouseEvent *ev) override;
 
-  protected:
-    bool event(QEvent *e) Q_DECL_OVERRIDE;
-    void mouseReleaseEvent(QMouseEvent *ev) Q_DECL_OVERRIDE;
-
-  private:
-    void updatePixmap();
+private:
+    void updatePixmap() override;
 };
-
 }
 
 #endif // PROMOLABEL_H

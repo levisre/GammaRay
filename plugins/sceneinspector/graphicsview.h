@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -33,29 +33,27 @@
 #include <QGraphicsView>
 
 namespace GammaRay {
-
 class GraphicsView : public QGraphicsView
 {
-  Q_OBJECT
-  public:
-    explicit GraphicsView(QWidget *parent = 0);
+    Q_OBJECT
+public:
+    explicit GraphicsView(QWidget *parent = nullptr);
 
     void showItem(QGraphicsItem *item);
 
-  signals:
+signals:
     void sceneCoordinatesChanged(const QPointF &sceneCoord);
     void itemCoordinatesChanged(const QPointF &itemCoord);
     void transformChanged();
 
-  protected:
-    void keyPressEvent(QKeyEvent *event) Q_DECL_OVERRIDE;
-    void mouseMoveEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
-    void drawForeground(QPainter *painter, const QRectF &rect) Q_DECL_OVERRIDE;
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void drawForeground(QPainter *painter, const QRectF &rect) override;
 
-  private:
+private:
     QGraphicsItem *m_currentItem;
 };
-
 }
 
 #endif // GAMMARAY_GRAPHICSVIEW_H

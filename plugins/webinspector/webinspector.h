@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,31 +32,27 @@
 #include <core/toolfactory.h>
 
 namespace GammaRay {
-
 class WebInspector : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit WebInspector(GammaRay::ProbeInterface *probe, QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit WebInspector(Probe *probe, QObject *parent = nullptr);
 
-  private slots:
+private slots:
     void objectAdded(QObject *obj);
 };
 
 class WebInspectorFactory : public QObject, public ToolFactory
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_webinspector.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_webinspector.json")
 
-  public:
-    explicit WebInspectorFactory(QObject *parent = 0);
-    QString id() const Q_DECL_OVERRIDE;
-    QString name() const Q_DECL_OVERRIDE;
-    void init(ProbeInterface* probe) Q_DECL_OVERRIDE;
-    bool isHidden() const Q_DECL_OVERRIDE;
+public:
+    explicit WebInspectorFactory(QObject *parent = nullptr);
+    QString id() const override;
+    void init(Probe *probe) override;
 };
-
 }
 
 #endif // GAMMARAY_WEBINSPECTOR_H

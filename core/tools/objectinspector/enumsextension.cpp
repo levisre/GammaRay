@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,25 +34,23 @@
 
 using namespace GammaRay;
 
-EnumsExtension::EnumsExtension(PropertyController* controller) :
-  PropertyControllerExtension(controller->objectBaseName() + ".enums"),
-  m_model(new ObjectEnumModel(controller))
+EnumsExtension::EnumsExtension(PropertyController *controller)
+    : PropertyControllerExtension(controller->objectBaseName() + ".enums")
+    , m_model(new ObjectEnumModel(controller))
 {
-  controller->registerModel(m_model, QStringLiteral("enums"));
+    controller->registerModel(m_model, QStringLiteral("enums"));
 }
 
-EnumsExtension::~EnumsExtension()
+EnumsExtension::~EnumsExtension() = default;
+
+bool EnumsExtension::setQObject(QObject *object)
 {
+    m_model->setMetaObject(object ? object->metaObject() : nullptr);
+    return m_model->rowCount() > 0;
 }
 
-bool EnumsExtension::setQObject(QObject* object)
+bool EnumsExtension::setMetaObject(const QMetaObject *metaObject)
 {
-  m_model->setMetaObject(object ? object->metaObject() : 0);
-  return m_model->rowCount() > 0;
-}
-
-bool EnumsExtension::setMetaObject(const QMetaObject* metaObject)
-{
-  m_model->setMetaObject(metaObject);
-  return m_model->rowCount() > 0;
+    m_model->setMetaObject(metaObject);
+    return m_model->rowCount() > 0;
 }

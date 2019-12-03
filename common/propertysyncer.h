@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -37,7 +37,6 @@
 #include <QVector>
 
 namespace GammaRay {
-
 class Message;
 
 /** Infrastructure for syncing property values between a local and a remote object. */
@@ -45,8 +44,8 @@ class GAMMARAY_COMMON_EXPORT PropertySyncer : public QObject
 {
     Q_OBJECT
 public:
-    explicit PropertySyncer(QObject *parent = 0);
-    ~PropertySyncer();
+    explicit PropertySyncer(QObject *parent = nullptr);
+    ~PropertySyncer() override;
 
     /** Add an object that should be monitored for to be synced property changes. */
     void addObject(Protocol::ObjectAddress addr, QObject *obj);
@@ -76,7 +75,7 @@ signals:
 
 private slots:
     void propertyChanged();
-    void objectDestroyed(QObject* obj);
+    void objectDestroyed(QObject *obj);
 
 private:
     struct ObjectInfo {
@@ -89,7 +88,6 @@ private:
     Protocol::ObjectAddress m_address;
     bool m_initialSync;
 };
-
 }
 
 #endif // GAMMARAY_PROPERTYSYNCER_H

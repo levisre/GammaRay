@@ -2,11 +2,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -29,64 +29,62 @@
 
 #include "plugininfo.h"
 
+#include <QCoreApplication>
 #include <QObject>
 #include <QString>
 
 #include <iostream>
 
-namespace GammaRay
-{
-
+namespace GammaRay {
 /** Base class for wrappers for potentially not yet loaded plugins. */
 class ProxyFactoryBase : public QObject
 {
-  Q_OBJECT
+    Q_OBJECT
 public:
-  explicit ProxyFactoryBase(const PluginInfo &pluginInfo, QObject *parent = 0);
-  ~ProxyFactoryBase();
+    explicit ProxyFactoryBase(const PluginInfo &pluginInfo, QObject *parent = nullptr);
+    ~ProxyFactoryBase() override;
 
-  PluginInfo pluginInfo() const;
-  QString errorString() const;
+    PluginInfo pluginInfo() const;
+    QString errorString() const;
 
 protected:
-  void loadPlugin();
+    void loadPlugin();
 
-  QObject *m_factory;
-  QString m_errorString;
+    QObject *m_factory;
+    QString m_errorString;
 
 private:
-  PluginInfo m_pluginInfo;
+    PluginInfo m_pluginInfo;
 };
 
-template <typename IFace>
+template<typename IFace>
 class ProxyFactory : public ProxyFactoryBase, public IFace
 {
 public:
-  explicit inline ProxyFactory(const PluginInfo &pluginInfo, QObject *parent = 0)
-    : ProxyFactoryBase(pluginInfo, parent) {}
-  inline ~ProxyFactory() {}
+    explicit inline ProxyFactory(const PluginInfo &pluginInfo, QObject *parent = nullptr)
+        : ProxyFactoryBase(pluginInfo, parent) {}
+    inline ~ProxyFactory() override = default;
 
-  QString id() const Q_DECL_OVERRIDE
-  {
-    return pluginInfo().id();
-  }
+    QString id() const override
+    {
+        return pluginInfo().id();
+    }
 
 protected:
-  IFace *factory()
-  {
-    loadPlugin();
-    IFace *iface = qobject_cast<IFace*>(m_factory);
-    if (!iface) {
-      m_errorString =
-        QObject::tr("Plugin does not provide an instance of %1.").
-        arg(qobject_interface_iid<IFace*>());
-      std::cerr << "Failed to cast object from " << qPrintable(pluginInfo().path())
-                << " to " << qobject_interface_iid<IFace*>() << std::endl;
+    IFace *factory()
+    {
+        loadPlugin();
+        IFace *iface = qobject_cast<IFace *>(m_factory);
+        if (!iface) {
+            m_errorString = qApp->translate("GammaRay::ProxyFactory",
+                                            "Plugin does not provide an instance of %1.")
+                                                .arg(qobject_interface_iid<IFace *>());
+            std::cerr << "Failed to cast object from " << qPrintable(pluginInfo().path())
+                      << " to " << qobject_interface_iid<IFace *>() << std::endl;
+        }
+        return iface;
     }
-    return iface;
-  }
 };
-
 }
 
 #endif // GAMMARAY_PROXYFACTORYBASE_H

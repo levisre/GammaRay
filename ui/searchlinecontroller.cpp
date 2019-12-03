@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,44 +31,64 @@
 #include <QLineEdit>
 #include <QRegExp>
 #include <QTimer>
+#include <QAbstractProxyModel>
 
 using namespace GammaRay;
 
-SearchLineController::SearchLineController(QLineEdit* lineEdit, QAbstractItemModel* proxyModel):
-    QObject(lineEdit),
-    m_lineEdit(lineEdit),
-    m_model(proxyModel)
+namespace {
+static QAbstractItemModel *findEffectiveFilterModel(QAbstractItemModel *model) {
+    Q_ASSERT(model);
+
+    if (model->metaObject()->indexOfProperty("filterKeyColumn") != -1) {
+        return model;
+    }
+
+    QAbstractProxyModel *proxy = qobject_cast<QAbstractProxyModel *>(model);
+
+    if (proxy) {
+        return findEffectiveFilterModel(proxy->sourceModel());
+    }
+
+    return nullptr;
+}
+}
+
+SearchLineController::SearchLineController(QLineEdit *lineEdit, QAbstractItemModel *proxyModel)
+    : QObject(lineEdit)
+    , m_lineEdit(lineEdit)
+    , m_filterModel(findEffectiveFilterModel(proxyModel))
 {
     Q_ASSERT(lineEdit);
-    Q_ASSERT(proxyModel);
+    Q_ASSERT(m_filterModel);
 
-    m_model->setProperty("filterKeyColumn", -1);
-    m_model->setProperty("filterCaseSensitivity", Qt::CaseInsensitive);
+    if (!m_filterModel) {
+        QMetaObject::invokeMethod(this, "deleteLater", Qt::QueuedConnection);
+        return;
+    }
+
+    m_filterModel->setProperty("filterKeyColumn", -1);
+    m_filterModel->setProperty("filterCaseSensitivity", Qt::CaseInsensitive);
     activateSearch();
 
 #if QT_VERSION >= 0x050200
     m_lineEdit->setClearButtonEnabled(true);
 #endif
     if (m_lineEdit->placeholderText().isEmpty())
-      m_lineEdit->setPlaceholderText(tr("Search"));
+        m_lineEdit->setPlaceholderText(tr("Search"));
 
     auto timer = new QTimer(this);
     timer->setSingleShot(true);
     timer->setInterval(300);
-    connect(lineEdit, SIGNAL(textChanged(QString)), timer, SLOT(start()));
-    connect(timer, SIGNAL(timeout()), this, SLOT(activateSearch()));
+    connect(lineEdit, &QLineEdit::textChanged, timer, [timer]{ timer->start(); });
+    connect(timer, &QTimer::timeout, this, &SearchLineController::activateSearch);
 }
 
-SearchLineController::~SearchLineController()
-{
-}
+SearchLineController::~SearchLineController() = default;
 
 void SearchLineController::activateSearch()
 {
-    if (!m_model) {
-        deleteLater();
-        return;
+    if (m_filterModel) {
+        m_filterModel->setProperty("filterRegExp",
+                                   QRegExp(m_lineEdit->text(), Qt::CaseInsensitive, QRegExp::FixedString));
     }
-
-    m_model->setProperty("filterRegExp", QRegExp(m_lineEdit->text(), Qt::CaseInsensitive, QRegExp::FixedString));
 }

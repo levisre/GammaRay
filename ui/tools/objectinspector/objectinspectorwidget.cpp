@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,6 +33,7 @@
 #include <common/objectmodel.h>
 #include <common/sourcelocation.h>
 
+#include <ui/clientdecorationidentityproxymodel.h>
 #include <ui/contextmenuextension.h>
 #include <ui/searchlinecontroller.h>
 
@@ -44,67 +45,72 @@
 using namespace GammaRay;
 
 ObjectInspectorWidget::ObjectInspectorWidget(QWidget *parent)
-  : QWidget(parent)
-  , ui(new Ui::ObjectInspectorWidget)
-  , m_stateManager(this)
+    : QWidget(parent)
+    , ui(new Ui::ObjectInspectorWidget)
+    , m_stateManager(this)
 {
-  qRegisterMetaType<ObjectId>();
-  qRegisterMetaTypeStreamOperators<ObjectId>();
+    ui->setupUi(this);
+    ui->objectPropertyWidget->setObjectBaseName(QStringLiteral("com.kdab.GammaRay.ObjectInspector"));
 
-  ui->setupUi(this);
-  ui->objectPropertyWidget->setObjectBaseName(QStringLiteral("com.kdab.GammaRay.ObjectInspector"));
+    auto model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ObjectInspectorTree"));
+    auto *clientModel = new ClientDecorationIdentityProxyModel(this);
+    clientModel->setSourceModel(model);
+    ui->objectTreeView->header()->setObjectName("objectTreeViewHeader");
+    ui->objectTreeView->setModel(clientModel);
+    ui->objectTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->objectTreeView->setDeferredResizeMode(0, QHeaderView::Stretch);
+    ui->objectTreeView->setDeferredResizeMode(1, QHeaderView::Interactive);
+    new SearchLineController(ui->objectSearchLine, clientModel);
 
-  auto model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ObjectInspectorTree"));
-  ui->objectTreeView->header()->setObjectName("objectTreeViewHeader");
-  ui->objectTreeView->setModel(model);
-  ui->objectTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
-  ui->objectTreeView->setDeferredResizeMode(0, QHeaderView::Stretch);
-  ui->objectTreeView->setDeferredResizeMode(1, QHeaderView::Interactive);
-  new SearchLineController(ui->objectSearchLine, model);
+    QItemSelectionModel *selectionModel = ObjectBroker::selectionModel(ui->objectTreeView->model());
+    ui->objectTreeView->setSelectionModel(selectionModel);
+    connect(selectionModel, &QItemSelectionModel::selectionChanged,
+            this, &ObjectInspectorWidget::objectSelectionChanged);
 
-  QItemSelectionModel* selectionModel = ObjectBroker::selectionModel(ui->objectTreeView->model());
-  ui->objectTreeView->setSelectionModel(selectionModel);
-  connect(selectionModel, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-          this, SLOT(objectSelectionChanged(QItemSelection)));
+    if (qgetenv("GAMMARAY_TEST_FILTER") == "1") {
+        QMetaObject::invokeMethod(ui->objectSearchLine, "setText",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(QString, QStringLiteral("Object")));
+    }
 
-  if (qgetenv("GAMMARAY_TEST_FILTER") == "1") {
-    QMetaObject::invokeMethod(ui->objectSearchLine, "setText",
-                              Qt::QueuedConnection,
-                              Q_ARG(QString, QStringLiteral("Object")));
-  }
+    connect(ui->objectTreeView, &QWidget::customContextMenuRequested,
+            this, &ObjectInspectorWidget::objectContextMenuRequested);
 
-  connect(ui->objectTreeView, SIGNAL(customContextMenuRequested(QPoint)),
-          this, SLOT(objectContextMenuRequested(QPoint)));
+    m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "60%" << "40%");
 
-  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "60%" << "40%");
-
-  connect(ui->objectPropertyWidget, SIGNAL(tabsUpdated()), &m_stateManager, SLOT(reset()));
+    connect(ui->objectPropertyWidget, &PropertyWidget::tabsUpdated, this, &ObjectInspectorWidget::propertyWidgetTabsChanged);
 }
 
-ObjectInspectorWidget::~ObjectInspectorWidget()
+ObjectInspectorWidget::~ObjectInspectorWidget() = default;
+
+void ObjectInspectorWidget::objectSelectionChanged(const QItemSelection &selection)
 {
+    if (selection.isEmpty())
+        return;
+    const QModelIndex index = selection.first().topLeft();
+    ui->objectTreeView->scrollTo(index);
 }
 
-void ObjectInspectorWidget::objectSelectionChanged(const QItemSelection& selection)
+void ObjectInspectorWidget::objectContextMenuRequested(const QPoint &pos)
 {
-  if (selection.isEmpty())
-    return;
-  const QModelIndex index = selection.first().topLeft();
-  ui->objectTreeView->scrollTo(index);
+    const auto index = ui->objectTreeView->indexAt(pos);
+    if (!index.isValid())
+        return;
+
+    const auto objectId = index.data(ObjectModel::ObjectIdRole).value<ObjectId>();
+    QMenu menu(tr("Object @ %1").arg(QLatin1String("0x") + QString::number(objectId.id(), 16)));
+    ContextMenuExtension ext(objectId);
+    ext.setLocation(ContextMenuExtension::Creation, index.data(
+                        ObjectModel::CreationLocationRole).value<SourceLocation>());
+    ext.setLocation(ContextMenuExtension::Declaration,
+                    index.data(ObjectModel::DeclarationLocationRole).value<SourceLocation>());
+    ext.populateMenu(&menu);
+
+    menu.exec(ui->objectTreeView->viewport()->mapToGlobal(pos));
 }
 
-void ObjectInspectorWidget::objectContextMenuRequested(const QPoint& pos)
+void ObjectInspectorWidget::propertyWidgetTabsChanged()
 {
-  const auto index = ui->objectTreeView->indexAt(pos);
-  if (!index.isValid())
-    return;
-
-  const auto objectId = index.data(ObjectModel::ObjectIdRole).value<ObjectId>();
-  QMenu menu(tr("Object @ %1").arg(QLatin1String("0x") + QString::number(objectId.id(), 16)));
-  ContextMenuExtension ext(objectId);
-  ext.setLocation(ContextMenuExtension::Creation, index.data(ObjectModel::CreationLocationRole).value<SourceLocation>());
-  ext.setLocation(ContextMenuExtension::Declaration, index.data(ObjectModel::DeclarationLocationRole).value<SourceLocation>());
-  ext.populateMenu(&menu);
-
-  menu.exec(ui->objectTreeView->viewport()->mapToGlobal(pos));
+    m_stateManager.saveState();
+    m_stateManager.reset();
 }

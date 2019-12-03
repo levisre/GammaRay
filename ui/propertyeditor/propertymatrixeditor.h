@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Tobias Koenig <tobias.koenig@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,17 +32,13 @@
 #include "propertyextendededitor.h"
 
 namespace GammaRay {
-
 class PropertyMatrixEditor : public PropertyExtendedEditor
 {
-  Q_OBJECT
-  public:
-    explicit PropertyMatrixEditor(QWidget *parent = Q_NULLPTR);
-
-  protected:
-    void edit() Q_DECL_OVERRIDE;
+    Q_OBJECT
+public:
+    explicit PropertyMatrixEditor(QWidget *parent = nullptr);
+    void showEditor(QWidget * parent) override;
 };
-
 }
 
 #endif // GAMMARAY_PROPERTYMATRIXEDITOR_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,10 +32,8 @@
 #include "gammaray_ui_export.h"
 
 namespace GammaRay {
-
 GAMMARAY_UI_EXPORT void showSplashScreen();
 GAMMARAY_UI_EXPORT void hideSplashScreen();
-
 }
 
 #endif // SPLASHSCREEN_H

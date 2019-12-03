@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,34 +29,27 @@
 #ifndef GAMMARAY_STYLEINSPECTOR_STYLEELEMENTPROXYMODEL_H
 #define GAMMARAY_STYLEINSPECTOR_STYLEELEMENTPROXYMODEL_H
 
-#if QT_VERSION < QT_VERSION_CHECK(4, 8, 0)
-#include <QSortFilterProxyModel>
-typedef QSortFilterProxyModel QIdentityProxyModel;
-#else
 #include <QIdentityProxyModel>
-#endif
 
 #include <QSize>
 
 namespace GammaRay {
-
 class StyleElementProxyModel : public QIdentityProxyModel
 {
-  Q_OBJECT
-  public:
-    explicit StyleModelProxy(QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit StyleModelProxy(QObject *parent = nullptr);
 
     virtual QVariant data(const QModelIndex &proxyIndex, int role = Qt::DisplayRole) const;
 
-  public slots:
+public slots:
     void setWidth(int width);
     void setHeight(int height);
     void setZoomFactor(int zoom);
 
-  private:
+private:
     QSize m_sizeHint;
 };
-
 }
 
 #endif // GAMMARAY_STYLEELEMENTPROXYMODEL_H

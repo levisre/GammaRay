@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -52,7 +52,7 @@ class QmlSupportTest : public QObject
 {
     Q_OBJECT
 private:
-    int indexOfProperty(PropertyAdaptor *adaptor, const char* name)
+    int indexOfProperty(PropertyAdaptor *adaptor, const char *name)
     {
         for (int i = 0; i < adaptor->count(); ++i) {
             auto prop = adaptor->propertyData(i);
@@ -75,7 +75,8 @@ private slots:
     {
         QQmlEngine engine;
         QQmlComponent component(&engine);
-        component.setData("import QtQuick 2.0\nRectangle { Text { text: \"Hello world!\" } }", QUrl());
+        component.setData("import QtQuick 2.0\nRectangle { Text { text: \"Hello world!\" } }",
+                          QUrl());
         auto obj = component.create();
         QVERIFY(obj);
 
@@ -94,9 +95,11 @@ private slots:
 
         auto data = listAdaptor->propertyData(0);
         QVERIFY(!data.name().isEmpty());
-        QVERIFY(data.value().canConvert<QObject*>());
+        QVERIFY(data.value().canConvert<QObject *>());
         QVERIFY(!data.typeName().isEmpty());
         QVERIFY(!data.className().isEmpty());
+
+        delete obj;
     }
 
     void testAttachedProperty()
@@ -118,15 +121,19 @@ private slots:
         QCOMPARE(data.name(), QStringLiteral("Keys"));
         QVERIFY(!data.typeName().isEmpty());
         QVERIFY(data.value().isValid());
-        QVERIFY(data.value().canConvert<QObject*>());
+        QVERIFY(data.value().canConvert<QObject *>());
         QVERIFY(!data.className().isEmpty());
+
+        delete obj;
     }
 
     void testJSValue()
     {
         QQmlEngine engine;
         QQmlComponent component(&engine);
-        component.setData("import QtQuick 2.0\nRectangle { property var a1: []; property var a2: [\"hello\", \"world\"] }", QUrl());
+        component.setData(
+            "import QtQuick 2.0\nRectangle { property var a1: []; property var a2: [\"hello\", \"world\"] }",
+            QUrl());
         auto obj = component.create();
         QVERIFY(obj);
 
@@ -136,8 +143,6 @@ private slots:
         auto idx = indexOfProperty(adaptor, "a1");
         QVERIFY(idx >= 0);
 
-        // Qt < 5.4 returned a QVariant here
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
         auto data = adaptor->propertyData(idx);
         auto jsValueAdaptor = PropertyAdaptorFactory::create(data.value(), this);
         QVERIFY(jsValueAdaptor);
@@ -153,7 +158,8 @@ private slots:
         data = jsValueAdaptor->propertyData(1);
         QCOMPARE(data.name(), QStringLiteral("1"));
         QCOMPARE(data.value(), QVariant("world"));
-#endif
+
+        delete obj;
     }
 
     void testContextProperty()
@@ -164,7 +170,6 @@ private slots:
         auto adaptor = PropertyAdaptorFactory::create(engine.rootContext(), this);
         QVERIFY(adaptor);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
         auto idx = indexOfProperty(adaptor, "myContextProp");
         QVERIFY(idx >= 0);
 
@@ -174,7 +179,6 @@ private slots:
 
         adaptor->writeProperty(idx, 23);
         QCOMPARE(engine.rootContext()->contextProperty("myContextProp").toInt(), 23);
-#endif
     }
 };
 

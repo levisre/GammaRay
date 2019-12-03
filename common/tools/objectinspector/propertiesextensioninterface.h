@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -32,16 +32,17 @@
 #include <QObject>
 
 namespace GammaRay {
-
 /** @brief Client/Server interface of the property editor. */
 class PropertiesExtensionInterface : public QObject
 {
-  Q_OBJECT
-  Q_PROPERTY(bool canAddProperty READ canAddProperty WRITE setCanAddProperty NOTIFY canAddPropertyChanged)
-  Q_PROPERTY(bool hasPropertyValues READ hasPropertyValues WRITE setHasPropertyValues NOTIFY hasPropertyValuesChanged)
-  public:
-    explicit PropertiesExtensionInterface(const QString &name, QObject *parent = 0);
-    virtual ~PropertiesExtensionInterface();
+    Q_OBJECT
+    Q_PROPERTY(
+        bool canAddProperty READ canAddProperty WRITE setCanAddProperty NOTIFY canAddPropertyChanged)
+    Q_PROPERTY(
+        bool hasPropertyValues READ hasPropertyValues WRITE setHasPropertyValues NOTIFY hasPropertyValuesChanged)
+public:
+    explicit PropertiesExtensionInterface(const QString &name, QObject *parent = nullptr);
+    ~PropertiesExtensionInterface() override;
 
     const QString &name() const;
 
@@ -51,23 +52,23 @@ class PropertiesExtensionInterface : public QObject
     bool hasPropertyValues() const;
     void setHasPropertyValues(bool hasValues);
 
-  public slots:
+public slots:
     virtual void setProperty(const QString &name, const QVariant &value) = 0;
 
-  signals:
+signals:
     void canAddPropertyChanged();
     void hasPropertyValuesChanged();
 
-  private:
+private:
     QString m_name;
     bool m_canAddProperty;
     bool m_hasPropertyValues;
 };
-
 }
 
 QT_BEGIN_NAMESPACE
-Q_DECLARE_INTERFACE(GammaRay::PropertiesExtensionInterface, "com.kdab.GammaRay.PropertiesExtensionInterface")
+Q_DECLARE_INTERFACE(GammaRay::PropertiesExtensionInterface,
+                    "com.kdab.GammaRay.PropertiesExtensionInterface")
 QT_END_NAMESPACE
 
 #endif // GAMMARAY_PROPERTIESEXTENSIONINTERFACE_H

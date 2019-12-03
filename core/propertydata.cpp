@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,17 +30,12 @@
 
 using namespace GammaRay;
 
-PropertyData::PropertyData() :
-    m_flags(PropertyData::Readable)
-{
-}
-
 QString PropertyData::name() const
 {
     return m_name;
 }
 
-void PropertyData::setName(const QString& name)
+void PropertyData::setName(const QString &name)
 {
     m_name = name;
 }
@@ -50,7 +45,7 @@ QVariant PropertyData::value() const
     return m_value;
 }
 
-void PropertyData::setValue(const QVariant& value)
+void PropertyData::setValue(const QVariant &value)
 {
     m_value = value;
 }
@@ -62,7 +57,7 @@ QString PropertyData::typeName() const
     return m_typeName;
 }
 
-void PropertyData::setTypeName(const QString& typeName)
+void PropertyData::setTypeName(const QString &typeName)
 {
     m_typeName = typeName;
 }
@@ -72,27 +67,47 @@ QString PropertyData::className() const
     return m_className;
 }
 
-void PropertyData::setClassName(const QString& className)
+void PropertyData::setClassName(const QString &className)
 {
     m_className = className;
 }
 
-QString PropertyData::details() const
+PropertyData::AccessFlags PropertyData::accessFlags() const
 {
-    return m_details;
+    return m_accessFlags;
 }
 
-void PropertyData::setDetails(const QString& details)
+void PropertyData::setAccessFlags(PropertyData::AccessFlags flags)
 {
-    m_details = details;
+    m_accessFlags = flags;
 }
 
-PropertyData::Flags PropertyData::flags() const
+PropertyModel::PropertyFlags PropertyData::propertyFlags() const
 {
-    return m_flags;
+    return m_propertyFlags;
 }
 
-void PropertyData::setFlags(PropertyData::Flags flags)
+void PropertyData::setPropertyFlags(PropertyModel::PropertyFlags flags)
 {
-    m_flags = flags;
+    m_propertyFlags = flags;
+}
+
+int PropertyData::revision() const
+{
+    return m_revision;
+}
+
+void PropertyData::setRevision(int rev)
+{
+    m_revision = rev;
+}
+
+QString PropertyData::notifySignal() const
+{
+    return m_notifySignal;
+}
+
+void PropertyData::setNotifySignal(const QString& notifySignal)
+{
+    m_notifySignal = notifySignal;
 }

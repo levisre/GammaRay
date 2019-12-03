@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,43 +34,44 @@
 #include <core/toolfactory.h>
 
 QT_BEGIN_NAMESPACE
+class QAbstractItemModel;
+class QItemSelectionModel;
 class QTimer;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class SignalMonitor : public SignalMonitorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::SignalMonitorInterface)
-  public:
-    explicit SignalMonitor(ProbeInterface *probe, QObject *parent = 0);
-    ~SignalMonitor();
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::SignalMonitorInterface)
+public:
+    explicit SignalMonitor(Probe *probe, QObject *parent = nullptr);
+    ~SignalMonitor() override;
 
-  public slots:
-    void sendClockUpdates(bool enabled) Q_DECL_OVERRIDE;
+public slots:
+    void sendClockUpdates(bool enabled) override;
 
-  private slots:
+private slots:
     void timeout();
+    void objectSelected(QObject *obj);
 
-  private:
+private:
     QTimer *m_clock;
-
+    QAbstractItemModel *m_objModel;
+    QItemSelectionModel *m_objSelectionModel;
 };
 
 class SignalMonitorFactory : public QObject, public StandardToolFactory<QObject, SignalMonitor>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_signalmonitor.json")
-  public:
-    explicit SignalMonitorFactory(QObject *parent = 0) : QObject(parent)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_signalmonitor.json")
+public:
+    explicit SignalMonitorFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 } // namespace GammaRay
 
 #endif // GAMMARAY_SIGNALMONITOR_H

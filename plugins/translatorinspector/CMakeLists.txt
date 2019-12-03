@@ -1,26 +1,21 @@
+# probe part
+if (NOT GAMMARAY_CLIENT_ONLY_BUILD)
 gammaray_add_plugin(gammaray_translatorinspector
   JSON gammaray_translatorinspector.json
   SOURCES translatorinspector.cpp translatorinspectorinterface.cpp translatorwrapper.cpp translatorsmodel.cpp
 )
-target_link_libraries(gammaray_translatorinspector gammaray_core Qt5::Core Qt5::Gui)
-
-if(GAMMARAY_BUILD_UI)
-  qt5_wrap_ui(translatorinspector_ui_srcs
-    translatorinspectorwidget.ui
-  )
-  gammaray_add_plugin(gammaray_translatorinspector_ui
-    JSON gammaray_translatorinspector.json
-    SOURCES translatorinspectorwidget.cpp translatorinspectorinterface.cpp ${translatorinspector_ui_srcs}
-  )
-  target_link_libraries(gammaray_translatorinspector_ui gammaray_ui)
+target_include_directories(gammaray_translatorinspector SYSTEM PRIVATE ${Qt5Core_PRIVATE_INCLUDE_DIRS})
+target_link_libraries(gammaray_translatorinspector gammaray_core Qt5::Core)
 endif()
 
-if(Qt5Widgets_FOUND)
-  add_executable(translator_test main.cpp)
-  qt5_use_modules(translator_test Widgets)
-
-  add_custom_target(translator_test_qm
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/translation.qm ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translation.qm
+# ui part
+if(GAMMARAY_BUILD_UI)
+  gammaray_add_plugin(gammaray_translatorinspector_ui
+    JSON gammaray_translatorinspector.json
+    SOURCES
+        translatorinspectorwidget.cpp
+        translatorinspectorinterface.cpp
+        translatorwrapperproxy.cpp
   )
-  add_dependencies(translator_test translator_test_qm)
+  target_link_libraries(gammaray_translatorinspector_ui gammaray_ui)
 endif()

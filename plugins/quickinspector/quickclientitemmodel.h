@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,21 +29,19 @@
 #ifndef GAMMARAY_QUICKINSPECTOR_QUICKCLIENTITEMMODEL_H
 #define GAMMARAY_QUICKINSPECTOR_QUICKCLIENTITEMMODEL_H
 
-#include <QIdentityProxyModel>
+#include <ui/clientdecorationidentityproxymodel.h>
 
 namespace GammaRay {
-
 /** UI-dependent (and thus client-side) bits of the item tree model. */
-class QuickClientItemModel : public QIdentityProxyModel
+class QuickClientItemModel : public ClientDecorationIdentityProxyModel
 {
-  Q_OBJECT
-  public:
-    explicit QuickClientItemModel(QObject *parent = 0);
-    ~QuickClientItemModel();
+    Q_OBJECT
+public:
+    explicit QuickClientItemModel(QObject *parent = nullptr);
+    ~QuickClientItemModel() override;
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 };
-
 }
 
 #endif // GAMMARAY_QUICKCLIENTITEMMODEL_H

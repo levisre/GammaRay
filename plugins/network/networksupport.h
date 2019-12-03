@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,13 +32,12 @@
 #include <core/toolfactory.h>
 
 namespace GammaRay {
-
 class NetworkSupport : public QObject
 {
     Q_OBJECT
 public:
-    explicit NetworkSupport(ProbeInterface *probe, QObject *parent = Q_NULLPTR);
-    ~NetworkSupport();
+    explicit NetworkSupport(Probe *probe, QObject *parent = nullptr);
+    ~NetworkSupport() override;
 
 private:
     void registerMetaTypes();
@@ -52,10 +51,8 @@ class NetworkSupportFactory : public QObject, public StandardToolFactory<QObject
     Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_network.json")
 
 public:
-    explicit NetworkSupportFactory(QObject *parent = Q_NULLPTR);
-    QString name() const Q_DECL_OVERRIDE;
+    explicit NetworkSupportFactory(QObject *parent = nullptr);
 };
-
 }
 
 #endif // GAMMARAY_NETWORKSUPPORT_H

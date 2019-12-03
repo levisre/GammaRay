@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Tobias Koenig <tobias.koenig@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,32 +31,28 @@
 
 #include <QDialog>
 
-QT_BEGIN_NAMESPACE
+namespace GammaRay {
 namespace Ui {
 class PropertyMatrixDialog;
 }
-QT_END_NAMESPACE
-
-namespace GammaRay {
 
 class PropertyMatrixModel;
 
 class PropertyMatrixDialog : public QDialog
 {
-  Q_OBJECT
-  public:
-    explicit PropertyMatrixDialog(QWidget *parent = Q_NULLPTR);
-    ~PropertyMatrixDialog();
+    Q_OBJECT
+public:
+    explicit PropertyMatrixDialog(QWidget *parent = nullptr);
+    ~PropertyMatrixDialog() override;
 
     void setMatrix(const QVariant &matrix);
     QVariant matrix() const;
 
-  private:
-    QT_PREPEND_NAMESPACE(Ui::PropertyMatrixDialog) *ui;
+private:
+    Ui::PropertyMatrixDialog *ui;
 
     PropertyMatrixModel *m_model;
 };
-
 }
 
 #endif // GAMMARAY_PROPERTYMATRIXDIALOG_H

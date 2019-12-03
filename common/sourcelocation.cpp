@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,21 +30,35 @@
 
 using namespace GammaRay;
 
-SourceLocation::SourceLocation() :
-    m_line(-1),
-    m_column(-1)
+SourceLocation::SourceLocation(const QUrl &url)
+    : m_url(url)
+    , m_line(0)
+    , m_column(0)
 {
 }
 
-SourceLocation::SourceLocation(const QUrl &url, int line, int column) :
-    m_url(url),
-    m_line(line),
-    m_column(column)
+SourceLocation::SourceLocation(const QUrl &url, int line, int column)
+    : m_url(url)
+    , m_line(line)
+    , m_column(column)
 {
 }
 
-SourceLocation::~SourceLocation()
+SourceLocation::~SourceLocation() = default;
+
+GammaRay::SourceLocation GammaRay::SourceLocation::fromZeroBased(const QUrl& url, int line, int column)
 {
+    return SourceLocation(url, line, column);
+}
+
+GammaRay::SourceLocation GammaRay::SourceLocation::fromOneBased(const QUrl& url, int line, int column)
+{
+    return SourceLocation(url, line - 1, column - 1);
+}
+
+bool SourceLocation::operator==(const SourceLocation &other) const
+{
+    return m_url == other.m_url && m_line == other.m_line && m_column == other.m_column;
 }
 
 bool SourceLocation::isValid() const
@@ -67,9 +81,14 @@ int SourceLocation::line() const
     return m_line;
 }
 
-void SourceLocation::setLine(int line)
+void SourceLocation::setZeroBasedLine(int line)
 {
     m_line = line;
+}
+
+void SourceLocation::setOneBasedLine(int line)
+{
+    m_line = line - 1;
 }
 
 int SourceLocation::column() const
@@ -77,9 +96,14 @@ int SourceLocation::column() const
     return m_column;
 }
 
-void SourceLocation::setColumn(int column)
+void SourceLocation::setZeroBasedColumn(int column)
 {
     m_column = column;
+}
+
+void SourceLocation::setOneBasedColumn(int column)
+{
+    m_column = column - 1;
 }
 
 QString SourceLocation::displayString() const
@@ -94,18 +118,18 @@ QString SourceLocation::displayString() const
     else
         result = m_url.toString();
 
-    if (m_line < 1)
+    if (m_line < 0)
         return result;
 
-    result += QString::fromLatin1(":%1").arg(m_line);
+    result += QString::fromLatin1(":%1").arg(m_line + 1);
 
-    if (m_column >= 1)
-        result += QString::fromLatin1(":%1").arg(m_column);
+    if (m_column >= 0)
+        result += QString::fromLatin1(":%1").arg(m_column + 1);
 
     return result;
 }
 
-QDataStream& GammaRay::operator<<(QDataStream& out, const SourceLocation& location)
+QDataStream &GammaRay::operator<<(QDataStream &out, const SourceLocation &location)
 {
     out << location.m_url;
     out << location.m_line;
@@ -113,7 +137,7 @@ QDataStream& GammaRay::operator<<(QDataStream& out, const SourceLocation& locati
     return out;
 }
 
-QDataStream& GammaRay::operator>>(QDataStream& in, SourceLocation& location)
+QDataStream &GammaRay::operator>>(QDataStream &in, SourceLocation &location)
 {
     in >> location.m_url;
     in >> location.m_line;

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,11 +32,10 @@
 #include <QVector3D>
 
 namespace GammaRay {
-
 class BoundingVolume
 {
 public:
-    BoundingVolume();
+    BoundingVolume() = default;
     void addPoint(const QVector3D &p);
 
     QVector3D center() const;
@@ -45,9 +44,8 @@ public:
 private:
     QVector3D m_p1;
     QVector3D m_p2;
-    bool m_null;
+    bool m_null = true;
 };
-
 }
 
 #endif // GAMMARAY_BOUNDINGVOLUME_H

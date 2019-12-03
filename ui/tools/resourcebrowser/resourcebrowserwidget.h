@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,37 +38,35 @@ class QItemSelection;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class ResourceBrowserInterface;
 
 namespace Ui {
-  class ResourceBrowserWidget;
+class ResourceBrowserWidget;
 }
 
 class ResourceBrowserWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit ResourceBrowserWidget(QWidget *parent = 0);
-    ~ResourceBrowserWidget();
+    Q_OBJECT
+public:
+    explicit ResourceBrowserWidget(QWidget *parent = nullptr);
+    ~ResourceBrowserWidget() override;
 
-  public slots:
+public slots:
     void selectResource(const QString &sourceFilePath, int line = -1, int column = -1);
 
-  private slots:
+private slots:
     void setupLayout();
     void resourceDeselected();
     void resourceSelected(const QByteArray &contents, int line, int column);
-    void resourceDownloaded(const QString &fileName, const QByteArray &contents);
+    void resourceDownloaded(const QString &targetFilePath, const QByteArray &contents);
 
     void handleCustomContextMenu(const QPoint &pos);
 
-  private:
+private:
     QScopedPointer<Ui::ResourceBrowserWidget> ui;
     UIStateManager m_stateManager;
     ResourceBrowserInterface *m_interface;
 };
-
 }
 
 #endif // GAMMARAY_RESOURCEBROWSER_H

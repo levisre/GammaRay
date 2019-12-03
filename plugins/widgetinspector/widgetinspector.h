@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,21 +36,18 @@
 #include <QWidget>
 
 namespace GammaRay {
-
-class WidgetInspectorFactory
-  : public QObject, public StandardToolFactory<QWidget, WidgetInspectorServer>
+class WidgetInspectorFactory : public QObject,
+    public StandardToolFactory<QWidget, WidgetInspectorServer>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_widgetinspector.json")
-  public:
-    explicit WidgetInspectorFactory(QObject *parent = 0) : QObject(parent)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_widgetinspector.json")
+public:
+    explicit WidgetInspectorFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // GAMMARAY_WIDGETINSPECTOR_H

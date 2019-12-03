@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,30 +27,45 @@
 */
 
 #include "splashscreen.h"
+#include "uiresources.h"
 
 #include <QSplashScreen>
 #include <QBitmap>
+#include <QApplication>
+#include <QDesktopWidget>
 
-QSplashScreen *splash = 0;
+QSplashScreen *splash = nullptr;
 
 namespace GammaRay {
-
 void showSplashScreen()
 {
-  if (!splash) {
-    QPixmap pixmap(QStringLiteral(":gammaray/splashscreen.png"));
-    splash = new QSplashScreen(pixmap);
-    splash->setMask(pixmap.mask());
-  }
+    if (!splash) {
+        splash = new QSplashScreen;
+        QPixmap pixmap = UIResources::themedPixmap(QStringLiteral("splashscreen.png"), splash);
+        splash->setPixmap(pixmap);
+    }
 
-  splash->show();
+    const QWidget *window = qApp->activeWindow();
+
+    if (window && window != splash) {
+        splash->ensurePolished();
+
+        const QRect windowRect = qApp->desktop()->availableGeometry(window);
+        QRect splashRect = QRect(QPoint(), splash->size());
+
+        splashRect.moveCenter(windowRect.center());
+        splash->move(splashRect.topLeft());
+    }
+
+    splash->show();
 }
 
 void hideSplashScreen()
 {
-  if (splash) {
-    splash->hide();
-  }
+    if (splash) {
+        splash->hide();
+        delete splash;
+        splash = nullptr;
+    }
 }
-
 }

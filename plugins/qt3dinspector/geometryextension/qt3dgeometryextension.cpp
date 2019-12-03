@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -43,10 +43,10 @@
 
 using namespace GammaRay;
 
-Qt3DGeometryExtension::Qt3DGeometryExtension(GammaRay::PropertyController* controller) :
-    Qt3DGeometryExtensionInterface(controller->objectBaseName() + ".qt3dGeometry", controller),
-    PropertyControllerExtension(controller->objectBaseName() + ".qt3dGeometry"),
-    m_geometry(nullptr)
+Qt3DGeometryExtension::Qt3DGeometryExtension(GammaRay::PropertyController *controller)
+    : Qt3DGeometryExtensionInterface(controller->objectBaseName() + ".qt3dGeometry", controller)
+    , PropertyControllerExtension(controller->objectBaseName() + ".qt3dGeometry")
+    , m_geometry(nullptr)
 {
 }
 
@@ -54,22 +54,22 @@ Qt3DGeometryExtension::~Qt3DGeometryExtension()
 {
 }
 
-bool Qt3DGeometryExtension::setQObject(QObject* object)
+bool Qt3DGeometryExtension::setQObject(QObject *object)
 {
     Qt3DRender::QGeometryRenderer *geometry = nullptr;
 
     // try to find a half-way related QGeometryRenderer instance
-    if (geometry = qobject_cast<Qt3DRender::QGeometryRenderer*>(object)) {
-    } else if (auto entity = qobject_cast<Qt3DCore::QEntity*>(object)) {
+    if ((geometry = qobject_cast<Qt3DRender::QGeometryRenderer *>(object))) {
+    } else if (auto entity = qobject_cast<Qt3DCore::QEntity *>(object)) {
         foreach (auto component, entity->components()) {
-            if (geometry = qobject_cast<Qt3DRender::QGeometryRenderer*>(component))
+            if ((geometry = qobject_cast<Qt3DRender::QGeometryRenderer *>(component)))
                 break;
         }
-    } else if (auto geo = qobject_cast<Qt3DRender::QGeometry*>(object)) {
+    } else if (auto geo = qobject_cast<Qt3DRender::QGeometry *>(object)) {
         return setQObject(geo->parent());
-    } else if (auto attr = qobject_cast<Qt3DRender::QAttribute*>(object)) {
+    } else if (auto attr = qobject_cast<Qt3DRender::QAttribute *>(object)) {
         return setQObject(attr->parent());
-    } else if (auto buffer = qobject_cast<Qt3DRender::QBuffer*>(object)) {
+    } else if (auto buffer = qobject_cast<Qt3DRender::QBuffer *>(object)) {
         return setQObject(buffer->parent());
     }
 
@@ -92,9 +92,11 @@ void Qt3DGeometryExtension::updateGeometryData()
         return;
     }
 
-    QHash<Qt3DRender::QBuffer*, uint> bufferMap;
+    QHash<Qt3DRender::QBuffer *, uint> bufferMap;
     data.attributes.reserve(m_geometry->geometry()->attributes().size());
     foreach (auto attr, m_geometry->geometry()->attributes()) {
+        if (attr->count() == 0) // ignore empty/invalid attributes
+            continue;
         Qt3DGeometryAttributeData attrData;
         attrData.name = attr->name();
         attrData.attributeType = attr->attributeType();

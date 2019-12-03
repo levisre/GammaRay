@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,20 +26,14 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include "variantpropertyobject.h"
 
 #include <QHash>
 #include <QVariant>
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 2, 0)
-typedef QHash<QString, int> StringIntHash;
-Q_DECLARE_METATYPE(StringIntHash)
-#endif
-
-VariantPropertyObject::VariantPropertyObject(QObject *parent):
-    QObject(parent),
-    m_object(new QObject)
+VariantPropertyObject::VariantPropertyObject(QObject *parent)
+    : QObject(parent)
+    , m_object(new QObject)
 {
     QHash<QString, int> mapping;
     mapping.insert(QStringLiteral("One"), 1);
@@ -48,26 +42,24 @@ VariantPropertyObject::VariantPropertyObject(QObject *parent):
     setProperty("dynamicProperty", QVariant::fromValue(mapping));
 }
 
-VariantPropertyObject::~VariantPropertyObject()
-{
-}
+VariantPropertyObject::~VariantPropertyObject() = default;
 
 QSharedPointer<QObject> VariantPropertyObject::sharedObject() const
 {
-  return m_object;
+    return m_object;
 }
 
 QPointer<QObject> VariantPropertyObject::trackingObject() const
 {
-  return m_object.data();
+    return m_object.data();
 }
 
 QVector<int> VariantPropertyObject::widgetVector() const
 {
-  QVector<int> vec;
-  vec << 5;
-  vec << 6;
-  vec << 7;
-  vec << 8;
-  return vec;
+    QVector<int> vec;
+    vec << 5;
+    vec << 6;
+    vec << 7;
+    vec << 8;
+    return vec;
 }

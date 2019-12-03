@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -31,6 +31,7 @@
 #define GAMMARAY_WIDGETINSPECTOR_WIDGETINSPECTORSERVER_H
 
 #include <widgetinspectorinterface.h>
+#include <common/remoteviewinterface.h>
 
 #include <QPointer>
 
@@ -43,51 +44,60 @@ class QPoint;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-class ProbeInterface;
+class Probe;
 class PropertyController;
 class OverlayWidget;
 class PaintAnalyzer;
 class RemoteViewServer;
+class ObjectId;
+using ObjectIds = QVector<ObjectId>;
 
 class WidgetInspectorServer : public WidgetInspectorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::WidgetInspectorInterface)
-  public:
-    explicit WidgetInspectorServer(ProbeInterface *probe, QObject *parent = 0);
-    ~WidgetInspectorServer();
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::WidgetInspectorInterface)
+public:
+    explicit WidgetInspectorServer(Probe *probe, QObject *parent = nullptr);
+    ~WidgetInspectorServer() override;
 
-  protected:
-    bool eventFilter(QObject *object, QEvent *event) Q_DECL_OVERRIDE;
+signals:
+    void elementsAtReceived(const GammaRay::ObjectIds &ids, int bestCandidate);
 
-  private:
+protected:
+    bool eventFilter(QObject *object, QEvent *event) override;
+
+private:
+    GammaRay::ObjectIds recursiveWidgetsAt(QWidget *parent, const QPoint &pos,
+                                           GammaRay::RemoteViewInterface::RequestMode mode, int& bestCandidate) const;
     void callExternalExportAction(const char *name, QWidget *widget, const QString &fileName);
     QImage imageForWidget(QWidget *widget);
     void registerWidgetMetaTypes();
     void registerVariantHandlers();
     void discoverObjects();
     void checkFeatures();
+    QVector<QRect> tabFocusChain(QWidget *window) const;
 
-  private slots:
-    void widgetSelected(const QItemSelection &selection);
+private slots:
+    void widgetSelectionChanged(const QItemSelection &selection);
     void widgetSelected(QWidget *widget);
     void objectSelected(QObject *obj);
     void objectCreated(QObject *object);
 
     void recreateOverlayWidget();
 
-    void saveAsImage(const QString &fileName) Q_DECL_OVERRIDE;
-    void saveAsSvg(const QString &fileName) Q_DECL_OVERRIDE;
-    void saveAsPdf(const QString &fileName) Q_DECL_OVERRIDE;
-    void saveAsUiFile(const QString &fileName) Q_DECL_OVERRIDE;
+    void saveAsImage(const QString &fileName) override;
+    void saveAsSvg(const QString &fileName) override;
+    void saveAsPdf(const QString &fileName) override;
+    void saveAsUiFile(const QString &fileName) override;
 
-    void analyzePainting() Q_DECL_OVERRIDE;
+    void analyzePainting() override;
 
     void updateWidgetPreview();
-    void pickElement(const QPoint &pos);
 
-  private:
+    void requestElementsAt(const QPoint &pos, GammaRay::RemoteViewInterface::RequestMode mode);
+    void pickElementId(const GammaRay::ObjectId& id);
+
+private:
     QPointer<OverlayWidget> m_overlayWidget;
     QLibrary *m_externalExportActions;
     PropertyController *m_propertyController;
@@ -95,9 +105,8 @@ class WidgetInspectorServer : public WidgetInspectorInterface
     QPointer<QWidget> m_selectedWidget;
     PaintAnalyzer *m_paintAnalyzer;
     RemoteViewServer *m_remoteView;
-    ProbeInterface *m_probe;
+    Probe *m_probe;
 };
-
 }
 
 #endif // GAMMARAY_WIDGETINSPECTORSERVER_H

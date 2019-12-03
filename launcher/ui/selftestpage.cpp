@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,52 +29,53 @@
 #include <config-gammaray.h>
 
 #include "selftestpage.h"
-#include "probefinder.h"
 #include "ui_selftestpage.h"
 
-#include <launcher/selftest.h>
+#include <launcher/core/probefinder.h>
+#include <launcher/core/selftest.h>
 
 #include <QStandardItemModel>
 
 using namespace GammaRay;
 
 SelfTestPage::SelfTestPage(QWidget *parent)
-  : QWidget(parent), ui(new Ui::SelfTestPage), m_resultModel(new QStandardItemModel(this))
+    : QWidget(parent)
+    , ui(new Ui::SelfTestPage)
+    , m_resultModel(new QStandardItemModel(this))
 {
-  ui->setupUi(this);
-  ui->resultView->setModel(m_resultModel);
-  run();
+    ui->setupUi(this);
+    ui->resultView->setModel(m_resultModel);
+    run();
 }
 
 SelfTestPage::~SelfTestPage()
 {
-  delete ui;
+    delete ui;
 }
 
 void SelfTestPage::run()
 {
-  m_resultModel->clear();
-  SelfTest selfTest;
-  connect(&selfTest, SIGNAL(information(QString)), this, SLOT(information(QString)));
-  connect(&selfTest, SIGNAL(error(QString)), this, SLOT(error(QString)));
-  selfTest.checkEverything();
+    m_resultModel->clear();
+    SelfTest selfTest;
+    connect(&selfTest, &SelfTest::information, this, &SelfTestPage::information);
+    connect(&selfTest, &SelfTest::error, this, &SelfTestPage::error);
+    selfTest.checkEverything();
 }
 
 void SelfTestPage::error(const QString &msg)
 {
-  QStandardItem *item = new QStandardItem;
-  item->setEditable(false);
-  item->setText(msg);
-  item->setIcon(style()->standardIcon(QStyle::SP_MessageBoxCritical));
-  m_resultModel->appendRow(item);
+    auto *item = new QStandardItem;
+    item->setEditable(false);
+    item->setText(msg);
+    item->setIcon(style()->standardIcon(QStyle::SP_MessageBoxCritical));
+    m_resultModel->appendRow(item);
 }
 
 void SelfTestPage::information(const QString &msg)
 {
-  QStandardItem *item = new QStandardItem;
-  item->setEditable(false);
-  item->setText(msg);
-  item->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
-  m_resultModel->appendRow(item);
+    auto *item = new QStandardItem;
+    item->setEditable(false);
+    item->setText(msg);
+    item->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+    m_resultModel->appendRow(item);
 }
-

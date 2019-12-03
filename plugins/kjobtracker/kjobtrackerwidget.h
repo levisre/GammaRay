@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,30 +35,28 @@
 #include <QWidget>
 
 namespace GammaRay {
-
 namespace Ui {
-  class KJobTrackerWidget;
+class KJobTrackerWidget;
 }
 
 class KJobTrackerWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit KJobTrackerWidget(QWidget *parent = 0);
-    ~KJobTrackerWidget();
+    Q_OBJECT
+public:
+    explicit KJobTrackerWidget(QWidget *parent = nullptr);
+    ~KJobTrackerWidget() override;
 
-  private:
+private:
     QScopedPointer<Ui::KJobTrackerWidget> ui;
     UIStateManager m_stateManager;
 };
 
 class KJobTrackerUiFactory : public QObject, public StandardToolUiFactory<KJobTrackerWidget>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolUiFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_kjobtracker.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolUiFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_kjobtracker.json")
 };
-
 }
 
 #endif // GAMMARAY_KJOBTRACKERWIDGET_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,19 +34,17 @@
 
 using namespace GammaRay;
 
-ClientDevice::ClientDevice(QObject* parent)
+ClientDevice::ClientDevice(QObject *parent)
     : QObject(parent)
     , m_tries(0)
 {
 }
 
-ClientDevice::~ClientDevice()
-{
-}
+ClientDevice::~ClientDevice() = default;
 
-ClientDevice* ClientDevice::create(const QUrl& url, QObject *parent)
+ClientDevice *ClientDevice::create(const QUrl &url, QObject *parent)
 {
-    ClientDevice* device = 0;
+    ClientDevice *device = nullptr;
     if (url.scheme() == QLatin1String("tcp"))
         device = new TcpClientDevice(parent);
     else if (url.scheme() == QLatin1String("local"))
@@ -54,7 +52,7 @@ ClientDevice* ClientDevice::create(const QUrl& url, QObject *parent)
 
     if (!device) {
         qWarning() << "Unsupported transport protocol:" << url.toString();
-        return 0;
+        return nullptr;
     }
 
     device->m_serverAddress = url;

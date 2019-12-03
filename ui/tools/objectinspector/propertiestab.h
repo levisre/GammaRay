@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,13 +30,13 @@
 #define PROPERTIESTAB_H
 
 #include <QWidget>
+#include <memory>
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class PropertiesExtensionInterface;
 
 class Ui_PropertiesTab;
@@ -44,28 +44,27 @@ class PropertyWidget;
 
 class PropertiesTab : public QWidget
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     explicit PropertiesTab(PropertyWidget *parent);
-    virtual ~PropertiesTab();
+    ~PropertiesTab() override;
 
-  private:
+private:
     void setObjectBaseName(const QString &baseName);
 
-  private slots:
+private slots:
     void updateNewPropertyValueEditor();
     void validateNewProperty();
     void propertyContextMenu(const QPoint &pos);
     void addNewProperty();
     void hasValuesChanged();
 
-  private:
-    Ui_PropertiesTab *m_ui;
+private:
+    std::unique_ptr<Ui_PropertiesTab> m_ui;
     PropertiesExtensionInterface *m_interface;
 
     QWidget *m_newPropertyValue;
 };
-
 }
 
 #endif // PROPERTIESTAB_H

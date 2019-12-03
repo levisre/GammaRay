@@ -1,9 +1,12 @@
 set(gammaray_srcs
   ${CMAKE_SOURCE_DIR}/3rdparty/qt/resourcemodel.cpp
 
+  abstractbindingprovider.cpp
   aggregatedpropertymodel.cpp
+  bindingaggregator.cpp
+  bindingnode.cpp
   metaobject.cpp
-  metaobjecttreemodel.cpp
+  metaobjectregistry.cpp
   metaobjectrepository.cpp
   metaproperty.cpp
   probe.cpp
@@ -16,12 +19,14 @@ set(gammaray_srcs
   objectenummodel.cpp
   objecttreemodel.cpp
   objecttypefilterproxymodel.cpp
+  problemcollector.cpp
   methodargumentmodel.cpp
   multisignalmapper.cpp
   signalspycallbackset.cpp
   singlecolumnobjectproxymodel.cpp
+  stacktracemodel.cpp
   toolfactory.cpp
-  toolmodel.cpp
+  toolmanager.cpp
   toolpluginmodel.cpp
   toolpluginerrormodel.cpp
   propertycontroller.cpp
@@ -31,10 +36,16 @@ set(gammaray_srcs
   varianthandler.cpp
   objectdataprovider.cpp
   attributemodel.cpp
+  qmetaobjectvalidator.cpp
+  enumrepositoryserver.cpp
+  enumutil.cpp
+  execution.cpp
+  classesiconsrepositoryserver.cpp
 
   propertyadaptor.cpp
   propertyaggregator.cpp
   propertydata.cpp
+  propertyfilter.cpp
   dynamicpropertyadaptor.cpp
   qmetapropertyadaptor.cpp
   metapropertyadaptor.cpp
@@ -42,28 +53,21 @@ set(gammaray_srcs
   sequentialpropertyadaptor.cpp
   objectinstance.cpp
   propertyadaptorfactory.cpp
+  jsonpropertyadaptor.cpp
 
+  paintbuffer.cpp
   paintbuffermodel.cpp
   paintanalyzer.cpp
+  painterprofilingreplayer.cpp
 
   remoteviewserver.cpp
 
-  tools/modelinspector/modeltester.cpp
-  tools/modelinspector/modelmodel.cpp
-  tools/modelinspector/modelcellmodel.cpp
   tools/metatypebrowser/metatypesmodel.cpp
-  tools/localeinspector/localemodel.cpp
-  tools/localeinspector/localedataaccessor.cpp
-  tools/localeinspector/localeaccessormodel.cpp
-  tools/textdocumentinspector/textdocumentmodel.cpp
-  tools/textdocumentinspector/textdocumentformatmodel.cpp
   tools/messagehandler/messagehandler.cpp
   tools/messagehandler/messagemodel.cpp
-  tools/localeinspector/localeinspector.cpp
   tools/metaobjectbrowser/metaobjectbrowser.cpp
+  tools/metaobjectbrowser/metaobjecttreemodel.cpp
   tools/metatypebrowser/metatypebrowser.cpp
-  tools/modelinspector/modelinspector.cpp
-  tools/modelinspector/safetyfilterproxymodel.cpp
   tools/objectinspector/objectinspector.cpp
   tools/objectinspector/propertiesextension.cpp
   tools/objectinspector/methodsextension.cpp
@@ -74,9 +78,14 @@ set(gammaray_srcs
   tools/objectinspector/enumsextension.cpp
   tools/objectinspector/classinfoextension.cpp
   tools/objectinspector/applicationattributeextension.cpp
+  tools/objectinspector/bindingextension.cpp
+  tools/objectinspector/bindingmodel.cpp
+  tools/objectinspector/stacktraceextension.cpp
+  tools/problemreporter/availablecheckersmodel.cpp
+  tools/problemreporter/problemmodel.cpp
+  tools/problemreporter/problemreporter.cpp
   tools/resourcebrowser/resourcebrowser.cpp
   tools/resourcebrowser/resourcefiltermodel.cpp
-  tools/textdocumentinspector/textdocumentinspector.cpp
 
   remote/server.cpp
   remote/remotemodelserver.cpp
@@ -85,66 +94,60 @@ set(gammaray_srcs
   remote/tcpserverdevice.cpp
   remote/localserverdevice.cpp
   remote/serverproxymodel.cpp
+
+  ${CMAKE_SOURCE_DIR}/resources/gammaray.qrc
 )
 
-if(Qt5Core_FOUND)
-  set(gammaray_srcs
-    ${gammaray_srcs}
-    tools/messagehandler/loggingcategorymodel.cpp
-    tools/mimetypes/mimetypes.cpp
-    tools/mimetypes/mimetypesmodel.cpp
-    tools/standardpaths/standardpaths.cpp
-    tools/standardpaths/standardpathsmodel.cpp
-  )
-endif()
+set(gammaray_srcs
+  ${gammaray_srcs}
+  tools/messagehandler/loggingcategorymodel.cpp
+)
 
-if(NOT Qt5Gui_VERSION VERSION_LESS 5.5.0) # QPaintBuffer was removed in 5.5
-  include_directories(${CMAKE_SOURCE_DIR}/3rdparty/qt/5.5/)
-  list(APPEND gammaray_srcs ${CMAKE_SOURCE_DIR}/3rdparty/qt/5.5/private/qpaintbuffer.cpp)
-endif()
+include_directories(${CMAKE_SOURCE_DIR}/3rdparty/qt/5.5/)
+list(APPEND gammaray_srcs ${CMAKE_SOURCE_DIR}/3rdparty/qt/5.5/private/qpaintbuffer.cpp)
 
-if(NOT WIN32)
-  set(gammaray_srcs ${gammaray_srcs} tools/messagehandler/backtrace_unix.cpp)
-elseif(MINGW)
-  set(gammaray_srcs ${gammaray_srcs} tools/messagehandler/backtrace_dummy.cpp)
-else()
-  set(gammaray_srcs ${gammaray_srcs}
-    tools/messagehandler/backtrace_win.cpp
-    ${CMAKE_SOURCE_DIR}/3rdparty/StackWalker/StackWalker.cpp)
+if(WIN32 AND NOT MINGW)
+  list(APPEND gammaray_srcs ${CMAKE_SOURCE_DIR}/3rdparty/StackWalker/StackWalker.cpp)
 endif()
-
-qt4_wrap_cpp(gammaray_srcs ${CMAKE_SOURCE_DIR}/3rdparty/qt/modeltest.h)
-qt4_add_resources(gammaray_srcs ${CMAKE_SOURCE_DIR}/resources/gammaray.qrc)
 
 # core lib
-add_library(gammaray_core SHARED ${gammaray_srcs})
+add_library(gammaray_core ${GAMMARAY_LIBRARY_TYPE}
+  ${gammaray_srcs}
+)
 generate_export_header(gammaray_core)
+target_compile_features(gammaray_core PUBLIC ${GAMMARAY_REQUIRED_CXX_FEATURES})
 
 gammaray_target_relocatable_interfaces(gammaray_core_ipaths)
 target_include_directories(gammaray_core PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> $<INSTALL_INTERFACE:${gammaray_core_ipaths}>)
+target_include_directories(gammaray_core SYSTEM PRIVATE
+    ${CMAKE_SOURCE_DIR}/3rdparty/backward-cpp
+    ${Qt5Core_PRIVATE_INCLUDE_DIRS}
+    ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
+)
 target_link_libraries(gammaray_core
   LINK_PUBLIC gammaray_common
-  LINK_PRIVATE gammaray_common_internal gammaray_kitemmodels
+  LINK_PRIVATE gammaray_common_internal gammaray_kitemmodels ${CMAKE_DL_LIBS}
 )
 set_target_properties(gammaray_core PROPERTIES
   ${GAMMARAY_DEFAULT_LIBRARY_PROPERTIES}
   OUTPUT_NAME gammaray_core-${GAMMARAY_PROBE_ABI}
 )
+gammaray_set_rpath(gammaray_core ${LIB_INSTALL_DIR})
 
-if(Qt5Core_FOUND)
-  target_link_libraries(gammaray_core LINK_PUBLIC Qt5::Core LINK_PRIVATE Qt5::Gui)
-else()
-  target_link_libraries(gammaray_core
-    LINK_PUBLIC ${QT_QTCORE_LIBRARIES} ${QT_QTGUI_LIBRARIES} # GUI is needed for QItemSelectionModel
-    LINK_PRIVATE ${QT_QTNETWORK_LIBRARIES}
-  )
+target_link_libraries(gammaray_core LINK_PUBLIC Qt5::Core LINK_PRIVATE Qt5::Gui)
+if (TARGET Qt5::AndroidExtras)
+    target_link_libraries(gammaray_core LINK_PRIVATE Qt5::AndroidExtras)
 endif()
+
+add_backward(gammaray_core)
 
 if(NOT GAMMARAY_PROBE_ONLY_BUILD)
   install(TARGETS gammaray_core EXPORT GammaRayTargets ${INSTALL_TARGETS_DEFAULT_ARGS})
 
   gammaray_install_headers(
     ${CMAKE_CURRENT_BINARY_DIR}/gammaray_core_export.h
+    enumrepositoryserver.h
+    enumutil.h
     metaobject.h
     metaobjectrepository.h
     metaproperty.h
@@ -152,15 +155,16 @@ if(NOT GAMMARAY_PROBE_ONLY_BUILD)
     objectdataprovider.h
     objecttypefilterproxymodel.h
     probe.h
-    probeinterface.h
     probecontroller.h
     propertycontroller.h
     propertycontrollerextension.h
     signalspycallbackset.h
     singlecolumnobjectproxymodel.h
     toolfactory.h
+    typetraits.h
     util.h
     varianthandler.h
+    remote/server.h
   )
 
   ecm_generate_pri_file(BASE_NAME GammaRayCore
@@ -171,6 +175,12 @@ if(NOT GAMMARAY_PROBE_ONLY_BUILD)
   )
 
   install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
+  if(GAMMARAY_STATIC_PROBE)
+    gammaray_install_headers(staticprobe.h)
+  endif()
 else()
   install(TARGETS gammaray_core ${INSTALL_TARGETS_DEFAULT_ARGS})
+endif()
+if(MSVC)
+  install(FILES "$<TARGET_PDB_FILE_DIR:gammaray_core>/$<TARGET_PDB_FILE_NAME:gammaray_core>" DESTINATION ${BIN_INSTALL_DIR} CONFIGURATIONS Debug RelWithDebInfo)
 endif()

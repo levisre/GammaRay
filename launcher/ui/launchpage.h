@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,7 +29,7 @@
 #ifndef GAMMARAY_LAUNCHPAGE_H
 #define GAMMARAY_LAUNCHPAGE_H
 
-#include <launcher/probeabidetector.h>
+#include <launcher/core/probeabidetector.h>
 
 #include <QWidget>
 
@@ -38,20 +38,19 @@ class QStringListModel;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class ProbeABIModel;
 
 class LaunchOptions;
 namespace Ui {
-  class LaunchPage;
+class LaunchPage;
 }
 
 class LaunchPage : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit LaunchPage(QWidget *parent = 0);
-    ~LaunchPage();
+    Q_OBJECT
+public:
+    explicit LaunchPage(QWidget *parent = nullptr);
+    ~LaunchPage() override;
 
     LaunchOptions launchOptions() const;
 
@@ -59,17 +58,18 @@ class LaunchPage : public QWidget
 
     void writeSettings();
 
-  signals:
+signals:
     void updateButtonState();
 
-  private slots:
+private slots:
     void showFileDialog();
+    void showDirDialog();
     void addArgument();
     void removeArgument();
     void updateArgumentButtons();
     void detectABI(const QString &path);
 
-  private:
+private:
     QStringList notEmptyString(const QStringList &list) const;
     Ui::LaunchPage *ui;
     QStringListModel *m_argsModel;
@@ -77,7 +77,6 @@ class LaunchPage : public QWidget
     ProbeABIDetector m_abiDetector;
     bool m_abiIsValid;
 };
-
 }
 
 #endif // GAMMARAY_LAUNCHPAGE_H

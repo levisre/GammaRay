@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,20 +32,18 @@
 #include <common/tools/objectinspector/connectionsextensioninterface.h>
 
 namespace GammaRay {
-
 class ConnectionsExtensionClient : public ConnectionsExtensionInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ConnectionsExtensionInterface)
-  public:
-    explicit ConnectionsExtensionClient(const QString &name, QObject *parent = 0);
-    virtual ~ConnectionsExtensionClient();
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ConnectionsExtensionInterface)
+public:
+    explicit ConnectionsExtensionClient(const QString &name, QObject *parent = nullptr);
+    ~ConnectionsExtensionClient() override;
 
-  public slots:
-    void navigateToReceiver(int modelRow) Q_DECL_OVERRIDE;
-    void navigateToSender(int modelRow) Q_DECL_OVERRIDE;
+public slots:
+    void navigateToReceiver(int modelRow) override;
+    void navigateToSender(int modelRow) override;
 };
-
 }
 
 #endif // GAMMARAY_CONNECTIONSEXTENSIONCLIENT_H

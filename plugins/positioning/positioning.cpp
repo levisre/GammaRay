@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,15 +27,20 @@
 */
 
 #include "positioning.h"
+#include "positioninfopropertyadaptor.h"
 
 #include <core/metaobject.h>
 #include <core/metaobjectrepository.h>
 #include <core/varianthandler.h>
 
+#include <QDataStream>
 #include <QGeoPositionInfoSource>
 #include <QGeoSatelliteInfoSource>
 #include <QGeoAreaMonitorSource>
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
+Q_DECLARE_METATYPE(QGeoPositionInfo)
+#endif
 Q_DECLARE_METATYPE(QGeoPositionInfoSource::Error)
 Q_DECLARE_METATYPE(QGeoPositionInfoSource::PositioningMethods)
 Q_DECLARE_METATYPE(QGeoSatelliteInfoSource::Error)
@@ -57,32 +62,69 @@ static QString positioningMethodsToString(QGeoPositionInfoSource::PositioningMet
     if (methods & QGeoPositionInfoSource::NonSatellitePositioningMethods)
         l.push_back(QStringLiteral("NonSatellitePositioningMethods"));
 
-  return l.join(QLatin1Char('|'));
+    return l.join(QLatin1Char('|'));
 }
 
-Positioning::Positioning(ProbeInterface* probe, QObject* parent): QObject(parent)
+Positioning::Positioning(Probe *probe, QObject *parent)
+    : PositioningInterface(parent)
 {
-    Q_UNUSED(probe);
+    qRegisterMetaTypeStreamOperators<QGeoPositionInfo>("QGeoPositionInfo");
+    registerMetaTypes();
+    connect(probe, &Probe::objectCreated, this, &Positioning::objectAdded);
+}
 
-    MetaObject *mo = 0;
+void Positioning::objectAdded(QObject* obj)
+{
+    if (auto geoInfoSource = qobject_cast<QGeoPositionInfoSource*>(obj)) {
+        if (geoInfoSource->sourceName() != QLatin1Literal("gammaray")) {
+            if (positioningOverrideAvailable()) // we already have a proxy source taking care of things
+                return;
+            // until we have a proxy, just forward the position from the real source
+            connect(geoInfoSource, &QGeoPositionInfoSource::positionUpdated, this, &Positioning::setPositionInfo);
+            setPositionInfo(geoInfoSource->lastKnownPosition());
+            m_nonProxyPositionInfoSources.push_back(geoInfoSource);
+        } else {
+            // we previously got non-proxied sources, disconnect those
+            if (!m_nonProxyPositionInfoSources.empty()) {
+                std::for_each(m_nonProxyPositionInfoSources.begin(), m_nonProxyPositionInfoSources.end(), [this](QGeoPositionInfoSource *source) {
+                    disconnect(source, &QGeoPositionInfoSource::positionUpdated, this, &Positioning::setPositionInfo);
+                });
+                m_nonProxyPositionInfoSources.clear();
+            }
+            QMetaObject::invokeMethod(geoInfoSource, "setInterface", Q_ARG(PositioningInterface*, this));
+        }
+    }
+}
+
+void Positioning::registerMetaTypes()
+{
+    MetaObject *mo = nullptr;
+    MO_ADD_METAOBJECT0(QGeoPositionInfo);
+    MO_ADD_PROPERTY_RO(QGeoPositionInfo, coordinate);
+    MO_ADD_PROPERTY   (QGeoPositionInfo, timestamp, setTimestamp);
+
     MO_ADD_METAOBJECT1(QGeoPositionInfoSource, QObject);
-    MO_ADD_PROPERTY_RO(QGeoPositionInfoSource, QGeoPositionInfoSource::Error, error);
-    MO_ADD_PROPERTY_RO(QGeoPositionInfoSource, QGeoPositionInfoSource::PositioningMethods, preferredPositioningMethods);
-    MO_ADD_PROPERTY_RO(QGeoPositionInfoSource, QGeoPositionInfoSource::PositioningMethods, supportedPositioningMethods);
+    MO_ADD_PROPERTY_RO(QGeoPositionInfoSource, error);
+    MO_ADD_PROPERTY_LD(QGeoPositionInfoSource, lastKnownPosition, [](QGeoPositionInfoSource *s) { return s->lastKnownPosition(); });
+    MO_ADD_PROPERTY_RO(QGeoPositionInfoSource, preferredPositioningMethods);
+    MO_ADD_PROPERTY_RO(QGeoPositionInfoSource, supportedPositioningMethods);
 
     MO_ADD_METAOBJECT1(QGeoSatelliteInfoSource, QObject);
-    MO_ADD_PROPERTY_RO(QGeoSatelliteInfoSource, QGeoSatelliteInfoSource::Error, error);
-    MO_ADD_PROPERTY_RO(QGeoSatelliteInfoSource, QString, sourceName);
+    MO_ADD_PROPERTY_RO(QGeoSatelliteInfoSource, error);
+    MO_ADD_PROPERTY_RO(QGeoSatelliteInfoSource, sourceName);
 
     MO_ADD_METAOBJECT1(QGeoAreaMonitorSource, QObject);
-    MO_ADD_PROPERTY_RO(QGeoAreaMonitorSource, QGeoAreaMonitorSource::Error, error);
-    MO_ADD_PROPERTY_RO(QGeoAreaMonitorSource, QString, sourceName);
-    MO_ADD_PROPERTY_RO(QGeoAreaMonitorSource, QGeoAreaMonitorSource::AreaMonitorFeatures, supportedAreaMonitorFeatures);
+    MO_ADD_PROPERTY_RO(QGeoAreaMonitorSource, error);
+    MO_ADD_PROPERTY_RO(QGeoAreaMonitorSource, sourceName);
+    MO_ADD_PROPERTY_RO(QGeoAreaMonitorSource, supportedAreaMonitorFeatures);
 
     VariantHandler::registerStringConverter<QGeoPositionInfoSource::PositioningMethods>(positioningMethodsToString);
-}
+    VariantHandler::registerStringConverter<QGeoPositionInfo>([](const QGeoPositionInfo &info) {
+        return VariantHandler::displayString(info.coordinate());
+    });
+    VariantHandler::registerStringConverter<QGeoCoordinate>([](const QGeoCoordinate &coord) {
+        return coord.toString();
+    });
 
-QString PositioningFactory::name() const
-{
-    return tr("Positioning");
+    PropertyAdaptorFactory::registerFactory(PositionInfoPropertyAdaptorFactory::instance());
 }

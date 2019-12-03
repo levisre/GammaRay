@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,34 +33,34 @@
 #include "objectinstance.h"
 
 namespace GammaRay {
-
 /** Property adaptor for QMetaProperty/Object-based property access. */
 class QMetaPropertyAdaptor : public PropertyAdaptor
 {
     Q_OBJECT
 public:
-    explicit QMetaPropertyAdaptor(QObject* parent = 0);
-    ~QMetaPropertyAdaptor();
+    explicit QMetaPropertyAdaptor(QObject *parent = nullptr);
+    ~QMetaPropertyAdaptor() override;
 
-    int count() const Q_DECL_OVERRIDE;
-    PropertyData propertyData(int index) const Q_DECL_OVERRIDE;
-    void writeProperty(int index, const QVariant& value) Q_DECL_OVERRIDE;
-    void resetProperty(int index) Q_DECL_OVERRIDE;
+    int count() const override;
+    PropertyData propertyData(int index) const override;
+    void writeProperty(int index, const QVariant &value) override;
+    void resetProperty(int index) override;
 
 protected:
-    void doSetObject(const ObjectInstance& oi) Q_DECL_OVERRIDE;
+    void doSetObject(const ObjectInstance &oi) override;
 
 private:
     QString detailString(const QMetaProperty &prop) const;
+    PropertyData propertyMetaData(int index) const;
 
 private slots:
     void propertyUpdated();
 
 private:
-    QHash<int, int> m_notifyToPropertyMap;
+    QHash<int, int> m_notifyToRowMap;
+    QVector<int> m_rowToPropertyIndex;
     mutable bool m_notifyGuard;
 };
-
 }
 
 #endif // GAMMARAY_QMETAPROPERTYADAPTOR_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,15 +33,15 @@
 using namespace GammaRay;
 
 PropertyColorEditor::PropertyColorEditor(QWidget *parent)
-  : PropertyExtendedEditor(parent)
+    : PropertyExtendedEditor(parent)
 {
 }
 
-void PropertyColorEditor::edit()
+void PropertyColorEditor::showEditor(QWidget* parent)
 {
-  const QColor color = QColorDialog::getColor(value().value<QColor>(), this, QString(), QColorDialog::ShowAlphaChannel);
-  if (color.isValid()) {
-    save(QVariant::fromValue(color));
-  }
+    const QColor color = QColorDialog::getColor(value().value<QColor>(), parent,
+                                                QString(), QColorDialog::ShowAlphaChannel);
+    if (color.isValid())
+        save(QVariant::fromValue(color));
+    emit editorClosed();
 }
-

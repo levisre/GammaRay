@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,7 +31,10 @@
 
 #include "gammaray_common_export.h"
 
+#include <QDataStream>
+#include <QMetaType>
 #include <QObject>
+#include <QPainterPath>
 
 QT_BEGIN_NAMESPACE
 class QImage;
@@ -43,16 +46,38 @@ namespace GammaRay {
 class GAMMARAY_COMMON_EXPORT PaintAnalyzerInterface : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(bool hasArgumentDetails READ hasArgumentDetails WRITE setHasArgumentDetails NOTIFY hasArgumentDetailsChanged)
+    Q_PROPERTY(bool hasStackTrace READ hasStackTrace WRITE setHasStackTrace NOTIFY hasStackTraceChanged)
 public:
-    explicit PaintAnalyzerInterface(const QString &name, QObject *parent = Q_NULLPTR);
+    explicit PaintAnalyzerInterface(const QString &name, QObject *parent = nullptr);
     QString name() const;
+
+    bool hasArgumentDetails() const;
+    void setHasArgumentDetails(bool hasDetails);
+
+    bool hasStackTrace() const;
+    void setHasStackTrace(bool hasStackTrace);
+
+Q_SIGNALS:
+    void hasArgumentDetailsChanged(bool);
+    void hasStackTraceChanged(bool);
 
 private:
     QString m_name;
+    bool m_hasArgumentDetails;
+    bool m_hasStackTrace;
 };
 
+struct PaintAnalyzerFrameData
+{
+    QPainterPath clipPath;
+};
+
+QDataStream &operator<<(QDataStream &stream, const GammaRay::PaintAnalyzerFrameData &data);
+QDataStream &operator>>(QDataStream &stream, GammaRay::PaintAnalyzerFrameData &data);
 }
 
+Q_DECLARE_METATYPE(GammaRay::PaintAnalyzerFrameData)
 QT_BEGIN_NAMESPACE
 Q_DECLARE_INTERFACE(GammaRay::PaintAnalyzerInterface, "com.kdab.GammaRay.PaintAnalyzer/1.0")
 QT_END_NAMESPACE

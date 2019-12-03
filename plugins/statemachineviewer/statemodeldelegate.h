@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,17 +32,16 @@
 #include <QStyledItemDelegate>
 
 namespace GammaRay {
-
 class StateModelDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
 public:
-    explicit StateModelDelegate(QObject *parent = Q_NULLPTR);
+    explicit StateModelDelegate(QObject *parent = nullptr);
 
 protected:
-    void initStyleOption(QStyleOptionViewItem* option, const QModelIndex& index) const Q_DECL_OVERRIDE;
+    void initStyleOption(QStyleOptionViewItem *option,
+                         const QModelIndex &index) const override;
 };
-
 }
 
 #endif // GAMMARAY_STATEMODELDELEGATE_H

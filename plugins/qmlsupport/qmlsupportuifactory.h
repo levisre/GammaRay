@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,16 +32,15 @@
 #include <ui/tooluifactory.h>
 
 namespace GammaRay {
-
 class QmlSupportUiFactory : public QObject, public ToolUiFactory
 {
     Q_OBJECT
     Q_INTERFACES(GammaRay::ToolUiFactory)
     Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_qmlsupport.json")
 public:
-    QString id() const Q_DECL_OVERRIDE;
-    void initUi() Q_DECL_OVERRIDE;
-    QWidget* createWidget(QWidget*) Q_DECL_OVERRIDE;
+    QString id() const override;
+    void initUi() override;
+    QWidget *createWidget(QWidget *) override;
 };
 }
 

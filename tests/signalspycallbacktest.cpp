@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -24,11 +24,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <probe/probecreator.h>
-#include <core/probe.h>
+#include "baseprobetest.h"
 
-#include <QtTest/qtest.h>
-#include <QObject>
 #include <QPointer>
 
 using namespace GammaRay;
@@ -50,17 +47,9 @@ public slots:
     void senderDeletingSlot() { delete sender(); }
 };
 
-class SignalSpyCallbackTest : public QObject
+class SignalSpyCallbackTest : public BaseProbeTest
 {
     Q_OBJECT
-private:
-    void createProbe()
-    {
-        qputenv("GAMMARAY_ProbePath", QCoreApplication::applicationDirPath().toUtf8());
-        new ProbeCreator(ProbeCreator::Create);
-        QTest::qWait(1); // event loop re-entry
-    }
-
 private slots:
     void testSenderDeletion()
     {
@@ -70,14 +59,14 @@ private slots:
         QPointer<Sender> s2 = new Sender;
         Receiver r;
 
-        connect(s1, SIGNAL(mySignal()), &r, SLOT(senderDeletingSlot()));
+        connect(s1.data(), &Sender::mySignal, &r, &Receiver::senderDeletingSlot);
         s1->emitSignal(); // must not crash
         QVERIFY(s1.isNull());
 
         // give the probe time to process s and r2 (needs one event loop re-entry)
         QTest::qWait(1);
 
-        connect(s2, SIGNAL(mySignal()), &r, SLOT(senderDeletingSlot()));
+        connect(s2.data(), &Sender::mySignal, &r, &Receiver::senderDeletingSlot);
         s2->emitSignal(); // must not crash
         QVERIFY(s2.isNull());
     }

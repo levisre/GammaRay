@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,7 +35,6 @@
 #include <QPointer>
 
 namespace GammaRay {
-
 class PropertyController;
 
 class ObjectDynamicPropertyModel;
@@ -44,24 +43,23 @@ class AggregatedPropertyModel;
 
 class PropertiesExtension : public PropertiesExtensionInterface, public PropertyControllerExtension
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::PropertiesExtensionInterface)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::PropertiesExtensionInterface)
 
-  public:
+public:
     explicit PropertiesExtension(PropertyController *controller);
-    ~PropertiesExtension();
+    ~PropertiesExtension() override;
 
-    void setProperty(const QString &name, const QVariant &value) Q_DECL_OVERRIDE;
+    void setProperty(const QString &name, const QVariant &value) override;
 
-    bool setObject(void *object, const QString &typeName) Q_DECL_OVERRIDE;
-    bool setQObject(QObject *object) Q_DECL_OVERRIDE;
-    bool setMetaObject(const QMetaObject* metaObject) Q_DECL_OVERRIDE;
+    bool setObject(void *object, const QString &typeName) override;
+    bool setQObject(QObject *object) override;
+    bool setMetaObject(const QMetaObject *metaObject) override;
 
-  private:
+private:
     AggregatedPropertyModel *m_aggregatedPropertyModel;
     QPointer<QObject> m_object;
 };
-
 }
 
 #endif // PROPERTIESEXTENSION_H

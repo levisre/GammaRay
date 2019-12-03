@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,20 +32,18 @@
 #include "styleinspectorinterface.h"
 
 namespace GammaRay {
-
 class StyleInspectorClient : public StyleInspectorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::StyleInspectorInterface)
-  public:
-    explicit StyleInspectorClient(QObject *parent = 0);
-    ~StyleInspectorClient();
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::StyleInspectorInterface)
+public:
+    explicit StyleInspectorClient(QObject *parent = nullptr);
+    ~StyleInspectorClient() override;
 
-    void setCellHeight(int height) Q_DECL_OVERRIDE;
-    void setCellWidth(int width) Q_DECL_OVERRIDE;
-    void setCellZoom(int zoom) Q_DECL_OVERRIDE;
+    void setCellHeight(int height) override;
+    void setCellWidth(int width) override;
+    void setCellZoom(int zoom) override;
 };
-
 }
 
 #endif // GAMMARAY_STYLEINSPECTORCLIENT_H

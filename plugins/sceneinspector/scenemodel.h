@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,33 +38,33 @@ class QGraphicsItem;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class SceneModel : public QAbstractItemModel
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     enum Role {
-      SceneItemRole = UserRole + 1
+        SceneItemRole = UserRole + 1
     };
-    explicit SceneModel(QObject *parent = 0);
+    explicit SceneModel(QObject *parent = nullptr);
     void setScene(QGraphicsScene *scene);
     QGraphicsScene *scene() const;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QModelIndex parent(const QModelIndex &child) const Q_DECL_OVERRIDE;
-    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
+    QModelIndex index(int row, int column,
+                      const QModelIndex &parent = QModelIndex()) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
 
-  private:
-    QList<QGraphicsItem*> topLevelItems() const;
+private:
+    QList<QGraphicsItem *> topLevelItems() const;
     /// Returns a string type name for the given QGV item type id
     QString typeName(int itemType) const;
 
     QGraphicsScene *m_scene;
     QHash<int, QString> m_typeNames;
 };
-
 }
 
 #endif // GAMMARAY_SCENEMODEL_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,6 +27,7 @@
 */
 
 #include "abstractstyleelementmodel.h"
+#include "dynamicproxystyle.h"
 
 #include <QApplication>
 #include <QProxyStyle>
@@ -35,51 +36,51 @@
 using namespace GammaRay;
 
 AbstractStyleElementModel::AbstractStyleElementModel(QObject *parent)
-  : QAbstractTableModel(parent)
+    : QAbstractTableModel(parent)
 {
 }
 
 void AbstractStyleElementModel::setStyle(QStyle *style)
 {
-  beginResetModel();
-  m_style = QPointer<QStyle>(style);
-  endResetModel();
+    beginResetModel();
+    m_style = QPointer<QStyle>(style);
+    endResetModel();
 }
 
 QVariant AbstractStyleElementModel::data(const QModelIndex &index, int role) const
 {
-  if (!index.isValid() || !m_style) {
-    return QVariant();
-  }
-  return doData(index.row(), index.column(), role);
+    if (!index.isValid() || !m_style)
+        return QVariant();
+    return doData(index.row(), index.column(), role);
 }
 
 int AbstractStyleElementModel::columnCount(const QModelIndex &parent) const
 {
-  Q_UNUSED(parent);
-  return doColumnCount();
+    Q_UNUSED(parent);
+    return doColumnCount();
 }
 
 int AbstractStyleElementModel::rowCount(const QModelIndex &parent) const
 {
-  if (parent.isValid() || !m_style) {
-    return 0;
-  }
-  return doRowCount();
+    if (parent.isValid() || !m_style)
+        return 0;
+    return doRowCount();
 }
 
 bool AbstractStyleElementModel::isMainStyle() const
 {
-  QStyle *style = qApp->style();
-  forever {
-    if (style == m_style) {
-      return true;
+    QStyle *style = qApp->style();
+    forever {
+        if (style == m_style)
+            return true;
+        QProxyStyle *proxy = qobject_cast<QProxyStyle *>(style);
+        if (!proxy)
+            return false;
+        style = proxy->baseStyle();
     }
-    QProxyStyle *proxy = qobject_cast<QProxyStyle*>(style);
-    if (!proxy) {
-      return false;
-    }
-    style = proxy->baseStyle();
-  }
 }
 
+QStyle* AbstractStyleElementModel::effectiveStyle() const
+{
+    return (isMainStyle() && DynamicProxyStyle::exists()) ? DynamicProxyStyle::instance() : m_style;
+}

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,12 +28,17 @@
 
 #include "metaobjectbrowser.h"
 #include "metaobjecttreemodel.h"
-#include "probe.h"
-#include "propertycontroller.h"
+
+#include <core/metaobjectregistry.h>
+#include <core/probe.h>
+#include <core/propertycontroller.h>
+#include <core/problemcollector.h>
+#include <core/qmetaobjectvalidator.h>
+#include <core/remote/serverproxymodel.h>
 
 #include <common/objectbroker.h>
 #include <common/metatypedeclarations.h>
-#include <core/remote/serverproxymodel.h>
+#include <common/tools/metaobjectbrowser/qmetaobjectmodel.h>
 
 #include <3rdparty/kde/krecursivefilterproxymodel.h>
 
@@ -42,72 +47,133 @@
 
 using namespace GammaRay;
 
-MetaObjectBrowser::MetaObjectBrowser(ProbeInterface *probe, QObject *parent)
+MetaObjectBrowser::MetaObjectBrowser(Probe *probe, QObject *parent)
     : QObject(parent)
     , m_propertyController(new PropertyController(QStringLiteral("com.kdab.GammaRay.MetaObjectBrowser"), this))
+    , m_motm(new MetaObjectTreeModel(this))
+    , m_model(nullptr)
 {
-  m_model = new ServerProxyModel<KRecursiveFilterProxyModel>(this);
-  m_model->setSourceModel(Probe::instance()->metaObjectModel());
-  probe->registerModel(QStringLiteral("com.kdab.GammaRay.MetaObjectBrowserTreeModel"), m_model);
+    auto model = new ServerProxyModel<KRecursiveFilterProxyModel>(this);
+    model->addRole(QMetaObjectModel::MetaObjectIssues);
+    model->addRole(QMetaObjectModel::MetaObjectInvalid);
+    model->setSourceModel(m_motm);
+    m_model = model;
+    probe->registerModel(QStringLiteral("com.kdab.GammaRay.MetaObjectBrowserTreeModel"), m_model);
 
-  QItemSelectionModel *selectionModel = ObjectBroker::selectionModel(m_model);
+    QItemSelectionModel *selectionModel = ObjectBroker::selectionModel(m_model);
 
-  connect(selectionModel,SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-          SLOT(objectSelected(QItemSelection)));
+    connect(selectionModel, &QItemSelectionModel::selectionChanged,
+            this, &MetaObjectBrowser::objectSelectionChanged);
 
-  m_propertyController->setMetaObject(0); // init
+    m_propertyController->setMetaObject(nullptr); // init
 
-  connect(probe->probe(), SIGNAL(objectSelected(QObject*,QPoint)), this, SLOT(objectSelected(QObject*)));
-  connect(probe->probe(), SIGNAL(nonQObjectSelected(void*,QString)), this, SLOT(objectSelected(void*,QString)));
+    connect(probe, &Probe::objectSelected, this, &MetaObjectBrowser::qobjectSelected);
+    connect(probe, &Probe::nonQObjectSelected, this, &MetaObjectBrowser::voidPtrObjectSelected);
+
+    ObjectBroker::registerObject(QStringLiteral("com.kdab.GammaRay.MetaObjectBrowser"), this);
+
+    ProblemCollector::registerProblemChecker("com.kdab.GammaRay.MetaObjectBrowser.QMetaObjectValidator",
+                                             "QMetaObject Validator",
+                                             "Checks for common errors with meta objects, like invocable functions with unregistered parameter types.",
+                                             &MetaObjectBrowser::scanForMetaObjectProblems,
+                                             /*enabled=*/ false
+                                            );
 }
 
-void MetaObjectBrowser::objectSelected(const QItemSelection &selection)
+void MetaObjectBrowser::rescanMetaTypes()
 {
-  QModelIndex index;
-  if (selection.size() == 1)
-    index = selection.first().topLeft();
-
-  if (index.isValid()) {
-    const QMetaObject *metaObject =
-      index.data(MetaObjectTreeModel::MetaObjectRole).value<const QMetaObject*>();
-    m_propertyController->setMetaObject(metaObject);
-  } else {
-    m_propertyController->setMetaObject(0);
-  }
+    Probe::instance()->metaObjectRegistry()->scanMetaTypes();
 }
 
-void MetaObjectBrowser::objectSelected(QObject *obj)
+void MetaObjectBrowser::objectSelectionChanged(const QItemSelection &selection)
+{
+    QModelIndex index;
+    if (selection.size() == 1)
+        index = selection.first().topLeft();
+
+    if (index.isValid()) {
+        const QMetaObject *metaObject
+            = index.data(QMetaObjectModel::MetaObjectRole).value<const QMetaObject*>();
+        m_propertyController->setMetaObject(metaObject);
+    } else {
+        m_propertyController->setMetaObject(nullptr);
+    }
+}
+
+void MetaObjectBrowser::qobjectSelected(QObject *obj)
 {
     if (!obj)
         return;
     metaObjectSelected(obj->metaObject());
 }
 
-void MetaObjectBrowser::objectSelected(void *obj, const QString &typeName)
+void MetaObjectBrowser::voidPtrObjectSelected(void *obj, const QString &typeName)
 {
     if (typeName != QLatin1String("const QMetaObject*"))
         return;
-    metaObjectSelected(static_cast<QMetaObject*>(obj));
+    metaObjectSelected(static_cast<QMetaObject *>(obj));
 }
 
 void MetaObjectBrowser::metaObjectSelected(const QMetaObject *mo)
 {
     if (!mo)
         return;
-    const auto indexes = m_model->match(m_model->index(0,0), MetaObjectTreeModel::MetaObjectRole, QVariant::fromValue(mo), Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
+    mo = Probe::instance()->metaObjectRegistry()->canonicalMetaObject(mo);
+    const auto indexes = m_model->match(m_model->index(0, 0), QMetaObjectModel::MetaObjectRole,
+                                        QVariant::fromValue(mo),
+                                        Qt::MatchExactly | Qt::MatchRecursive | Qt::MatchWrap);
     if (indexes.isEmpty()) {
         metaObjectSelected(mo->superClass());
         return;
     }
-    ObjectBroker::selectionModel(m_model)->select(indexes.first(), QItemSelectionModel::Rows | QItemSelectionModel::ClearAndSelect);
-}
-
-QString MetaObjectBrowserFactory::name() const
-{
-  return tr("Meta Objects");
+    ObjectBroker::selectionModel(m_model)->select(
+        indexes.first(), QItemSelectionModel::Rows | QItemSelectionModel::ClearAndSelect);
 }
 
 QVector<QByteArray> MetaObjectBrowserFactory::selectableTypes() const
 {
     return QVector<QByteArray>() << QObject::staticMetaObject.className() << "QMetaObject";
+}
+
+void MetaObjectBrowser::scanForMetaObjectProblems()
+{
+    doProblemScan(nullptr);
+}
+
+void MetaObjectBrowser::doProblemScan(const QMetaObject *parent)
+{
+    auto registry = Probe::instance()->metaObjectRegistry();
+
+    const QVector<const QMetaObject *> metaObjects = registry->childrenOf(parent);
+
+    for (const QMetaObject *mo : metaObjects) {
+        if (!registry->isValid(mo) || !registry->isStatic(mo))
+            continue;
+
+        auto results = QMetaObjectValidator::check(mo);
+        if (results != QMetaObjectValidatorResult::NoIssue) {
+            //TODO do we want the Problem descriptions have more detail, i.e. have one problem listed
+            //     for each method/property that has issues instead of one for each metaobject?
+            Problem p;
+            p.severity = Problem::Warning;
+            QStringList issueList;
+
+            if (results & QMetaObjectValidatorResult::SignalOverride)
+                issueList.push_back(QStringLiteral("overrides base class signal"));
+            if (results & QMetaObjectValidatorResult::UnknownMethodParameterType)
+                issueList.push_back(QStringLiteral("uses a parameter type not registered with the meta type system"));
+            if (results & QMetaObjectValidatorResult::PropertyOverride)
+                issueList.push_back(QStringLiteral("overrides base class property"));
+            if (results & QMetaObjectValidatorResult::UnknownPropertyType)
+                issueList.push_back(QStringLiteral("has a property with a type not registered with the meta type system"));
+
+            p.description = QStringLiteral("%1 %2.").arg(mo->className(), issueList.join(", "));
+            p.object = ObjectId(const_cast<QMetaObject*>(mo), "const QMetaObject*");
+            p.problemId = QString("com.kdab.GammaRay.MetaObjectBrowser.QMetaObjectValidator:%1").arg(reinterpret_cast<quintptr>(mo));
+            p.findingCategory = Problem::Scan;
+            ProblemCollector::addProblem(p);
+        }
+
+        doProblemScan(mo);
+    }
 }

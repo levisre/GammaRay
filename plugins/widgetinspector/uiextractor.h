@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,13 +35,11 @@
 #include <QFormBuilder>
 
 namespace GammaRay {
-
 class UiExtractor : public QFormBuilder
 {
-  protected:
-    bool checkProperty(QObject *obj, const QString &prop) const Q_DECL_OVERRIDE;
+protected:
+    bool checkProperty(QObject *obj, const QString &prop) const override;
 };
-
 }
 
 #endif

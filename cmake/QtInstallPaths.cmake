@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
+# Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
 # All rights reserved.
 #
 # Author: Allen Winter <allen.winter@kdab.com>
@@ -30,14 +30,12 @@
 
 #
 # Create variables for all the various install paths for the Qt version in use
-# Make sure to have found Qt4 or Qt5 before using this.
+# Make sure to have found Qt5 before using this.
 # sets variables like QT_INSTALL_PREFIX, QT_INSTALL_DATA, QT_INSTALL_DOCS, etc.
 # run qmake -query to see a full list
 
 if(TARGET Qt5::qmake)
-  get_target_property(QT_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
-elseif(TARGET Qt4::qmake)
-  get_target_property(QT_QMAKE_EXECUTABLE Qt4::qmake IMPORTED_LOCATION)
+  get_target_property(QT_QMAKE_EXECUTABLE Qt5::qmake LOCATION)
 else()
   message(FATAL_ERROR "No supported Qt version found. Make sure you find Qt before calling this")
 endif()
@@ -55,10 +53,16 @@ endif()
 string(REPLACE "\n" ";" VARS_LIST ${ALL_VARS})
 foreach(QVAL ${VARS_LIST})
   if(QVAL MATCHES "QT_INSTALL_")
-    string(REGEX REPLACE "(QT_INSTALL_.*):" "\\1;" QVAL_LIST ${QVAL})
+    string(REPLACE ":" ";" QVAL_LIST ${QVAL})
+    list(LENGTH QVAL_LIST listlen)
     list(GET QVAL_LIST 0 var)
-    list(GET QVAL_LIST 1 path)
-    file(TO_NATIVE_PATH "${path}" path)
+    if(WIN32 AND ${listlen} GREATER 2)
+      list(GET QVAL_LIST 2 path)
+      list(GET QVAL_LIST 1 drive)
+      set(path "${drive}:${path}")
+    else()
+      list(GET QVAL_LIST 1 path)
+    endif()
     if(NOT ${var}) #if set aleady on the command line for example
       set(${var} ${path} CACHE PATH "Qt install path for ${var}")
     endif()

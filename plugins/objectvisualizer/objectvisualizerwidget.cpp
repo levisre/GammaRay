@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -43,41 +43,37 @@
 using namespace GammaRay;
 
 GraphViewerWidget::GraphViewerWidget(QWidget *parent)
-  : QWidget(parent)
-  , m_stateManager(this)
-  , mWidget(new GraphWidget(this))
+    : QWidget(parent)
+    , m_stateManager(this)
+    , mWidget(new GraphWidget(this))
 {
-  mModel = ObjectBroker::model("com.kdab.GammaRay.ObjectVisualizerModel");
+    mModel = ObjectBroker::model("com.kdab.GammaRay.ObjectVisualizerModel");
 
-  QVBoxLayout *vbox = new QVBoxLayout;
-  auto objectSearchLine = new QLineEdit(this);
-  new SearchLineController(objectSearchLine, mModel);
-  vbox->addWidget(objectSearchLine);
-  DeferredTreeView *objectTreeView = new DeferredTreeView(this);
-  objectTreeView->header()->setObjectName("objectTreeViewHeader");
-  objectTreeView->setModel(mModel);
-  objectTreeView->setSortingEnabled(true);
-  vbox->addWidget(objectTreeView);
+    QVBoxLayout *vbox = new QVBoxLayout;
+    auto objectSearchLine = new QLineEdit(this);
+    new SearchLineController(objectSearchLine, mModel);
+    vbox->addWidget(objectSearchLine);
+    DeferredTreeView *objectTreeView = new DeferredTreeView(this);
+    objectTreeView->header()->setObjectName("objectTreeViewHeader");
+    objectTreeView->setModel(mModel);
+    objectTreeView->setSortingEnabled(true);
+    vbox->addWidget(objectTreeView);
 
-  mObjectTreeView = objectTreeView;
+    mObjectTreeView = objectTreeView;
 
-  QWidget *treeViewWidget = new QWidget(this);
-  treeViewWidget->setLayout(vbox);
+    QWidget *treeViewWidget = new QWidget(this);
+    treeViewWidget->setLayout(vbox);
 
-  QSplitter *splitter = new QSplitter(this);
-  splitter->addWidget(treeViewWidget);
-  splitter->addWidget(mWidget);
-  QHBoxLayout *hbox = new QHBoxLayout(this);
-  hbox->addWidget(splitter);
+    QSplitter *splitter = new QSplitter(this);
+    splitter->addWidget(treeViewWidget);
+    splitter->addWidget(mWidget);
+    QHBoxLayout *hbox = new QHBoxLayout(this);
+    hbox->addWidget(splitter);
 
-  mWidget->vtkWidget()->setModel(mModel);
-  mWidget->vtkWidget()->setSelectionModel(mObjectTreeView->selectionModel());
+    mWidget->vtkWidget()->setModel(mModel);
+    mWidget->vtkWidget()->setSelectionModel(mObjectTreeView->selectionModel());
 }
 
 GraphViewerWidget::~GraphViewerWidget()
 {
 }
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(ObjectVisualizerUiFactory)
-#endif

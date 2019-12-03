@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,33 +35,31 @@
 #include <QWidget>
 
 namespace GammaRay {
-
 namespace Ui {
-  class CodecBrowserWidget;
+class CodecBrowserWidget;
 }
 
 class CodecBrowserWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit CodecBrowserWidget(QWidget *parent = 0);
-    ~CodecBrowserWidget();
+    Q_OBJECT
+public:
+    explicit CodecBrowserWidget(QWidget *parent = nullptr);
+    ~CodecBrowserWidget() override;
 
-  private slots:
+private slots:
     void textChanged(const QString &text);
 
-  private:
+private:
     QScopedPointer<Ui::CodecBrowserWidget> ui;
     UIStateManager m_stateManager;
 };
 
 class CodecBrowserUiFactory : public QObject, public StandardToolUiFactory<CodecBrowserWidget>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolUiFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_codecbrowser.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolUiFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_codecbrowser.json")
 };
-
 }
 
 #endif // GAMMARAY_CODECBROWSERWIDGET_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,7 +34,6 @@
 #include <QAbstractTableModel>
 
 namespace GammaRay {
-
 class BufferModel : public QAbstractTableModel
 {
     Q_OBJECT
@@ -45,9 +44,9 @@ public:
     void setGeometryData(const Qt3DGeometryData &data);
     void setBufferIndex(int index);
 
-    int columnCount(const QModelIndex & parent) const override;
-    int rowCount(const QModelIndex & parent) const override;
-    QVariant data(const QModelIndex & index, int role) const override;
+    int columnCount(const QModelIndex &parent) const override;
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
 private:
@@ -67,8 +66,6 @@ private:
     int m_bufferIndex;
     int m_rowSize;
 };
-
-
 }
 
 #endif // GAMMARAY_BUFFERMODEL_H

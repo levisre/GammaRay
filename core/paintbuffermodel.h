@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,46 +30,54 @@
 #define GAMMARAY_WIDGETINSPECTOR_PAINTBUFFERMODEL_H
 
 #include <config-gammaray.h>
+#include "paintbuffer.h"
 
-#ifdef HAVE_PRIVATE_QT_HEADERS
+#include <common/modelroles.h>
+
 #include <QAbstractItemModel>
 
-#include <private/qpaintbuffer_p.h>
-
 QT_BEGIN_NAMESPACE
-class QPaintBuffer;
+struct QPaintBufferCommand;
+class QPainterPath;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /**
  * Model that shows commands stored in a QPaintBuffer.
  */
-class PaintBufferModel : public QAbstractTableModel
+class PaintBufferModel : public QAbstractItemModel
 {
-  Q_OBJECT
-  public:
-    explicit PaintBufferModel(QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit PaintBufferModel(QObject *parent = nullptr);
 
-    void setPaintBuffer(const QPaintBuffer &buffer);
-    QPaintBuffer buffer() const;
+    void setPaintBuffer(const PaintBuffer &buffer);
+    PaintBuffer buffer() const;
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    void setCosts(const QVector<double> &costs);
 
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QMap<int, QVariant> itemData(const QModelIndex &index) const override;
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
-  private:
-    QPaintBuffer m_buffer;
+    QModelIndex index(int row, int column, const QModelIndex & parent) const override;
+    QModelIndex parent(const QModelIndex & child) const override;
+
+private:
+    QVariant argumentAt(const QPaintBufferCommand &cmd, int index) const;
+    QString argumentDisplayString(const QPaintBufferCommand &cmd) const;
+    QVariant argumentDecoration(const QPaintBufferCommand &cmd) const;
+
+    QPainterPath clipPath(int row) const;
+
+    PaintBuffer m_buffer;
     QPaintBufferPrivate *m_privateBuffer;
+    QVector<double> m_costs;
+    double m_maxCost;
 };
-
 }
-
-#endif
 
 #endif // GAMMARAY_PAINTBUFFERMODEL_H

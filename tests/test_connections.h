@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,64 +39,64 @@ QT_END_NAMESPACE
 
 class TestObject : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit TestObject(QObject *parent = 0);
-    ~TestObject();
+    Q_OBJECT
+public:
+    explicit TestObject(QObject *parent = nullptr);
+    ~TestObject() override;
 
-  private slots:
+private slots:
     void dummySlot()
     {
     }
 
-  public:
+public:
     QObject *child;
 };
 
 class TestConnections : public QObject
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     enum Type {
-      DeleteLater,
-      Delete,
-      NoEventLoop,
-      Stack,
-      SetParent
+        DeleteLater,
+        Delete,
+        NoEventLoop,
+        Stack,
+        SetParent
     };
 
     TestConnections(Type type, int timeOuts, int timeoutInterval = -1);
-    ~TestConnections();
+    ~TestConnections() override;
 
-  public slots:
+public slots:
     void timeout();
 
-  private slots:
+private slots:
     void dummySlot()
     {
     }
 
-  signals:
+signals:
     void done();
 
-  private:
+private:
     const Type m_type;
     const int m_timeOuts;
     int m_numTimeout;
-    QList<QObject*> m_objects;
+    QList<QObject *> m_objects;
     QTimer *m_timer;
 };
 
 class TestThread : public QThread
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     TestThread(TestConnections::Type type, int timeOuts, int timeoutInterval = -1,
-               QObject *parent = 0);
-    ~TestThread();
-    void run() Q_DECL_OVERRIDE;
+               QObject *parent = nullptr);
+    ~TestThread() override;
+    void run() override;
 
-  private:
+private:
     TestConnections::Type m_type;
     int m_timeOuts;
     int m_timeoutInterval;
@@ -104,36 +104,36 @@ class TestThread : public QThread
 
 class TestMain : public QObject
 {
-  Q_OBJECT
-  public:
-    TestMain(int argc, char **m_argv);
-  public slots:
+    Q_OBJECT
+public:
+    TestMain(int argc, char **argv);
+public slots:
     void startTests();
-  private slots:
+private slots:
     void run_data();
     void run();
     void threading();
-  private:
+private:
     int m_argc;
     char **m_argv;
 };
 
 class TestWaiter : public QObject
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     void addThread(TestThread *thread);
     void addTester(TestConnections *tester);
     void startThreadsAndWaitForFinished();
 
-  private slots:
+private slots:
     void testerDone();
     void threadFinished();
 
-  private:
+private:
     void checkFinished();
-    QList<TestThread*> m_threads;
-    QList<TestConnections*> m_tester;
+    QList<TestThread *> m_threads;
+    QList<TestConnections *> m_tester;
     QEventLoop *m_loop;
 };
 

@@ -1,4 +1,5 @@
 # probe plugin
+if (NOT GAMMARAY_CLIENT_ONLY_BUILD)
 set(gammaray_qmlsupport_srcs
   qmlsupport.cpp
   qmllistpropertyadaptor.cpp
@@ -9,9 +10,16 @@ set(gammaray_qmlsupport_srcs
   qmlcontextmodel.cpp
   qmltypeextension.cpp
 )
-include_directories(SYSTEM ${Qt5Qml_PRIVATE_INCLUDE_DIRS})
+
 gammaray_add_plugin(gammaray_qmlsupport JSON gammaray_qmlsupport.json SOURCES ${gammaray_qmlsupport_srcs})
+target_include_directories(gammaray_qmlsupport SYSTEM PRIVATE ${Qt5Qml_PRIVATE_INCLUDE_DIRS})
 target_link_libraries(gammaray_qmlsupport gammaray_core Qt5::Qml)
+endif()
+
+
+if(NOT Qt5Qml_VERSION VERSION_LESS 5.10)
+    target_sources(gammaray_qmlsupport PUBLIC qmlbindingprovider.cpp)
+endif()
 
 # ui plugin
 if(GAMMARAY_BUILD_UI)
@@ -20,10 +28,6 @@ if(GAMMARAY_BUILD_UI)
     qmlsupportuifactory.cpp
     qmlcontexttab.cpp
     qmltypetab.cpp
-  )
-  qt4_wrap_ui(gammaray_qmlsupport_ui_srcs
-    qmlcontexttab.ui
-    qmltypetab.ui
   )
   gammaray_add_plugin(gammaray_qmlsupport_ui JSON gammaray_qmlsupport.json SOURCES ${gammaray_qmlsupport_ui_srcs})
   target_link_libraries(gammaray_qmlsupport_ui gammaray_ui)

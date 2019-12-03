@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -32,29 +32,28 @@
 #include <QObject>
 
 namespace GammaRay {
-
 /** Communication interface for the connections tab in the property view. */
 class ConnectionsExtensionInterface : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit ConnectionsExtensionInterface(const QString &name, QObject *parent = 0);
-    ~ConnectionsExtensionInterface();
+    Q_OBJECT
+public:
+    explicit ConnectionsExtensionInterface(const QString &name, QObject *parent = nullptr);
+    ~ConnectionsExtensionInterface() override;
 
     QString name() const;
 
-  public slots:
+public slots:
     virtual void navigateToSender(int modelRow) = 0;
     virtual void navigateToReceiver(int modelRow) = 0;
 
-  private:
+private:
     QString m_name;
 };
-
 }
 
 QT_BEGIN_NAMESPACE
-Q_DECLARE_INTERFACE(GammaRay::ConnectionsExtensionInterface, "com.kdab.GammaRay.ConnectionsExtensionInterface")
+Q_DECLARE_INTERFACE(GammaRay::ConnectionsExtensionInterface,
+                    "com.kdab.GammaRay.ConnectionsExtensionInterface")
 QT_END_NAMESPACE
 
 #endif // GAMMARAY_CONNECTIONSEXTENSIONINTERFACE_H

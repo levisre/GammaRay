@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,24 +32,24 @@
 #include "metaobjectmodel.h"
 
 namespace GammaRay {
-
 class ObjectEnumModel : public MetaObjectModel<QMetaEnum, &QMetaObject::enumerator,
                                                &QMetaObject::enumeratorCount,
                                                &QMetaObject::enumeratorOffset>
 {
-  Q_OBJECT
-  public:
-    explicit ObjectEnumModel(QObject *parent = 0);
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QString columnHeader(int index) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QVariant metaData(const QModelIndex &index, const QMetaEnum &enumerator, int role) const Q_DECL_OVERRIDE;
+    Q_OBJECT
+public:
+    explicit ObjectEnumModel(QObject *parent = nullptr);
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QString columnHeader(int index) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant metaData(const QModelIndex &index, const QMetaEnum &enumerator,
+                      int role) const override;
 
-    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QModelIndex parent(const QModelIndex &child) const Q_DECL_OVERRIDE;
+    QModelIndex index(int row, int column,
+                      const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
 };
-
 }
 
 #endif // GAMMARAY_OBJECTENUMMODEL_H

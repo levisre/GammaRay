@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,22 +30,21 @@
 using namespace GammaRay;
 
 StateMachineViewerClient::StateMachineViewerClient(QObject *parent)
-  : StateMachineViewerInterface(parent)
+    : StateMachineViewerInterface(parent)
 {
-
 }
 
 void StateMachineViewerClient::selectStateMachine(int index)
 {
-  Endpoint::instance()->invokeObject(objectName(), "selectStateMachine", QVariantList() << index);
+    Endpoint::instance()->invokeObject(objectName(), "selectStateMachine", QVariantList() << index);
 }
 
 void StateMachineViewerClient::toggleRunning()
 {
-  Endpoint::instance()->invokeObject(objectName(), "toggleRunning");
+    Endpoint::instance()->invokeObject(objectName(), "toggleRunning");
 }
 
 void StateMachineViewerClient::repopulateGraph()
 {
-  Endpoint::instance()->invokeObject(objectName(), "repopulateGraph");
+    Endpoint::instance()->invokeObject(objectName(), "repopulateGraph");
 }

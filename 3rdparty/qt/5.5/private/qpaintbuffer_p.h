@@ -298,7 +298,7 @@ struct QVectorPathCmd
         : vectorPath(d->floats.constData() + cmd.offset,
                      cmd.size,
                      cmd.offset2 & 0x80000000
-                     ? 0
+                     ? nullptr
                      : (const QPainterPath::ElementType *) (d->ints.constData() + cmd.offset2 + 1),
                      *(d->ints.constData() + (cmd.offset2 & 0x7fffffff))) {}
 
@@ -324,6 +324,9 @@ protected:
     QTransform m_world_matrix;
 
     QPainter *painter;
+
+private:
+    Q_DISABLE_COPY(QPainterReplayer)
 };
 
 class QPaintEngineExReplayer : public QPainterReplayer
@@ -405,10 +408,10 @@ public:
 
     QPaintBufferPrivate *buffer;
 
-    mutable int m_begin_detected : 1;
-    mutable int m_save_detected : 1;
-    mutable int m_stream_raw_text_items : 1;
-    mutable int m_unused : 29;
+    mutable uint m_begin_detected : 1;
+    mutable uint m_save_detected : 1;
+    mutable uint m_stream_raw_text_items : 1;
+    mutable uint m_unused : 29;
 
     mutable QPainterState *m_created_state;
 };

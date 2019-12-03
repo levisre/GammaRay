@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,65 +37,65 @@ class QIODevice;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** Abstract base class for the actual transport implementation. */
 class ServerDevice : public QObject
 {
     Q_OBJECT
 public:
-    explicit ServerDevice(QObject *parent = 0);
-    ~ServerDevice();
+    explicit ServerDevice(QObject *parent = nullptr);
+    ~ServerDevice() override;
 
     void setServerAddress(const QUrl &serverAddress);
 
     virtual bool listen() = 0;
+    virtual bool isListening() const = 0;
     virtual QString errorString() const = 0;
-    virtual QIODevice* nextPendingConnection() = 0;
+    virtual QIODevice *nextPendingConnection() = 0;
 
     /** An externally useable address of this server.
      *  This might be different from @p serverAddress as passed in the constructor.
      */
     virtual QUrl externalAddress() const = 0;
 
-    static ServerDevice* create(const QUrl &serverAddress, QObject *parent = 0);
+    static ServerDevice *create(const QUrl &serverAddress, QObject *parent = nullptr);
 
     /** Broadcast the given message on an appropriate channel, if backend supports broadcasting. */
     virtual void broadcast(const QByteArray &data);
 
 signals:
     void newConnection();
+    void externalAddressChanged();
 
 protected:
     QUrl m_address;
 };
 
-template <typename ServerT>
+template<typename ServerT>
 class ServerDeviceImpl : public ServerDevice
 {
 public:
-    explicit inline ServerDeviceImpl(QObject *parent = 0) : ServerDevice(parent), m_server(0)
+    explicit inline ServerDeviceImpl(QObject *parent = nullptr)
+        : ServerDevice(parent)
+        , m_server(nullptr)
     {
     }
 
-    ~ServerDeviceImpl()
-    {
-    }
+    ~ServerDeviceImpl() override = default;
 
-    QString errorString() const Q_DECL_OVERRIDE
+    QString errorString() const override
     {
         return m_server->errorString();
     }
 
-    QIODevice* nextPendingConnection() Q_DECL_OVERRIDE
+    QIODevice *nextPendingConnection() override
     {
         Q_ASSERT(m_server->hasPendingConnections());
         return m_server->nextPendingConnection();
     }
 
 protected:
-    ServerT* m_server;
+    ServerT *m_server;
 };
-
 }
 
 #endif // GAMMARAY_SERVERDEVICE_H

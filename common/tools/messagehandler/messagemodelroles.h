@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,30 +32,28 @@
 #include <common/modelroles.h>
 
 namespace GammaRay {
-
 /** Additional roles for MessageModel. */
 namespace MessageModelRole {
-    enum Role {
-        Sort = UserRole + 1, // not for remoting
-        Type,
-        File,
-        Line,
-        Backtrace
-    };
+enum Role {
+    Sort = UserRole + 1,     // not for remoting
+    Type,
+    File,
+    Line,
+    Backtrace
+};
 }
 
 /** Column indexes of MessageModel. */
 namespace MessageModelColumn {
-    enum Columns {
-        Time,
-        Message,
-        Category,
-        Function,
-        File,
-        COUNT
-    };
+enum Columns {
+    Time,
+    Message,
+    Category,
+    Function,
+    File,
+    COUNT
+};
 }
-
 }
 
 #endif

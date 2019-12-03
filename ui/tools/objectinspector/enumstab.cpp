@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,25 +40,23 @@
 using namespace GammaRay;
 
 EnumsTab::EnumsTab(PropertyWidget *parent)
-  : QWidget(parent)
-  , m_ui(new Ui_EnumsTab)
+    : QWidget(parent)
+    , m_ui(new Ui_EnumsTab)
 {
-  m_ui->setupUi(this);
-  m_ui->enumView->header()->setObjectName("enumViewHeader");
-  setObjectBaseName(parent->objectBaseName());
+    m_ui->setupUi(this);
+    m_ui->enumView->header()->setObjectName("enumViewHeader");
+    setObjectBaseName(parent->objectBaseName());
 }
 
-EnumsTab::~EnumsTab()
-{
-}
+EnumsTab::~EnumsTab() = default;
 
 void EnumsTab::setObjectBaseName(const QString &baseName)
 {
-  QSortFilterProxyModel *proxy = new KRecursiveFilterProxyModel(this);
-  proxy->setDynamicSortFilter(true);
-  proxy->setSourceModel(ObjectBroker::model(baseName + '.' + "enums"));
-  m_ui->enumView->setModel(proxy);
-  m_ui->enumView->sortByColumn(0, Qt::AscendingOrder);
-  m_ui->enumView->header()->setResizeMode(QHeaderView::ResizeToContents);
-  new SearchLineController(m_ui->enumSearchLine, proxy);
+    QSortFilterProxyModel *proxy = new KRecursiveFilterProxyModel(this);
+    proxy->setDynamicSortFilter(true);
+    proxy->setSourceModel(ObjectBroker::model(baseName + '.' + "enums"));
+    m_ui->enumView->setModel(proxy);
+    m_ui->enumView->sortByColumn(0, Qt::AscendingOrder);
+    m_ui->enumView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    new SearchLineController(m_ui->enumSearchLine, proxy);
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,48 +35,48 @@
 class KJob;
 
 namespace GammaRay {
-
 class KJobModel : public QAbstractTableModel
 {
-  Q_OBJECT
-  public:
-    explicit KJobModel(QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit KJobModel(QObject *parent = nullptr);
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
     QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+                        int role = Qt::DisplayRole) const override;
 
-  private slots:
+public slots:
     void objectAdded(QObject *obj);
     void objectRemoved(QObject *obj);
+
+private slots:
     void jobResult(KJob *job);
     void jobFinished(KJob *obj);
     void jobInfo(KJob *job, const QString &plainMessage);
 
-  private:
+private:
     int indexOfJob(QObject *obj) const;
 
     struct KJobInfo {
-      KJob *job;
-      QString name;
-      QString type;
-      QString statusText;
-      enum {
-        Running,
-        Finished,
-        Error,
-        Killed,
-        Deleted
-      } state;
+        KJob *job;
+        QString name;
+        QString type;
+        QString statusText;
+        enum {
+            Running,
+            Finished,
+            Error,
+            Killed,
+            Deleted
+        } state;
     };
     QVector<KJobInfo> m_data;
 };
-
 }
 
 #endif // GAMMARAY_KJOBMODEL_H

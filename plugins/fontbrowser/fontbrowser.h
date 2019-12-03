@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -34,35 +34,22 @@
 
 #include "fontbrowserserver.h"
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-#include <QApplication>
-#else
 #include <QGuiApplication>
-#endif
 
 namespace GammaRay {
-
 class FontBrowserFactory : public QObject
-#ifndef Q_MOC_RUN // Qt4 moc fails on the ifdef'ed multi-inheritance and generates invalid code
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-, public StandardToolFactory<QApplication, FontBrowserServer>
-#else
-, public StandardToolFactory<QGuiApplication, FontBrowserServer>
-#endif
-#endif
+    , public StandardToolFactory<QGuiApplication, FontBrowserServer>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_fontbrowser.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_fontbrowser.json")
 
-  public:
-    explicit FontBrowserFactory(QObject *parent = 0) : QObject(parent)
+public:
+    explicit FontBrowserFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // GAMMARAY_FONTBROWSER_H

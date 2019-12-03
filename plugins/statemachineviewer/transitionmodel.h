@@ -9,7 +9,7 @@
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   This program is free software; you can redistribute it and/or modify
@@ -36,28 +36,28 @@ class QAbstractState;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class TransitionModelPrivate;
 
 class TransitionModel : public ObjectModelBase<QAbstractItemModel>
 {
-  Q_OBJECT
-  public:
-    explicit TransitionModel(QObject *parent = 0);
-    ~TransitionModel();
+    Q_OBJECT
+public:
+    explicit TransitionModel(QObject *parent = nullptr);
+    ~TransitionModel() override;
     void setState(QAbstractState *state);
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int rowCount (const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QVariant data (const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QModelIndex parent(const QModelIndex &index) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QModelIndex index(int row, int column,
+                      const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &index) const override;
 
-  protected:
+protected:
     Q_DECLARE_PRIVATE(TransitionModel)
     TransitionModelPrivate *const d_ptr;
 };
-
 }
 
 #endif

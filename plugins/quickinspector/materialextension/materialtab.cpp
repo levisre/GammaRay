@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,58 +29,85 @@
 #include "materialtab.h"
 #include "materialextensioninterface.h"
 #include "ui_materialtab.h"
-#include <ui/propertywidget.h>
 
-#include "common/objectbroker.h"
+#include <ui/clientpropertymodel.h>
+#include <ui/contextmenuextension.h>
+#include <ui/propertywidget.h>
+#include <ui/propertyeditor/propertyeditordelegate.h>
+
+#include <common/objectbroker.h>
+#include <common/objectid.h>
+#include <common/propertymodel.h>
+
+#include <QMenu>
 
 using namespace GammaRay;
 
 MaterialTab::MaterialTab(PropertyWidget *parent)
-  : QWidget(parent)
-  , m_ui(new Ui_MaterialTab)
-  , m_interface(0)
+    : QWidget(parent)
+    , m_ui(new Ui_MaterialTab)
+    , m_interface(nullptr)
 {
-  m_ui->setupUi(this);
-  m_ui->materialPropertyView->header()->setObjectName("materialPropertyViewHeader");
-  m_ui->shaderList->header()->setObjectName("shaderListHeader");
-  setObjectBaseName(parent->objectBaseName());
-  connect(m_ui->shaderList->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-          this, SLOT(shaderSelectionChanged(QItemSelection)));
+    m_ui->setupUi(this);
+    m_ui->materialPropertyView->setItemDelegate(new PropertyEditorDelegate(this));
+    m_ui->materialPropertyView->header()->setObjectName("materialPropertyViewHeader");
+    connect(m_ui->materialPropertyView, &QTreeView::customContextMenuRequested, this, &MaterialTab::propertyContextMenu);
 
-  m_ui->splitter->setStretchFactor(0, 1);
-  m_ui->splitter->setStretchFactor(1, 3);
+    setObjectBaseName(parent->objectBaseName());
+    connect(m_ui->shaderList, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this, &MaterialTab::shaderSelectionChanged);
+
+    m_ui->shaderEdit->setSyntaxDefinition(QLatin1String("GLSL"));
+
+    m_ui->splitter->setStretchFactor(0, 1);
+    m_ui->splitter->setStretchFactor(1, 3);
 }
 
-MaterialTab::~MaterialTab()
-{
-}
+MaterialTab::~MaterialTab() = default;
 
 void MaterialTab::setObjectBaseName(const QString &baseName)
 {
-  if (m_interface) {
-    disconnect(m_interface, 0, this, 0);
-  }
+    if (m_interface)
+        disconnect(m_interface, nullptr, this, nullptr);
 
-  m_interface =
-    ObjectBroker::object<MaterialExtensionInterface*>(baseName + ".material");
-  connect(m_interface, SIGNAL(gotShader(QString)), this, SLOT(showShader(QString)));
+    m_interface = ObjectBroker::object<MaterialExtensionInterface *>(baseName + ".material");
+    connect(m_interface, &MaterialExtensionInterface::gotShader, this, &MaterialTab::showShader);
 
-  m_ui->materialPropertyView->setModel(ObjectBroker::model(baseName + ".materialPropertyModel"));
-  m_ui->shaderList->setModel(ObjectBroker::model(baseName + ".shaderModel"));
+    auto clientPropModel = new ClientPropertyModel(this);
+    clientPropModel->setSourceModel(ObjectBroker::model(baseName + ".materialPropertyModel"));
+    m_ui->materialPropertyView->setModel(clientPropModel);
+    m_ui->shaderList->setModel(ObjectBroker::model(baseName + ".shaderModel"));
 }
 
-void MaterialTab::shaderSelectionChanged(const QItemSelection& selection)
+void MaterialTab::shaderSelectionChanged(int idx)
 {
-  m_ui->shaderEdit->clear();
-  if (selection.isEmpty())
-    return;
-  const QModelIndex index = selection.first().topLeft();
-  if (!index.isValid())
-    return;
-  m_interface->getShader(index.data(Qt::DisplayRole).toString());
+    m_ui->shaderEdit->clear();
+    if (idx < 0)
+        return;
+    m_interface->getShader(idx);
 }
 
 void MaterialTab::showShader(const QString &shaderSource)
 {
-  m_ui->shaderEdit->setText(shaderSource);
+    m_ui->shaderEdit->setPlainText(shaderSource);
+}
+
+void MaterialTab::propertyContextMenu(QPoint pos)
+{
+    const auto idx = m_ui->materialPropertyView->indexAt(pos);
+    if (!idx.isValid())
+        return;
+
+    const auto actions = idx.data(PropertyModel::ActionRole).toInt();
+    const auto objectId = idx.data(PropertyModel::ObjectIdRole).value<ObjectId>();
+    ContextMenuExtension ext(objectId);
+    const bool canShow = (actions == PropertyModel::NavigateTo && !objectId.isNull())
+                         || ext.discoverPropertySourceLocation(ContextMenuExtension::GoTo, idx);
+
+    if (!canShow)
+        return;
+
+    QMenu contextMenu;
+    ext.populateMenu(&contextMenu);
+    contextMenu.exec(m_ui->materialPropertyView->viewport()->mapToGlobal(pos));
 }

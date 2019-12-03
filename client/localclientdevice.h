@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,19 +34,17 @@
 #include <QLocalSocket>
 
 namespace GammaRay {
-
 class LocalClientDevice : public ClientDeviceImpl<QLocalSocket>
 {
     Q_OBJECT
 public:
-    explicit LocalClientDevice(QObject* parent = 0);
-    void connectToHost() Q_DECL_OVERRIDE;
-    void disconnectFromHost() Q_DECL_OVERRIDE;
+    explicit LocalClientDevice(QObject *parent = nullptr);
+    void connectToHost() override;
+    void disconnectFromHost() override;
 
 private slots:
     void socketError();
 };
-
 }
 
 #endif // GAMMARAY_LOCALCLIENTDEVICE_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,58 +28,52 @@
 #ifndef GAMMARAY_MESSAGEHANDLER_MESSAGEMODEL_H
 #define GAMMARAY_MESSAGEHANDLER_MESSAGEMODEL_H
 
-#include "backtrace.h"
-
+#include <core/execution.h>
 #include <common/tools/messagehandler/messagemodelroles.h>
 
 #include <QAbstractTableModel>
+#include <QStringList>
 #include <QTime>
 #include <QVector>
 
 namespace GammaRay {
-
 struct DebugMessage {
-  QtMsgType type;
-  QString message;
-  QTime time;
-  Backtrace backtrace;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-  QString category;
-  QString file;
-  QString function;
-  int line;
-#endif
+    QtMsgType type;
+    QString message;
+    QTime time;
+    Execution::Trace backtrace;
+    QString category;
+    QString file;
+    QString function;
+    int line;
 };
-
 }
 
 Q_DECLARE_METATYPE(GammaRay::DebugMessage)
 QT_BEGIN_NAMESPACE
-Q_DECLARE_TYPEINFO(GammaRay::DebugMessage, Q_MOVABLE_TYPE);
+    Q_DECLARE_TYPEINFO(GammaRay::DebugMessage, Q_MOVABLE_TYPE);
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class MessageModel : public QAbstractTableModel
 {
-  Q_OBJECT
-  public:
-    explicit MessageModel(QObject *parent = 0);
-    ~MessageModel();
+    Q_OBJECT
+public:
+    explicit MessageModel(QObject *parent = nullptr);
+    ~MessageModel() override;
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+                        int role = Qt::DisplayRole) const override;
 
-  public slots:
+public slots:
     void addMessage(const GammaRay::DebugMessage &message);
 
-  private:
+private:
     QVector<DebugMessage> m_messages;
 };
-
 }
 
 #endif // MESSAGEMODEL_H

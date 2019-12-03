@@ -2,7 +2,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2014-2016 Klar?lvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2014-2019 Klar?lvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,8 +37,7 @@ class QUrl;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-/** @brief Interface for UI plugins to integrate with the client UI.
+/*! Interface for UI plugins to integrate with the client UI.
  *  This is especially relevant when the client is embedded inside another application
  *  such as an IDE.
  */
@@ -47,25 +46,26 @@ class GAMMARAY_UI_EXPORT UiIntegration : public QObject
     Q_OBJECT
 public:
 
-    explicit UiIntegration(QObject *parent = 0);
-    virtual ~UiIntegration();
+    explicit UiIntegration(QObject *parent = nullptr);
+    ~UiIntegration() override;
 
-    static UiIntegration* instance();
+    static UiIntegration *instance();
 
-    /** Show the source code at the given position.
+    /*! Show the source code at the given position.
      *  The stand-alone client will launch a text editor for this,
      *  if the client is embedded in an IDE it can chose to navigate directly.
      */
     static void requestNavigateToCode(const QUrl &url, int lineNumber, int columnNumber = 0);
 
+    static bool hasDarkUI();
+
 Q_SIGNALS:
     void navigateToCode(const QUrl &url, int lineNumber, int columnNumber);
 
 private:
-    /** Singleton instance. */
+    /*! Singleton instance. */
     static UiIntegration *s_uiIntegrationInstance;
 };
-
 } // namespace GammaRay
 
 #endif // UIINTEGRATION_H

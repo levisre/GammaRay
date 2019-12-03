@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,53 +33,50 @@
 using namespace GammaRay;
 
 StyleInspectorInterface::StyleInspectorInterface(QObject *parent)
-  : QObject(parent)
-  , m_cellHeight(64)
-  , m_cellWidth(64)
-  , m_cellZoom(1)
+    : QObject(parent)
+    , m_cellHeight(64)
+    , m_cellWidth(64)
+    , m_cellZoom(1)
 {
-  ObjectBroker::registerObject<StyleInspectorInterface*>(this);
+    ObjectBroker::registerObject<StyleInspectorInterface *>(this);
 }
 
-StyleInspectorInterface::~StyleInspectorInterface()
-{
-
-}
+StyleInspectorInterface::~StyleInspectorInterface() = default;
 
 int StyleInspectorInterface::cellHeight() const
 {
-  return m_cellHeight;
+    return m_cellHeight;
 }
 
 int StyleInspectorInterface::cellWidth() const
 {
-  return m_cellWidth;
+    return m_cellWidth;
 }
 
 int StyleInspectorInterface::cellZoom() const
 {
-  return m_cellZoom;
+    return m_cellZoom;
 }
 
 QSize StyleInspectorInterface::cellSizeHint() const
 {
-  return QSize(m_cellWidth * m_cellZoom, m_cellHeight * m_cellZoom);
+    return {m_cellWidth * m_cellZoom, m_cellHeight * m_cellZoom};
 }
 
 void StyleInspectorInterface::setCellHeight(int height)
 {
-  m_cellHeight = height;
-  emit cellSizeChanged();
+    m_cellHeight = height;
+    emit cellSizeChanged();
 }
 
 void StyleInspectorInterface::setCellWidth(int width)
 {
-  m_cellWidth = width;
-  emit cellSizeChanged();
+    m_cellWidth = width;
+    emit cellSizeChanged();
 }
 
 void StyleInspectorInterface::setCellZoom(int zoom)
 {
-  m_cellZoom = zoom;
-  emit cellSizeChanged();
+    m_cellZoom = zoom;
+    emit cellSizeChanged();
 }

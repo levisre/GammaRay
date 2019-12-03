@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,19 +34,19 @@
 
 using namespace GammaRay;
 
-QmlListPropertyAdaptor::QmlListPropertyAdaptor(QObject* parent): PropertyAdaptor(parent)
+QmlListPropertyAdaptor::QmlListPropertyAdaptor(QObject *parent)
+    : PropertyAdaptor(parent)
 {
 }
 
-QmlListPropertyAdaptor::~QmlListPropertyAdaptor()
-{
-}
+QmlListPropertyAdaptor::~QmlListPropertyAdaptor() = default;
 
 int QmlListPropertyAdaptor::count() const
 {
     auto var = object().variant(); // we need to keep that alive for the runtime of this method
-    QQmlListProperty<QObject> *prop = reinterpret_cast<QQmlListProperty<QObject>*>(const_cast<void*>(var.data()));
-    if (!prop)
+    QQmlListProperty<QObject> *prop
+        = reinterpret_cast<QQmlListProperty<QObject> *>(const_cast<void *>(var.data()));
+    if (!prop || !prop->count)
         return 0;
     return prop->count(prop);
 }
@@ -56,33 +56,35 @@ PropertyData QmlListPropertyAdaptor::propertyData(int index) const
     PropertyData pd;
 
     auto var = object().variant(); // we need to keep that alive for the runtime of this method
-    QQmlListProperty<QObject> *prop = reinterpret_cast<QQmlListProperty<QObject>*>(const_cast<void*>(var.data()));
-    if (!prop || index >= prop->count(prop))
+    QQmlListProperty<QObject> *prop
+        = reinterpret_cast<QQmlListProperty<QObject> *>(const_cast<void *>(var.data()));
+    if (!prop || !prop->at || !prop->count || index >= prop->count(prop))
         return pd;
 
     auto obj = prop->at(prop, index);
     pd.setName(QString::number(index));
     pd.setValue(QVariant::fromValue(obj));
     if (obj)
-      pd.setTypeName(obj->metaObject()->className());
+        pd.setTypeName(obj->metaObject()->className());
     pd.setClassName(var.typeName());
     return pd;
 }
 
-QmlListPropertyAdaptorFactory* QmlListPropertyAdaptorFactory::s_instance = 0;
+QmlListPropertyAdaptorFactory *QmlListPropertyAdaptorFactory::s_instance = nullptr;
 
-PropertyAdaptor* QmlListPropertyAdaptorFactory::create(const ObjectInstance& oi, QObject* parent) const
+PropertyAdaptor *QmlListPropertyAdaptorFactory::create(const ObjectInstance &oi,
+                                                       QObject *parent) const
 {
     if (oi.type() != ObjectInstance::QtVariant)
-        return Q_NULLPTR;
+        return nullptr;
 
     if (!oi.variant().isValid() || qstrncmp(oi.typeName(), "QQmlListProperty<", 17) != 0)
-        return Q_NULLPTR;
+        return nullptr;
 
     return new QmlListPropertyAdaptor(parent);
 }
 
-QmlListPropertyAdaptorFactory* QmlListPropertyAdaptorFactory::instance()
+QmlListPropertyAdaptorFactory *QmlListPropertyAdaptorFactory::instance()
 {
     if (!s_instance)
         s_instance = new QmlListPropertyAdaptorFactory;

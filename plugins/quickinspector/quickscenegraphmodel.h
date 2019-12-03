@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -44,49 +44,47 @@ class QQuickWindow;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** QQ2 scene graph model. */
 class QuickSceneGraphModel : public ObjectModelBase<QAbstractItemModel>
 {
-  Q_OBJECT
-  public:
-    explicit QuickSceneGraphModel(QObject *parent = 0);
-    ~QuickSceneGraphModel();
+    Q_OBJECT
+public:
+    explicit QuickSceneGraphModel(QObject *parent = nullptr);
+    ~QuickSceneGraphModel() override;
 
     void setWindow(QQuickWindow *window);
 
-    QVariant data(const QModelIndex &index, int role) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QModelIndex parent(const QModelIndex &child) const Q_DECL_OVERRIDE;
-    QModelIndex index(int row, int column, const QModelIndex &parent) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
+    QModelIndex index(int row, int column, const QModelIndex &parent) const override;
     QModelIndex indexForNode(QSGNode *node) const;
     QSGNode *sgNodeForItem(QQuickItem *item) const;
     QQuickItem *itemForSgNode(QSGNode *node) const;
     bool verifyNodeValidity(QSGNode *node);
 
-  signals:
+signals:
     void nodeDeleted(QSGNode *node);
 
-  private slots:
+private slots:
     void updateSGTree(bool emitSignals = true);
 
-  private:
+private:
     void clear();
-    QSGNode* currentRootNode() const;
+    QSGNode *currentRootNode() const;
     void populateFromNode(QSGNode *node, bool emitSignals);
     void collectItemNodes(QQuickItem *item);
     bool recursivelyFindChild(QSGNode *root, QSGNode *child) const;
-    void pruneSubTree(QSGNode* node);
+    void pruneSubTree(QSGNode *node);
 
     QPointer<QQuickWindow> m_window;
 
     QSGNode *m_rootNode;
-    QHash<QSGNode*, QSGNode*> m_childParentMap;
-    QHash<QSGNode*, QVector<QSGNode*> > m_parentChildMap;
-    QHash<QQuickItem*, QSGNode*> m_itemItemNodeMap;
-    QHash<QSGNode*, QQuickItem*> m_itemNodeItemMap;
+    QHash<QSGNode *, QSGNode *> m_childParentMap;
+    QHash<QSGNode *, QVector<QSGNode *> > m_parentChildMap;
+    QHash<QQuickItem *, QSGNode *> m_itemItemNodeMap;
+    QHash<QSGNode *, QQuickItem *> m_itemNodeItemMap;
 };
-
 }
 
 #endif // GAMMARAY_QUICKSCENEGRAPHMODEL_H

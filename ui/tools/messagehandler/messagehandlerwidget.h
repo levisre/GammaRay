@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,36 +34,32 @@
 
 QT_BEGIN_NAMESPACE
 class QItemSelection;
-class QStringListModel;
 class QTime;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 namespace Ui {
-  class MessageHandlerWidget;
+class MessageHandlerWidget;
 }
 
 class MessageHandlerWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit MessageHandlerWidget(QWidget *parent = 0);
-    ~MessageHandlerWidget();
+    Q_OBJECT
+public:
+    explicit MessageHandlerWidget(QWidget *parent = nullptr);
+    ~MessageHandlerWidget() override;
 
-  private slots:
-    void fatalMessageReceived(const QString &app, const QString &message,
-                              const QTime &time, const QStringList &backtrace);
+private slots:
+    void fatalMessageReceived(const QString &app, const QString &message, const QTime &time,
+                              const QStringList &backtrace);
     void copyToClipboard(const QString &message);
     void messageContextMenu(const QPoint &pos);
-    void messageSelected(const QItemSelection &selection);
+    void stackTraceContextMenu(QPoint pos);
 
-  private:
+private:
     QScopedPointer<Ui::MessageHandlerWidget> ui;
     UIStateManager m_stateManager;
-    QStringListModel *m_backtraceModel;
 };
-
 }
 
 #endif // MESSAGEHANDLERWIDGET_H

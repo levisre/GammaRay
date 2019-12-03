@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,30 +34,27 @@
 #include <QStyle>
 
 namespace GammaRay {
-
 /**
  * Lists all standard icons of a style.
  */
 class StandardIconModel : public AbstractStyleElementModel
 {
-  Q_OBJECT
-  public:
-    explicit StandardIconModel(QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit StandardIconModel(QObject *parent = nullptr);
 
     QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+                        int role = Qt::DisplayRole) const override;
 
-  protected:
-    QVariant doData(int row, int column, int role) const Q_DECL_OVERRIDE;
-    int doColumnCount() const Q_DECL_OVERRIDE;
-    int doRowCount() const Q_DECL_OVERRIDE;
+protected:
+    QVariant doData(int row, int column, int role) const override;
+    int doColumnCount() const override;
+    int doRowCount() const override;
 
-  private:
-    QVariant dataForStandardIcon(QStyle::StandardPixmap stdPix,
-                                 const QString &name,
-                                 int column, int role) const;
+private:
+    QVariant dataForStandardIcon(QStyle::StandardPixmap stdPix, const QString &name, int column,
+                                 int role) const;
 };
-
 }
 
 #endif // GAMMARAY_STANDARDICONMODEL_H

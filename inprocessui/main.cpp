@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,20 +26,18 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include <core/probe.h>
 #include <ui/mainwindow.h>
 
-
 extern "C" {
-
 void Q_DECL_EXPORT gammaray_create_inprocess_mainwindow()
 {
-  GammaRay::MainWindow *window = new GammaRay::MainWindow;
-  window->setAttribute(Qt::WA_DeleteOnClose);
-  GammaRay::Probe::instance()->setWindow(window);
-  GammaRay::Probe::instance()->setParent(window);
-  window->show();
-}
+    auto *window = new GammaRay::MainWindow;
+    window->setAttribute(Qt::WA_DeleteOnClose);
+    GammaRay::Probe::instance()->setWindow(window);
+    GammaRay::Probe::instance()->setParent(window);
+    window->show();
 
+    QMetaObject::invokeMethod(window, "selectTool", Q_ARG(QString, QStringLiteral("GammaRay::ObjectInspector")));
+}
 }

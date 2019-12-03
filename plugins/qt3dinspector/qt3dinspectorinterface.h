@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,7 +32,6 @@
 #include <QObject>
 
 namespace GammaRay {
-
 class Qt3DInspectorInterface : public QObject
 {
     Q_OBJECT
@@ -41,13 +40,13 @@ public:
     ~Qt3DInspectorInterface();
 
 public slots:
-      virtual void selectEngine(int index) = 0;
+    virtual void selectEngine(int index) = 0;
 };
 }
 
-
 QT_BEGIN_NAMESPACE
-Q_DECLARE_INTERFACE(GammaRay::Qt3DInspectorInterface, "com.kdab.GammaRay.Qt3DInspectorInterface/1.0")
+Q_DECLARE_INTERFACE(GammaRay::Qt3DInspectorInterface,
+                    "com.kdab.GammaRay.Qt3DInspectorInterface/1.0")
 QT_END_NAMESPACE
 
 #endif // GAMMARAY_QT3DINSPECTORINTERFACE_H

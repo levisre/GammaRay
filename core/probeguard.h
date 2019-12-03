@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,7 +34,6 @@
 #include <qglobal.h>
 
 namespace GammaRay {
-
 /** Use this inside probe code that might trigger expensive or otherwise problematic side-effects in
  * GammaRay itself, so the triggered probe part can skip reacting to that action.
  *
@@ -70,7 +69,6 @@ public:
     ProbeGuardSuspender();
     ~ProbeGuardSuspender();
 };
-
 }
 
 #endif // GAMMARAY_PROBEGUARD_H

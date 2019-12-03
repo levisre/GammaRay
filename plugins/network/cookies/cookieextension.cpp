@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,26 +36,24 @@
 
 using namespace GammaRay;
 
-CookieExtension::CookieExtension(PropertyController* controller) :
-    PropertyControllerExtension(controller->objectBaseName() + ".cookieJar"),
-    m_cookieJarModel(new CookieJarModel(controller))
+CookieExtension::CookieExtension(PropertyController *controller)
+    : PropertyControllerExtension(controller->objectBaseName() + ".cookieJar")
+    , m_cookieJarModel(new CookieJarModel(controller))
 {
     controller->registerModel(m_cookieJarModel, QStringLiteral("cookieJarModel"));
 }
 
-CookieExtension::~CookieExtension()
-{
-}
+CookieExtension::~CookieExtension() = default;
 
-bool CookieExtension::setQObject(QObject* object)
+bool CookieExtension::setQObject(QObject *object)
 {
-    if (auto cookieJar = qobject_cast<QNetworkCookieJar*>(object)) {
+    if (auto cookieJar = qobject_cast<QNetworkCookieJar *>(object)) {
         m_cookieJarModel->setCookieJar(cookieJar);
         return true;
-    } else if (auto nam = qobject_cast<QNetworkAccessManager*>(object)) {
+    } else if (auto nam = qobject_cast<QNetworkAccessManager *>(object)) {
         return setQObject(nam->cookieJar());
     }
 
-    m_cookieJarModel->setCookieJar(Q_NULLPTR);
+    m_cookieJarModel->setCookieJar(nullptr);
     return false;
 }

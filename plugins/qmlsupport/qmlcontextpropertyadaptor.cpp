@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,14 +38,12 @@
 
 using namespace GammaRay;
 
-QmlContextPropertyAdaptor::QmlContextPropertyAdaptor(QObject *parent) :
-    PropertyAdaptor(parent)
+QmlContextPropertyAdaptor::QmlContextPropertyAdaptor(QObject *parent)
+    : PropertyAdaptor(parent)
 {
 }
 
-QmlContextPropertyAdaptor::~QmlContextPropertyAdaptor()
-{
-}
+QmlContextPropertyAdaptor::~QmlContextPropertyAdaptor() = default;
 
 int QmlContextPropertyAdaptor::count() const
 {
@@ -61,24 +59,24 @@ PropertyData QmlContextPropertyAdaptor::propertyData(int index) const
     Q_ASSERT(index >= 0);
     Q_ASSERT(index < m_contextPropertyNames.size());
 
-    auto context = qobject_cast<QQmlContext*>(object().qtObject());
+    auto context = qobject_cast<QQmlContext *>(object().qtObject());
     if (!context)
         return pd;
 
     pd.setName(m_contextPropertyNames.at(index));
     pd.setValue(context->contextProperty(m_contextPropertyNames.at(index)));
     pd.setClassName(tr("QML Context Property"));
-    pd.setFlags(PropertyData::Writable);
+    pd.setAccessFlags(PropertyData::Writable);
     return pd;
 }
 
-void QmlContextPropertyAdaptor::writeProperty(int index, const QVariant  &value)
+void QmlContextPropertyAdaptor::writeProperty(int index, const QVariant &value)
 {
     Q_ASSERT(index >= 0);
     Q_ASSERT(index < m_contextPropertyNames.size());
 
     const auto name = m_contextPropertyNames.at(index);
-    auto context = qobject_cast<QQmlContext*>(object().qtObject());
+    auto context = qobject_cast<QQmlContext *>(object().qtObject());
     if (name.isEmpty() || !context)
         return;
     context->setContextProperty(name, value);
@@ -86,8 +84,7 @@ void QmlContextPropertyAdaptor::writeProperty(int index, const QVariant  &value)
 
 void QmlContextPropertyAdaptor::doSetObject(const ObjectInstance &oi)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
-    auto context = qobject_cast<QQmlContext*>(oi.qtObject());
+    auto context = qobject_cast<QQmlContext *>(oi.qtObject());
     Q_ASSERT(context);
 
     auto contextData = QQmlContextData::get(context);
@@ -100,35 +97,32 @@ void QmlContextPropertyAdaptor::doSetObject(const ObjectInstance &oi)
     QV4::IdentifierHashEntry *e = propNames.d->entries;
     QV4::IdentifierHashEntry *end = e + propNames.d->alloc;
     while (e < end) {
+#if QT_VERSION < QT_VERSION_CHECK(5, 12, 0)
         if (e->identifier)
             m_contextPropertyNames.push_back(e->identifier->string);
+#else
+        if (e->identifier.isValid())
+            m_contextPropertyNames.push_back(e->identifier.toQString());
+#endif
         ++e;
     }
-#else
-    Q_UNUSED(oi);
-#endif
 }
 
+QmlContextPropertyAdaptorFactory *QmlContextPropertyAdaptorFactory::s_instance = nullptr;
 
-QmlContextPropertyAdaptorFactory* QmlContextPropertyAdaptorFactory::s_instance = Q_NULLPTR;
-
-PropertyAdaptor* QmlContextPropertyAdaptorFactory::create(const ObjectInstance& oi, QObject* parent) const
+PropertyAdaptor *QmlContextPropertyAdaptorFactory::create(const ObjectInstance &oi,
+                                                          QObject *parent) const
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
     if (oi.type() != ObjectInstance::QtObject || !oi.qtObject())
-        return Q_NULLPTR;
+        return nullptr;
 
-    if (qobject_cast<QQmlContext*>(oi.qtObject()))
+    if (qobject_cast<QQmlContext *>(oi.qtObject()))
         return new QmlContextPropertyAdaptor(parent);
-#else
-    Q_UNUSED(oi);
-    Q_UNUSED(parent);
-#endif
 
-    return Q_NULLPTR;
+    return nullptr;
 }
 
-QmlContextPropertyAdaptorFactory* QmlContextPropertyAdaptorFactory::instance()
+QmlContextPropertyAdaptorFactory *QmlContextPropertyAdaptorFactory::instance()
 {
     if (!s_instance)
         s_instance = new QmlContextPropertyAdaptorFactory;

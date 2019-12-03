@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,26 +32,25 @@
 #include <common/objectmodel.h>
 
 namespace GammaRay {
-
 /** Model roles shared between client and server. */
 namespace QuickItemModelRole {
-  enum Roles {
+enum Roles {
     ItemFlags = ObjectModel::UserRole,
     ItemEvent,
     ItemActions
-  };
+};
 
-  enum ItemFlag {
+enum ItemFlag {
     None = 0,
     Invisible = 1,
     ZeroSize = 2,
-    OutOfView = 4,
-    HasFocus = 8,
-    HasActiveFocus = 16,
-    JustRecievedEvent = 32
-  };
+    PartiallyOutOfView = 4,
+    OutOfView = 8,
+    HasFocus = 16,
+    HasActiveFocus = 32,
+    JustRecievedEvent = 64
+};
 }
-
 }
 
 Q_DECLARE_METATYPE(GammaRay::QuickItemModelRole::ItemFlag)

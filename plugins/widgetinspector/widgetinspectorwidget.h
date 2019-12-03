@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,22 +39,26 @@ class QModelIndex;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-class RemoteViewWidget;
 class WidgetInspectorInterface;
+class Widget3DView;
+class WidgetRemoteView;
 
 namespace Ui {
-  class WidgetInspectorWidget;
+class WidgetInspectorWidget;
 }
 
 class WidgetInspectorWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit WidgetInspectorWidget(QWidget *parent = 0);
-    ~WidgetInspectorWidget();
+    Q_OBJECT
+public:
+    explicit WidgetInspectorWidget(QWidget *parent = nullptr);
+    ~WidgetInspectorWidget() override;
 
-  private slots:
+    Q_INVOKABLE void saveTargetState(QSettings *settings) const;
+    Q_INVOKABLE void restoreTargetState(QSettings *settings);
+
+private slots:
+    void onTabChanged(int index);
     void widgetSelected(const QItemSelection &selection);
     void widgetTreeContextMenu(QPoint pos);
 
@@ -64,23 +68,24 @@ class WidgetInspectorWidget : public QWidget
     void saveAsUiFile();
     void analyzePainting();
     void updateActions();
+    void propertyWidgetTabsChanged();
 
-  private:
+private:
     QScopedPointer<Ui::WidgetInspectorWidget> ui;
     UIStateManager m_stateManager;
     WidgetInspectorInterface *m_inspector;
-    RemoteViewWidget *m_remoteView;
+    WidgetRemoteView *m_remoteView;
+    Widget3DView *m_3dView;
 };
 
 class WidgetInspectorUiFactory : public QObject, public StandardToolUiFactory<WidgetInspectorWidget>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolUiFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_widgetinspector.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolUiFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_widgetinspector.json")
 public:
-    void initUi() Q_DECL_OVERRIDE;
+    void initUi() override;
 };
-
 }
 
 #endif // GAMMARAY_WIDGETINSPECTOR_H

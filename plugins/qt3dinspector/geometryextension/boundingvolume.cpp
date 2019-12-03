@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,14 +28,11 @@
 
 #include "boundingvolume.h"
 
+#include <cmath>
+
 using namespace GammaRay;
 
-BoundingVolume::BoundingVolume() :
-    m_null(true)
-{
-}
-
-void BoundingVolume::addPoint(const QVector3D& p)
+void BoundingVolume::addPoint(const QVector3D &p)
 {
     if (m_null) {
         m_null = false;
@@ -57,10 +54,13 @@ QVector3D BoundingVolume::center() const
         (m_p1.x() + m_p2.x()) * 0.5f,
         (m_p1.y() + m_p2.y()) * 0.5f,
         (m_p1.z() + m_p2.z()) * 0.5f
-    );
+        );
 }
 
 float BoundingVolume::radius() const
 {
-    return std::max((m_p1.x() - m_p2.x()) * 0.5f, std::max((m_p1.y() - m_p2.y()) * 0.5f, (m_p1.z() - m_p2.z()) * 0.5f));
+    const auto dx = m_p1.x() - m_p2.x();
+    const auto dy = m_p1.y() - m_p2.y();
+    const auto dz = m_p1.z() - m_p2.z();
+    return std::sqrt(dx*dx + dy*dy + dz*dz) * 0.5;
 }

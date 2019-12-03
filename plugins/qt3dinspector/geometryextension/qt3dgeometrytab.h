@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -45,20 +45,23 @@ class QTransform;
 namespace Qt3DRender {
 class QCamera;
 class QCullFace;
+class QDepthTest;
 class QGeometryRenderer;
+class QParameter;
+class QPickEvent;
 class QRenderPass;
 }
+class QComboBox;
+class QSurfaceFormat;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class BufferModel;
 class PropertyWidget;
 class Qt3DGeometryExtensionInterface;
-class Qt3DGeometryAttributeData;
+struct Qt3DGeometryAttributeData;
 
-namespace Ui
-{
+namespace Ui {
 class Qt3DGeometryTab;
 }
 
@@ -74,23 +77,34 @@ protected:
     bool eventFilter(QObject *receiver, QEvent *event) override;
 
 private:
-    Qt3DCore::QComponent* createMaterial(Qt3DCore::QNode *parent);
-    Qt3DCore::QComponent* createSkyboxMaterial(Qt3DCore::QNode *parent);
+    Qt3DCore::QComponent *createMaterial(Qt3DCore::QNode *parent);
+    Qt3DCore::QComponent *createES2WireframeMaterial(Qt3DCore::QNode *parent);
+    Qt3DCore::QComponent *createSkyboxMaterial(Qt3DCore::QNode *parent);
     void updateGeometry();
     void resetCamera();
-    void computeBoundingVolume(const Qt3DGeometryAttributeData &vertexAttr, const QByteArray &bufferData);
+    void computeBoundingVolume(const Qt3DGeometryAttributeData &vertexAttr,
+                               const QByteArray &bufferData);
+    void trianglePicked(Qt3DRender::QPickEvent *pick);
+    bool isIndexBuffer(unsigned int bufferIndex) const;
+    QSurfaceFormat probeFormat() const;
 
     std::unique_ptr<Ui::Qt3DGeometryTab> ui;
+    QComboBox *m_shadingModeCombo;
     Qt3DGeometryExtensionInterface *m_interface;
 
-    QWindow* m_surface;
+    QWindow *m_surface;
     Qt3DCore::QAspectEngine *m_aspectEngine;
     Qt3DRender::QCamera *m_camera;
     Qt3DRender::QGeometryRenderer *m_geometryRenderer;
+    Qt3DRender::QGeometryRenderer *m_es2lineRenderer; // ES2 wireframe fallback renderer
     Qt3DCore::QTransform *m_geometryTransform;
     Qt3DRender::QCullFace *m_cullMode;
+    Qt3DRender::QDepthTest *m_depthTest;
     Qt3DRender::QRenderPass *m_normalsRenderPass;
+    Qt3DRender::QParameter *m_normalLength;
+    Qt3DRender::QParameter *m_shadingMode;
     BoundingVolume m_boundingVolume;
+    mutable bool m_usingES2Fallback = false;
 
     BufferModel *m_bufferModel;
 };

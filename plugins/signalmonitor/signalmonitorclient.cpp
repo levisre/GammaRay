@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,15 +32,15 @@
 
 using namespace GammaRay;
 
-SignalMonitorClient::SignalMonitorClient(QObject* parent): SignalMonitorInterface(parent)
+SignalMonitorClient::SignalMonitorClient(QObject *parent)
+    : SignalMonitorInterface(parent)
 {
 }
 
-SignalMonitorClient::~SignalMonitorClient()
-{
-}
+SignalMonitorClient::~SignalMonitorClient() = default;
 
 void SignalMonitorClient::sendClockUpdates(bool enabled)
 {
-  Endpoint::instance()->invokeObject(objectName(), "sendClockUpdates", QVariantList() << QVariant::fromValue(enabled));
+    Endpoint::instance()->invokeObject(objectName(), "sendClockUpdates",
+                                       QVariantList() << QVariant::fromValue(enabled));
 }

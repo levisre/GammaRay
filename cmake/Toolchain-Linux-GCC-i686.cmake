@@ -1,7 +1,7 @@
 # Toolchain file for 32bit builds on 64bit Linux hosts
 #
 
-# Copyright (c) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
+# Copyright (c) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
 # All rights reserved.
 #
 # Author: Volker Krause <volker.krause@kdab.com>
@@ -33,5 +33,5 @@
 set(CMAKE_SYSTEM_NAME "Linux")
 set(CMAKE_SYSTEM_PROCESSOR "i686")
 
-set(CMAKE_C_COMPILER_ARG1 "-m32")
-set(CMAKE_CXX_COMPILER_ARG1 "-m32")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")

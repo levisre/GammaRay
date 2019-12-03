@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,7 +32,6 @@
 #include "propertyadaptor.h"
 
 namespace GammaRay {
-
 class MetaObject;
 
 /** Property access for GammaRay meta-type based property-access. */
@@ -40,21 +39,20 @@ class MetaPropertyAdaptor : public PropertyAdaptor
 {
     Q_OBJECT
 public:
-    explicit MetaPropertyAdaptor(QObject* parent = 0);
-    ~MetaPropertyAdaptor();
+    explicit MetaPropertyAdaptor(QObject *parent = nullptr);
+    ~MetaPropertyAdaptor() override;
 
-    int count() const Q_DECL_OVERRIDE;
-    PropertyData propertyData(int index) const Q_DECL_OVERRIDE;
-    void writeProperty(int index, const QVariant& value) Q_DECL_OVERRIDE;
+    int count() const override;
+    PropertyData propertyData(int index) const override;
+    void writeProperty(int index, const QVariant &value) override;
 
 protected:
-    void doSetObject(const ObjectInstance& oi) Q_DECL_OVERRIDE;
+    void doSetObject(const ObjectInstance &oi) override;
 
 private:
     MetaObject *m_metaObj;
     void *m_obj;
 };
-
 }
 
 #endif // GAMMARAY_METAPROPERTYADAPTOR_H

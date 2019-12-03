@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,34 +35,31 @@
 
 class KJob;
 namespace GammaRay {
-
 class KJobModel;
 
 class KJobTracker : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit KJobTracker(ProbeInterface *probe, QObject *parent = 0);
-    virtual ~KJobTracker();
+    Q_OBJECT
+public:
+    explicit KJobTracker(Probe *probe, QObject *parent = nullptr);
+    ~KJobTracker() override;
 
-  private:
+private:
     KJobModel *m_jobModel;
 };
 
 class KJobTrackerFactory : public QObject, public StandardToolFactory<KJob, KJobTracker>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_kjobtracker.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_kjobtracker.json")
 
-  public:
-    explicit KJobTrackerFactory(QObject *parent = 0) : QObject(parent)
+public:
+    explicit KJobTrackerFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // GAMMARAY_KJOBTRACKER_H

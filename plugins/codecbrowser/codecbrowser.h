@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,43 +37,40 @@ class QItemSelectionModel;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class SelectedCodecsModel;
 
 namespace Ui {
-  class CodecBrowser;
+class CodecBrowser;
 }
 
 class CodecBrowser : public QObject
 {
-  Q_OBJECT
-  public:
-    explicit CodecBrowser(ProbeInterface *probe, QObject *parent = 0);
+    Q_OBJECT
+public:
+    explicit CodecBrowser(Probe *probe, QObject *parent = nullptr);
 
-  public slots:
+public slots:
     void textChanged(const QString &text);
 
-  private slots:
+private slots:
     void updateCodecs(const QItemSelection &selected, const QItemSelection &deselected);
 
-  private:
+private:
     SelectedCodecsModel *m_selectedCodecsModel;
     QItemSelectionModel *m_codecSelectionModel;
 };
 
 class CodecBrowserFactory : public QObject, public StandardToolFactory<QObject, CodecBrowser>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_codecbrowser.json")
-  public:
-    explicit CodecBrowserFactory(QObject *parent = 0) : QObject(parent)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_codecbrowser.json")
+public:
+    explicit CodecBrowserFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // GAMMARAY_CODECBROWSER_H

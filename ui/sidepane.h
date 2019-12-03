@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,24 +32,25 @@
 #include <QListView>
 
 namespace GammaRay {
-
 class SidePane : public QListView
 {
-  Q_OBJECT
-  public:
-    explicit SidePane(QWidget *parent = 0);
-    ~SidePane();
+    Q_OBJECT
+public:
+    explicit SidePane(QWidget *parent = nullptr);
+    ~SidePane() override;
 
-    QSize sizeHint() const Q_DECL_OVERRIDE;
-    void setModel(QAbstractItemModel* model) Q_DECL_OVERRIDE;
+    QSize sizeHint() const override;
+    void setModel(QAbstractItemModel *model) override;
 
-  protected:
-    void resizeEvent(QResizeEvent *e) Q_DECL_OVERRIDE;
+protected:
+    bool eventFilter(QObject *object, QEvent *event) override;
 
-  private slots:
+private slots:
     void updateSizeHint();
-};
 
+private:
+    QPixmap m_background;
+};
 }
 
 #endif // GAMMARAY_SIDEPANE_H

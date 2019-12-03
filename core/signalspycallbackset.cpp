@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,15 +30,8 @@
 
 using namespace GammaRay;
 
-SignalSpyCallbackSet::SignalSpyCallbackSet() :
-    signalBeginCallback(0),
-    signalEndCallback(0),
-    slotBeginCallback(0),
-    slotEndCallback(0)
-{
-}
-
 bool SignalSpyCallbackSet::isNull() const
 {
-    return signalBeginCallback == 0 && signalEndCallback == 0 && slotBeginCallback == 0 && slotEndCallback == 0;
+    return signalBeginCallback == nullptr && signalEndCallback == nullptr && slotBeginCallback == nullptr
+           && slotEndCallback == nullptr;
 }

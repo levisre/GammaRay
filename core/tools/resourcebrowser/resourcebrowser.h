@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,34 +37,33 @@ class QModelIndex;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class ResourceBrowser : public ResourceBrowserInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ResourceBrowserInterface)
-  public:
-    explicit ResourceBrowser(ProbeInterface *probe, QObject *parent = 0);
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ResourceBrowserInterface)
+public:
+    explicit ResourceBrowser(Probe *probe, QObject *parent = nullptr);
 
-  public slots:
-    void downloadResource(const QString &sourceFilePath, const QString &targetFilePath) Q_DECL_OVERRIDE;
-    void selectResource(const QString &sourceFilePath, int line = -1, int column = -1) Q_DECL_OVERRIDE;
+public slots:
+    void downloadResource(const QString &sourceFilePath,
+                          const QString &targetFilePath) override;
+    void selectResource(const QString &sourceFilePath, int line = -1,
+                        int column = -1) override;
 
-  private slots:
+private slots:
     void currentChanged(const QModelIndex &current, int line = -1, int column = -1);
 };
 
 class ResourceBrowserFactory : public QObject, public StandardToolFactory<QObject, ResourceBrowser>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  public:
-    explicit ResourceBrowserFactory(QObject *parent) : QObject(parent)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+public:
+    explicit ResourceBrowserFactory(QObject *parent)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // GAMMARAY_RESOURCEBROWSER_H

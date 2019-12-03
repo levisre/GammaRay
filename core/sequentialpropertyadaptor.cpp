@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,27 +30,23 @@
 #include "objectinstance.h"
 #include "propertydata.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
 #include <QSequentialIterable>
-#endif
 
 using namespace GammaRay;
 
-SequentialPropertyAdaptor::SequentialPropertyAdaptor(QObject* parent): PropertyAdaptor(parent)
+SequentialPropertyAdaptor::SequentialPropertyAdaptor(QObject *parent)
+    : PropertyAdaptor(parent)
 {
 }
 
-SequentialPropertyAdaptor::~SequentialPropertyAdaptor()
-{
-}
+SequentialPropertyAdaptor::~SequentialPropertyAdaptor() = default;
 
-void SequentialPropertyAdaptor::doSetObject(const ObjectInstance& oi)
+void SequentialPropertyAdaptor::doSetObject(const ObjectInstance &oi)
 {
     if (oi.type() == ObjectInstance::QtVariant)
         m_value = oi.variant();
 }
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
 int SequentialPropertyAdaptor::count() const
 {
     if (!m_value.canConvert<QVariantList>())
@@ -74,4 +70,3 @@ PropertyData SequentialPropertyAdaptor::propertyData(int index) const
 
     return data;
 }
-#endif

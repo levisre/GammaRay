@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,13 +35,12 @@
 
 using namespace GammaRay;
 
-QJSValuePropertyAdaptor::QJSValuePropertyAdaptor(QObject* parent): PropertyAdaptor(parent)
+QJSValuePropertyAdaptor::QJSValuePropertyAdaptor(QObject *parent)
+    : PropertyAdaptor(parent)
 {
 }
 
-QJSValuePropertyAdaptor::~QJSValuePropertyAdaptor()
-{
-}
+QJSValuePropertyAdaptor::~QJSValuePropertyAdaptor() = default;
 
 int QJSValuePropertyAdaptor::count() const
 {
@@ -68,21 +67,21 @@ PropertyData QJSValuePropertyAdaptor::propertyData(int index) const
     return pd;
 }
 
+QJSValuePropertyAdaptorFactory *QJSValuePropertyAdaptorFactory::s_instance = nullptr;
 
-QJSValuePropertyAdaptorFactory* QJSValuePropertyAdaptorFactory::s_instance = Q_NULLPTR;
-
-PropertyAdaptor* QJSValuePropertyAdaptorFactory::create(const ObjectInstance& oi, QObject* parent) const
+PropertyAdaptor *QJSValuePropertyAdaptorFactory::create(const ObjectInstance &oi,
+                                                        QObject *parent) const
 {
     if (oi.type() != ObjectInstance::QtVariant)
-        return Q_NULLPTR;
+        return nullptr;
 
     if (!oi.variant().isValid() || !oi.variant().canConvert<QJSValue>())
-        return Q_NULLPTR;
+        return nullptr;
 
     return new QJSValuePropertyAdaptor(parent);
 }
 
-QJSValuePropertyAdaptorFactory* QJSValuePropertyAdaptorFactory::instance()
+QJSValuePropertyAdaptorFactory *QJSValuePropertyAdaptorFactory::instance()
 {
     if (!s_instance)
         s_instance = new QJSValuePropertyAdaptorFactory;

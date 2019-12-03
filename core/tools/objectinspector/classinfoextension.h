@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,23 +32,21 @@
 #include "propertycontrollerextension.h"
 
 namespace GammaRay {
-
 class PropertyController;
 class ObjectClassInfoModel;
 
 class ClassInfoExtension : public PropertyControllerExtension
 {
-  public:
+public:
     explicit ClassInfoExtension(PropertyController *controller);
     ~ClassInfoExtension();
 
-    bool setQObject(QObject *object) Q_DECL_OVERRIDE;
-    bool setMetaObject(const QMetaObject *metaObject) Q_DECL_OVERRIDE;
+    bool setQObject(QObject *object) override;
+    bool setMetaObject(const QMetaObject *metaObject) override;
 
-  private:
+private:
     ObjectClassInfoModel *m_model;
 };
-
 }
 
 #endif // CLASSINFOEXTENSION_H

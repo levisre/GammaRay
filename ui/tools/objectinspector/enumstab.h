@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,26 +30,25 @@
 #define ENUMSTAB_H
 
 #include <QWidget>
+#include <memory>
 
 namespace GammaRay {
-
 class Ui_EnumsTab;
 class PropertyWidget;
 
 class EnumsTab : public QWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 public:
-  explicit EnumsTab(PropertyWidget *parent);
-  virtual ~EnumsTab();
+    explicit EnumsTab(PropertyWidget *parent);
+    ~EnumsTab() override;
 
 private:
-  void setObjectBaseName(const QString &baseName);
+    void setObjectBaseName(const QString &baseName);
 
 private:
-  Ui_EnumsTab *m_ui;
+    std::unique_ptr<Ui_EnumsTab> m_ui;
 };
-
 }
 
 #endif // ENUMSTAB_H

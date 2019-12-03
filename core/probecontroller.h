@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,25 +32,20 @@
 #include <common/probecontrollerinterface.h>
 
 namespace GammaRay {
-
 /** @brief Server-side part for the object property inspector.
  *  Use this to integrate a property inspector like in the QObject view into your tool.
  */
 class ProbeController : public ProbeControllerInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ProbeControllerInterface)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ProbeControllerInterface)
 public:
-    explicit ProbeController(QObject *parent = 0);
+    explicit ProbeController(QObject *parent = nullptr);
 
 public slots:
-    void selectObject(GammaRay::ObjectId id, const QString &toolId) Q_DECL_OVERRIDE;
-    void requestSupportedTools(GammaRay::ObjectId id) Q_DECL_OVERRIDE;
-
-    void detachProbe() Q_DECL_OVERRIDE;
-    void quitHost() Q_DECL_OVERRIDE;
+    void detachProbe() override;
+    void quitHost() override;
 };
-
 }
 
 #endif // GAMMARAY_PROBECONTROLLER_H

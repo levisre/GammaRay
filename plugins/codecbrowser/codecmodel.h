@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,59 +34,47 @@
 #include <QTextCodec>
 
 namespace GammaRay {
-
-class AllCodecsModel : public QAbstractItemModel
+class AllCodecsModel : public QAbstractTableModel
 {
-  Q_OBJECT
-  public:
-    explicit AllCodecsModel(QObject *parent);
+    Q_OBJECT
+public:
+    explicit AllCodecsModel(QObject *parent = nullptr);
 
     QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+                        int role = Qt::DisplayRole) const override;
 
-    QVariant data(const QModelIndex &index,
-                  int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-    QModelIndex index(int row, int column,
-                      const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-
-    QModelIndex parent(const QModelIndex &child) const Q_DECL_OVERRIDE;
-
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+private:
+    QList<QByteArray> m_codecs;
 };
 
-class SelectedCodecsModel : public QAbstractItemModel
+class SelectedCodecsModel : public QAbstractTableModel
 {
-  Q_OBJECT
-  public:
-    explicit SelectedCodecsModel(QObject *parent);
+    Q_OBJECT
+public:
+    explicit SelectedCodecsModel(QObject *parent = nullptr);
 
     void setCodecs(const QStringList &codecs);
     QStringList currentCodecs() const;
 
     QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+                        int role = Qt::DisplayRole) const override;
 
-    QVariant data(const QModelIndex &index,
-                  int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-    QModelIndex index(int row, int column,
-                      const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
-    QModelIndex parent(const QModelIndex &child) const Q_DECL_OVERRIDE;
-
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-
-  public slots:
+public slots:
     void updateText(const QString &text);
 
-  private:
+private:
     QStringList m_codecs;
     QString m_text;
 };
-
 }
 
 #endif

@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,19 +32,19 @@
 #include <QAbstractTableModel>
 
 namespace GammaRay {
-
 /** List of plugin loading errors on the target. */
 class ToolPluginErrorModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    explicit ToolPluginErrorModel(const PluginLoadErrors &errors, QObject *parent = 0);
-    ~ToolPluginErrorModel();
+    explicit ToolPluginErrorModel(const PluginLoadErrors &errors, QObject *parent = nullptr);
+    ~ToolPluginErrorModel() override;
 
-    QVariant data(const QModelIndex& index, int role) const Q_DECL_OVERRIDE;
-    int columnCount(const QModelIndex& parent) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex& parent) const Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role) const override;
+    int columnCount(const QModelIndex &parent) const override;
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
 
 private:
     PluginLoadErrors m_errors;

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,6 +27,7 @@
 */
 
 #include "fontdatabasemodel.h"
+#include "fontbrowserinterface.h"
 
 #include <QDebug>
 #include <QFontDatabase>
@@ -38,16 +39,14 @@ using namespace GammaRay;
 
 static const int TopLevelId = std::numeric_limits<int>::max();
 
-FontDatabaseModel::FontDatabaseModel(QObject* parent) :
-    QAbstractItemModel(parent)
+FontDatabaseModel::FontDatabaseModel(QObject *parent)
+    : QAbstractItemModel(parent)
 {
 }
 
-FontDatabaseModel::~FontDatabaseModel()
-{
-}
+FontDatabaseModel::~FontDatabaseModel() = default;
 
-int FontDatabaseModel::rowCount(const QModelIndex& parent) const
+int FontDatabaseModel::rowCount(const QModelIndex &parent) const
 {
     ensureModelPopulated();
     if (!parent.isValid())
@@ -59,46 +58,91 @@ int FontDatabaseModel::rowCount(const QModelIndex& parent) const
     return 0;
 }
 
-int FontDatabaseModel::columnCount(const QModelIndex& parent) const
+int FontDatabaseModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return 2;
+    return NUM_COLUMNS;
 }
 
-QVariant FontDatabaseModel::data(const QModelIndex& index, int role) const
+QVariant FontDatabaseModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
         return QVariant();
 
-    int family = -1;
-    if (index.internalId() == TopLevelId)
-        family = index.row();
-    else
-        family = index.internalId();
-    Q_ASSERT(family >= 0 && family < m_families.size() && family < m_styles.size());
+    int styleIndex = -1;
+    int familyIndex = -1;
+    if (index.internalId() == TopLevelId) {
+        familyIndex = index.row();
+    } else {
+        familyIndex = index.internalId();
+        styleIndex = index.row();
+    }
+    Q_ASSERT(familyIndex >= 0 && familyIndex < m_families.size() && familyIndex < m_styles.size());
+    Q_ASSERT(styleIndex == -1 || (styleIndex >= 0 && styleIndex < m_styles.at(familyIndex).size()));
 
-    if (role == Qt::DisplayRole) {
-        if (index.internalId() == TopLevelId) {
-            if (index.column() == 0)
-                return m_families.at(family);
-        } else {
-            switch (index.column()) {
-                case 0:
-                    return m_styles.at(family).at(index.row());
-                case 1:
-                    return smoothSizeString(m_families.at(family), m_styles.at(family).at(index.row()));
-            }
+    const auto &style = styleIndex == -1 ? QString() : m_styles.at(familyIndex).at(styleIndex);
+    const auto &family = m_families.at(familyIndex);
+    const auto isSortRole = role == FontBrowserInterface::SortRole;
+
+    if (role == Qt::DisplayRole || isSortRole) {
+        auto toSortVariant = [isSortRole] (bool state) {
+            return isSortRole ? QVariant(state) : QVariant();
+        };
+        switch (static_cast<Columns>(index.column())) {
+        case Label:
+            return styleIndex == -1 ? family : style;
+        case Weight:
+            return QFontDatabase().weight(family, style);
+        case SmoothSizes:
+            return smoothSizeString(family, style);
+        case Bold:
+            return toSortVariant(QFontDatabase().bold(family, style));
+        case Italic:
+            return toSortVariant(QFontDatabase().italic(family, style));
+        case Scalable:
+            return toSortVariant(QFontDatabase().isScalable(family, style));
+        case BitmapScalable:
+            return toSortVariant(QFontDatabase().isBitmapScalable(family, style));
+        case SmoothlyScalable:
+            return toSortVariant(QFontDatabase().isSmoothlyScalable(family, style));
+        case NUM_COLUMNS:
+            return {};
+        }
+    } else if (role == Qt::CheckStateRole) {
+        auto checkState = [](bool state) {
+            return state ? Qt::Checked : Qt::Unchecked;
+        };
+        switch (static_cast<Columns>(index.column())) {
+        case Bold:
+            return checkState(QFontDatabase().bold(family, style));
+        case Italic:
+            return checkState(QFontDatabase().italic(family, style));
+        case Scalable:
+            return checkState(QFontDatabase().isScalable(family, style));
+        case BitmapScalable:
+            return checkState(QFontDatabase().isBitmapScalable(family, style));
+        case SmoothlyScalable:
+            return checkState(QFontDatabase().isSmoothlyScalable(family, style));
+        case Weight:
+        case Label:
+        case SmoothSizes:
+        case NUM_COLUMNS:
+            return {};
         }
     } else if (role == Qt::ToolTipRole) {
-        if (index.internalId() != TopLevelId && index.column() == 1) {
-            return smoothSizeString(m_families.at(family), m_styles.at(family).at(index.row()));
-        }
-    } else if (role == Qt::UserRole + 1) {
-        if (index.internalId() == TopLevelId) {
-            return QFont(m_families.at(family));
+        if (index.column() == SmoothSizes)
+            return smoothSizeString(family, style);
+    } else if (role == FontBrowserInterface::FontRole) {
+        if (styleIndex == -1) {
+            return QFont(family);
         } else {
-            QFontDatabase database;
-            return database.font(m_families.at(family), m_styles.at(family).at(index.row()), 10);
+            return QFontDatabase().font(family, style, 10);
+        }
+    } else if (role == FontBrowserInterface::FontSearchRole) {
+        if (index.internalId() == TopLevelId) {
+            return family;
+        } else {
+            return tr("%1 %2").arg(family, style);
         }
     }
 
@@ -108,18 +152,34 @@ QVariant FontDatabaseModel::data(const QModelIndex& index, int role) const
 QVariant FontDatabaseModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
-        switch (section) {
-            case 0: return tr("Fonts");
-            case 1: return tr("Smooth Sizes");
+        switch (static_cast<Columns>(section)) {
+        case Label:
+            return tr("Fonts");
+        case Weight:
+            return tr("Weight");
+        case Bold:
+            return tr("Bold");
+        case Italic:
+            return tr("Italic");
+        case Scalable:
+            return tr("Scalable");
+        case BitmapScalable:
+            return tr("Bitmap Scalable");
+        case SmoothlyScalable:
+            return tr("Smoothly Scalable");
+        case SmoothSizes:
+            return tr("Smooth Sizes");
+        case NUM_COLUMNS:
+            return {};
         }
     }
     return QAbstractItemModel::headerData(section, orientation, role);
 }
 
-QModelIndex FontDatabaseModel::index(int row, int column, const QModelIndex& parent) const
+QModelIndex FontDatabaseModel::index(int row, int column, const QModelIndex &parent) const
 {
     if (row < 0 || column < 0 || column >= columnCount())
-        return QModelIndex();
+        return {};
 
     if (parent.isValid()) {
         if (row >= m_styles.at(parent.row()).size())
@@ -129,22 +189,41 @@ QModelIndex FontDatabaseModel::index(int row, int column, const QModelIndex& par
     return createIndex(row, column, TopLevelId);
 }
 
-QModelIndex FontDatabaseModel::parent(const QModelIndex& child) const
+QModelIndex FontDatabaseModel::parent(const QModelIndex &child) const
 {
     if (!child.isValid() || child.internalId() == TopLevelId)
-        return QModelIndex();
+        return {};
     return createIndex(child.internalId(), 0, TopLevelId);
 }
 
-QString FontDatabaseModel::smoothSizeString(const QString& family, const QString& style) const
+QHash<int, QByteArray> FontDatabaseModel::roleNames() const
+{
+    auto ret = QAbstractItemModel::roleNames();
+    ret[FontBrowserInterface::FontRole] = QByteArrayLiteral("FontRole");
+    ret[FontBrowserInterface::FontSearchRole] = QByteArrayLiteral("FontSearchRole");
+    ret[FontBrowserInterface::SortRole] = QByteArrayLiteral("SortRole");
+    return ret;
+}
+
+QMap<int, QVariant> FontDatabaseModel::itemData(const QModelIndex &index) const
+{
+    auto ret = QAbstractItemModel::itemData(index);
+    for (auto role : {FontBrowserInterface::FontRole, FontBrowserInterface::FontSearchRole,
+                      FontBrowserInterface::SortRole})
+    {
+        ret[role] = data(index, role);
+    }
+    return ret;
+}
+
+QString FontDatabaseModel::smoothSizeString(const QString &family, const QString &style) const
 {
     QFontDatabase database;
     const auto smoothSizes = database.smoothSizes(family, style);
     QStringList sizes;
     sizes.reserve(smoothSizes.size());
-    foreach (auto points, smoothSizes) {
+    for (auto points : smoothSizes)
         sizes.push_back(QString::number(points));
-    }
     return sizes.join(QStringLiteral(" "));
 }
 
@@ -153,7 +232,7 @@ void FontDatabaseModel::ensureModelPopulated() const
     if (!m_families.isEmpty())
         return;
 
-    const_cast<FontDatabaseModel*>(this)->populateModel();
+    const_cast<FontDatabaseModel *>(this)->populateModel();
 }
 
 void FontDatabaseModel::populateModel()
@@ -168,8 +247,7 @@ void FontDatabaseModel::populateModel()
 
         const auto styles = database.styles(family);
         m_styles[i].reserve(styles.size());
-        foreach (const auto &style, database.styles(family)) {
+        foreach (const auto &style, database.styles(family))
             m_styles[i].push_back(style);
-        }
     }
 }

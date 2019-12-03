@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -38,20 +38,19 @@ class QNetworkCookieJar;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class CookieJarModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    explicit CookieJarModel(QObject *parent = Q_NULLPTR);
-    ~CookieJarModel();
+    explicit CookieJarModel(QObject *parent = nullptr);
+    ~CookieJarModel() override;
 
     void setCookieJar(QNetworkCookieJar *cookieJar);
 
-    int columnCount(const QModelIndex & parent) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex & parent) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex & index, int role) const Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent) const override;
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
 private:
     QNetworkCookieJar *m_cookieJar;

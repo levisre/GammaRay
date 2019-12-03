@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -45,41 +45,65 @@ class QItemSelection;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-class QuickScenePreviewWidget;
+class QuickSceneControlWidget;
+struct QuickDecorationsSettings;
 
 namespace Ui {
-  class QuickInspectorWidget;
+class QuickInspectorWidget;
 }
 
 class QuickInspectorWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit QuickInspectorWidget(QWidget *parent = 0);
-    ~QuickInspectorWidget();
+    Q_OBJECT
+public:
+    enum StateFlag {
+        Ready = 0x0,
+        WaitingApply = 0x1,
+        WaitingFeatures = 0x2,
+        WaitingOverlaySettings = 0x8,
+        WaitingAll = WaitingApply | WaitingFeatures | WaitingOverlaySettings
+    };
+    Q_DECLARE_FLAGS(State, StateFlag)
 
-  private slots:
+    explicit QuickInspectorWidget(QWidget *parent = nullptr);
+    ~QuickInspectorWidget() override;
+
+    Q_INVOKABLE void saveTargetState(QSettings *settings) const;
+    Q_INVOKABLE void restoreTargetState(QSettings *settings);
+
+private slots:
     void itemSelectionChanged(const QItemSelection &selection);
+    void sgSelectionChanged(const QItemSelection &selection);
     void setFeatures(GammaRay::QuickInspectorInterface::Features features);
-    void itemModelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles);
+    void setOverlaySettings(const GammaRay::QuickDecorationsSettings &settings);
+    void setSlowMode(bool slow);
+    void itemModelDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight,
+                              const QVector<int> &roles);
     void itemContextMenu(const QPoint &pos);
+    void stateReceived(GammaRay::QuickInspectorWidget::StateFlag flag);
+    void resetState();
+    void saveState();
+    void saveAsImage();
+    void updateActions();
 
-  private:
+private:
     QScopedPointer<Ui::QuickInspectorWidget> ui;
+    QuickInspectorWidget::State m_state;
     UIStateManager m_stateManager;
-    QuickScenePreviewWidget *m_previewWidget;
+    QuickSceneControlWidget *m_scenePreviewWidget;
     QuickInspectorInterface *m_interface;
 };
 
 class QuickInspectorUiFactory : public QObject, public StandardToolUiFactory<QuickInspectorWidget>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolUiFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_quickinspector.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolUiFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_quickinspector.json")
 
-  void initUi() Q_DECL_OVERRIDE;
+    void initUi() override;
 };
-
 }
+
+Q_DECLARE_METATYPE(GammaRay::QuickInspectorWidget::StateFlag)
 
 #endif

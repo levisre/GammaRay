@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,27 +34,23 @@
 #include <QVariant>
 
 namespace GammaRay {
-
 /** Adaptor for recursing into associative container property values. */
 class AssociativePropertyAdaptor : public PropertyAdaptor
 {
     Q_OBJECT
 public:
-    explicit AssociativePropertyAdaptor(QObject* parent = 0);
-    ~AssociativePropertyAdaptor();
+    explicit AssociativePropertyAdaptor(QObject *parent = nullptr);
+    ~AssociativePropertyAdaptor() override;
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
-    int count() const Q_DECL_OVERRIDE;
-    PropertyData propertyData(int index) const Q_DECL_OVERRIDE;
-#endif
+    int count() const override;
+    PropertyData propertyData(int index) const override;
 
 protected:
-    void doSetObject(const ObjectInstance& oi) Q_DECL_OVERRIDE;
+    void doSetObject(const ObjectInstance &oi) override;
 
 private:
     QVariant m_value;
 };
-
 }
 
 #endif // GAMMARAY_ASSOCIATIVEPROPERTYADAPTOR_H

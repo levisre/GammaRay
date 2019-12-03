@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,19 +35,10 @@ QT_BEGIN_NAMESPACE
 class QObject;
 QT_END_NAMESPACE
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 4, 0)
-#define GAMMARAY_USE_QHOOKS
-#endif
-
-#if (defined(Q_OS_WIN) || defined(Q_OS_MAC)) && !defined(GAMMARAY_USE_QHOOKS)
-#define GAMMARAY_USE_FUNCTION_OVERWRITE
-#endif
-
 extern "C" {
-
 extern Q_DECL_EXPORT void gammaray_startup_hook();
-extern Q_DECL_EXPORT void gammaray_addObject(QObject* obj);
-extern Q_DECL_EXPORT void gammaray_removeObject(QObject* obj);
+extern Q_DECL_EXPORT void gammaray_addObject(QObject *obj);
+extern Q_DECL_EXPORT void gammaray_removeObject(QObject *obj);
 
 /** Entry point for startup injection. */
 extern Q_DECL_EXPORT void gammaray_probe_inject();
@@ -59,21 +50,22 @@ extern Q_DECL_EXPORT void gammaray_probe_inject();
  *  on the other side.
  */
 extern Q_DECL_EXPORT void gammaray_probe_attach();
+
+/** Entry point for static injections. */
+extern Q_DECL_EXPORT void gammaray_install_hooks();
+
 }
 
 namespace GammaRay {
-
 namespace Hooks {
+/** Returns @c true if we have installed the hooks.
+ *  This is useful to avoid loops from preloaded hooks for example.
+ */
+bool hooksInstalled();
 
-  /** Returns @c true if we have installed the hooks.
-   *  This is useful to avoid loops from preloaded hooks for example.
-   */
-  bool hooksInstalled();
-
-  /** Install hooks, either by function overwriting or using qhooks. */
-  void installHooks();
+/** Install hooks, either by function overwriting or using qhooks. */
+void installHooks();
 }
-
 }
 
 #endif

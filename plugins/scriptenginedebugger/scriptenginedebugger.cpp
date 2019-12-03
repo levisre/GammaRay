@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,7 +29,6 @@
 #include "scriptenginedebugger.h"
 
 #include <core/objecttypefilterproxymodel.h>
-#include <core/probeinterface.h>
 #include <core/singlecolumnobjectproxymodel.h>
 
 #include <QScriptEngine>
@@ -43,28 +42,17 @@ using namespace GammaRay;
 ///      Also it seems that we get another crash when the interrupt action
 ///      was triggered and we close the mainwindow.
 
-ScriptEngineDebugger::ScriptEngineDebugger(ProbeInterface *probe, QObject *parent)
-  : QObject(parent)
+ScriptEngineDebugger::ScriptEngineDebugger(Probe *probe, QObject *parent)
+    : QObject(parent)
 {
-  ObjectTypeFilterProxyModel<QScriptEngine> *scriptEngineFilter =
-    new ObjectTypeFilterProxyModel<QScriptEngine>(this);
-  scriptEngineFilter->setSourceModel(probe->objectListModel());
-  SingleColumnObjectProxyModel *singleColumnProxy =
-    new SingleColumnObjectProxyModel(this);
-  singleColumnProxy->setSourceModel(scriptEngineFilter);
+    auto *scriptEngineFilter
+        = new ObjectTypeFilterProxyModel<QScriptEngine>(this);
+    scriptEngineFilter->setSourceModel(probe->objectListModel());
+    auto *singleColumnProxy
+        = new SingleColumnObjectProxyModel(this);
+    singleColumnProxy->setSourceModel(scriptEngineFilter);
 
-  probe->registerModel(QStringLiteral("com.kdab.GammaRay.ScriptEngines"), singleColumnProxy);
+    probe->registerModel(QStringLiteral("com.kdab.GammaRay.ScriptEngines"), singleColumnProxy);
 }
 
-ScriptEngineDebugger::~ScriptEngineDebugger()
-{
-}
-
-QString ScriptEngineDebuggerFactory::name() const
-{
-  return tr("Script Engines");
-}
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(ScriptEngineDebuggerFactory)
-#endif
+ScriptEngineDebugger::~ScriptEngineDebugger() = default;

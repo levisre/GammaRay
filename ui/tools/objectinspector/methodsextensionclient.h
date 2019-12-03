@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,21 +32,19 @@
 #include <common/tools/objectinspector/methodsextensioninterface.h>
 
 namespace GammaRay {
-
 class MethodsExtensionClient : public MethodsExtensionInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::MethodsExtensionInterface)
-  public:
-    explicit MethodsExtensionClient(const QString &name, QObject *parent = 0);
-    ~MethodsExtensionClient();
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::MethodsExtensionInterface)
+public:
+    explicit MethodsExtensionClient(const QString &name, QObject *parent = nullptr);
+    ~MethodsExtensionClient() override;
 
-  public slots:
-    void activateMethod() Q_DECL_OVERRIDE;
-    void invokeMethod(Qt::ConnectionType type) Q_DECL_OVERRIDE;
-    void connectToSignal() Q_DECL_OVERRIDE;
+public slots:
+    void activateMethod() override;
+    void invokeMethod(Qt::ConnectionType type) override;
+    void connectToSignal() override;
 };
-
 }
 
 #endif // GAMMARAY_METHODSEXTENSIONCLIENT_H

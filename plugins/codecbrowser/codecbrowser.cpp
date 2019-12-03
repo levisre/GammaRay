@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,49 +37,40 @@
 
 using namespace GammaRay;
 
-CodecBrowser::CodecBrowser(ProbeInterface* probe, QObject* parent)
-  : QObject(parent)
+CodecBrowser::CodecBrowser(Probe *probe, QObject *parent)
+    : QObject(parent)
 {
-  ObjectBroker::registerObject(QStringLiteral("com.kdab.GammaRay.CodecBrowser"), this);
+    ObjectBroker::registerObject(QStringLiteral("com.kdab.GammaRay.CodecBrowser"), this);
 
-  AllCodecsModel* model = new AllCodecsModel(this);
-  probe->registerModel(QStringLiteral("com.kdab.GammaRay.AllCodecsModel"), model);
+    auto *model = new AllCodecsModel(this);
+    probe->registerModel(QStringLiteral("com.kdab.GammaRay.AllCodecsModel"), model);
 
-  m_codecSelectionModel = ObjectBroker::selectionModel(model);
-  connect(m_codecSelectionModel, SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
-          SLOT(updateCodecs(QItemSelection,QItemSelection)));
+    m_codecSelectionModel = ObjectBroker::selectionModel(model);
+    connect(m_codecSelectionModel, &QItemSelectionModel::selectionChanged,
+            this, &CodecBrowser::updateCodecs);
 
-  m_selectedCodecsModel = new SelectedCodecsModel(this);
-  probe->registerModel(QStringLiteral("com.kdab.GammaRay.SelectedCodecsModel"), m_selectedCodecsModel);
+    m_selectedCodecsModel = new SelectedCodecsModel(this);
+    probe->registerModel(QStringLiteral(
+                             "com.kdab.GammaRay.SelectedCodecsModel"), m_selectedCodecsModel);
 }
 
 void CodecBrowser::textChanged(const QString &text)
 {
-  m_selectedCodecsModel->updateText(text);
+    m_selectedCodecsModel->updateText(text);
 }
 
-void CodecBrowser::updateCodecs(const QItemSelection &selected,
-                                const QItemSelection &deselected)
+void CodecBrowser::updateCodecs(const QItemSelection &selected, const QItemSelection &deselected)
 {
-  Q_UNUSED(selected);
-  Q_UNUSED(deselected);
+    Q_UNUSED(selected);
+    Q_UNUSED(deselected);
 
-  const auto rows = m_codecSelectionModel->selectedRows();
-  QStringList currentCodecNames;
-  currentCodecNames.reserve(rows.size());
-  foreach (const QModelIndex &index, rows) {
-    const QString codecName = index.data().toString();
-    currentCodecNames.append(codecName);
-  }
+    const auto rows = m_codecSelectionModel->selectedRows();
+    QStringList currentCodecNames;
+    currentCodecNames.reserve(rows.size());
+    for (const QModelIndex &index : rows) {
+        const QString codecName = index.data().toString();
+        currentCodecNames.append(codecName);
+    }
 
-  m_selectedCodecsModel->setCodecs(currentCodecNames);
+    m_selectedCodecsModel->setCodecs(currentCodecNames);
 }
-
-QString CodecBrowserFactory::name() const
-{
-  return tr("Text Codecs");
-}
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(CodecBrowserFactory)
-#endif

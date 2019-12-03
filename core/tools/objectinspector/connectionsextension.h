@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,30 +33,28 @@
 #include "core/propertycontrollerextension.h"
 
 namespace GammaRay {
-
 class InboundConnectionsModel;
 class OutboundConnectionsModel;
 
 class ConnectionsExtension : public ConnectionsExtensionInterface,
-                             public PropertyControllerExtension
+    public PropertyControllerExtension
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ConnectionsExtensionInterface)
-  public:
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ConnectionsExtensionInterface)
+public:
     explicit ConnectionsExtension(PropertyController *controller);
-    ~ConnectionsExtension();
+    ~ConnectionsExtension() override;
 
-    bool setQObject(QObject *object) Q_DECL_OVERRIDE;
+    bool setQObject(QObject *object) override;
 
-  public slots:
-    void navigateToReceiver(int modelRow) Q_DECL_OVERRIDE;
-    void navigateToSender(int modelRow) Q_DECL_OVERRIDE;
+public slots:
+    void navigateToReceiver(int modelRow) override;
+    void navigateToSender(int modelRow) override;
 
-  private:
+private:
     InboundConnectionsModel *m_inboundModel;
     OutboundConnectionsModel *m_outboundModel;
 };
-
 }
 
 #endif // GAMMARAY_CONNECTIONSEXTENSION_H

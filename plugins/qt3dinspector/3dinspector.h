@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -48,34 +48,35 @@ class QFrameGraphNode;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class PropertyController;
 class Qt3DEntityTreeModel;
 class FrameGraphModel;
 
-class Qt3DInspector: public Qt3DInspectorInterface
+class Qt3DInspector : public Qt3DInspectorInterface
 {
     Q_OBJECT
     Q_INTERFACES(GammaRay::Qt3DInspectorInterface)
 public:
-    explicit Qt3DInspector(ProbeInterface *probe, QObject *parent = 0);
+    explicit Qt3DInspector(Probe *probe, QObject *parent = nullptr);
     ~Qt3DInspector();
 
 public slots:
-    void selectEngine(int index) override;
+    void selectEngine(int row) override;
 
 private slots:
     void objectSelected(QObject *obj);
 
 private:
-    void entitySelectionChanged(const QItemSelection &selected);
+    void entitySelectionChanged(const QItemSelection &selection);
     void selectEngine(Qt3DCore::QAspectEngine *engine);
     void selectEntity(Qt3DCore::QEntity *entity);
-    void frameGraphSelectionChanged(const QItemSelection &selected);
+    void frameGraphSelectionChanged(const QItemSelection &selection);
     void selectFrameGraphNode(Qt3DRender::QFrameGraphNode *node);
 
     void registerCoreMetaTypes();
+    void registerInputMetaTypes();
     void registerRenderMetaTypes();
+    void registerAnimationMetaTypes();
     void registerExtensions();
 
 private:
@@ -93,21 +94,19 @@ private:
     PropertyController *m_frameGraphPropertyController;
 };
 
-class Qt3DInspectorFactory: public QObject, public StandardToolFactory<Qt3DCore::QNode, Qt3DInspector>
+class Qt3DInspectorFactory : public QObject,
+    public StandardToolFactory<Qt3DCore::QNode, Qt3DInspector>
 {
     Q_OBJECT
     Q_INTERFACES(GammaRay::ToolFactory)
     Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_3dinspector.json")
 
 public:
-    explicit Qt3DInspectorFactory(QObject *parent = 0) : QObject(parent)
+    explicit Qt3DInspectorFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif
-

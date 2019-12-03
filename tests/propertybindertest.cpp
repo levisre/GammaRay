@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,7 +37,9 @@ class MyObject : public QObject
     Q_PROPERTY(int intProp2 READ intProp2 WRITE setIntProp2 NOTIFY intProp2Changed)
     Q_OBJECT
 public:
-    explicit MyObject(QObject *parent = 0) : QObject(parent), p1(0), p2(23) {}
+    explicit MyObject(QObject *parent = nullptr)
+        : QObject(parent)
+    {}
     int intProp() { return p1; }
     int intProp2() { return p2; }
     void setIntProp(int i)
@@ -47,6 +49,7 @@ public:
         p1 = i;
         emit intPropChanged();
     }
+
     void setIntProp2(int i)
     {
         if (p2 == i)
@@ -60,7 +63,7 @@ signals:
     void intProp2Changed();
 
 private:
-    int p1, p2;
+    int p1 = 0, p2 = 23;
 };
 
 using namespace GammaRay;
@@ -71,8 +74,8 @@ class PropertyBinderTest : public QObject
 private slots:
     void testBinding()
     {
-        MyObject *obj1 = new MyObject(this);
-        MyObject *obj2 = new MyObject(this);
+        auto *obj1 = new MyObject(this);
+        auto *obj2 = new MyObject(this);
         new PropertyBinder(obj1, "intProp", obj2, "intProp");
 
         obj1->setIntProp(5);
@@ -87,9 +90,9 @@ private slots:
 
     void testInitialBinding()
     {
-        MyObject *obj1 = new MyObject(this);
+        auto *obj1 = new MyObject(this);
         obj1->setIntProp(18);
-        MyObject *obj2 = new MyObject(this);
+        auto *obj2 = new MyObject(this);
         QVERIFY(obj1->intProp() != obj2->intProp());
         new PropertyBinder(obj1, "intProp", obj2, "intProp");
         QCOMPARE(obj2->intProp(), 18);
@@ -97,10 +100,10 @@ private slots:
 
     void testMultiBinding()
     {
-        MyObject *obj1 = new MyObject(this);
+        auto *obj1 = new MyObject(this);
         obj1->setIntProp(18);
         obj1->setIntProp2(133);
-        MyObject *obj2 = new MyObject(this);
+        auto *obj2 = new MyObject(this);
 
         auto binder = new PropertyBinder(obj1, obj2);
         binder->add("intProp", "intProp");

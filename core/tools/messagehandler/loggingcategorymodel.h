@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,32 +34,31 @@
 #include <QVector>
 
 namespace GammaRay {
-
 void categoryFilter(QLoggingCategory *category);
 
 class LoggingCategoryModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    explicit LoggingCategoryModel(QObject *parent = Q_NULLPTR);
-    ~LoggingCategoryModel();
+    explicit LoggingCategoryModel(QObject *parent = nullptr);
+    ~LoggingCategoryModel() override;
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    Qt::ItemFlags flags(const QModelIndex & index) const Q_DECL_OVERRIDE;
-    bool setData(const QModelIndex &index, const QVariant &value, int role) Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role) override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
 
 private:
     void addCategory(QLoggingCategory *category);
-    QVector<QLoggingCategory*> m_categories;
+    QVector<QLoggingCategory *> m_categories;
     QLoggingCategory::CategoryFilter m_previousFilter;
 
-    friend void categoryFilter(QLoggingCategory*);
+    friend void categoryFilter(QLoggingCategory *);
     static LoggingCategoryModel *m_instance;
 };
-
 }
 
 #endif // GAMMARAY_LOGGINGCATEGORYMODEL_H

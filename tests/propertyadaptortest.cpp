@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -43,11 +43,7 @@
 #include <QPen>
 
 Q_DECLARE_METATYPE(QVector<int>)
-Q_DECLARE_METATYPE(QPen*)
-#if QT_VERSION < QT_VERSION_CHECK(5, 2, 0)
-typedef QHash<QString, int> StringIntHash;
-Q_DECLARE_METATYPE(StringIntHash)
-#endif
+Q_DECLARE_METATYPE(QPen *)
 
 using namespace GammaRay;
 
@@ -55,7 +51,8 @@ class PropertyAdaptorTest : public QObject
 {
     Q_OBJECT
 private:
-    void testProperty(PropertyAdaptor *adaptor, const char* name, const char* typeName, const char* className, PropertyData::Flags flags)
+    void testProperty(PropertyAdaptor *adaptor, const char *name, const char *typeName,
+                      const char *className, PropertyData::AccessFlags flags)
     {
         for (int i = 0; i < adaptor->count(); ++i) {
             auto prop = adaptor->propertyData(i);
@@ -63,7 +60,7 @@ private:
                 continue;
             QCOMPARE(prop.typeName(), QString(typeName));
             QCOMPARE(prop.className(), QString(className));
-            QCOMPARE(prop.flags(), flags);
+            QCOMPARE(prop.accessFlags(), flags);
             return;
         }
         qDebug() << name;
@@ -80,7 +77,7 @@ private:
         }
     }
 
-    int indexOfProperty(PropertyAdaptor *adaptor, const char* name)
+    int indexOfProperty(PropertyAdaptor *adaptor, const char *name)
     {
         for (int i = 0; i < adaptor->count(); ++i) {
             auto prop = adaptor->propertyData(i);
@@ -91,29 +88,31 @@ private:
     }
 
 private slots:
-    void initTestCases()
+    void initTestCase()
     {
         MetaObject *mo;
         MO_ADD_METAOBJECT0(QPen);
-        MO_ADD_PROPERTY_CR(QPen, QColor, color, setColor);
-        MO_ADD_PROPERTY   (QPen, int, width, setWidth);
+        MO_ADD_PROPERTY(QPen, color, setColor);
+        MO_ADD_PROPERTY(QPen, width, setWidth);
     }
 
     void testQtGadget()
     {
         Gadget gadget;
 
-        auto adaptor = PropertyAdaptorFactory::create(ObjectInstance(&gadget, &Gadget::staticMetaObject), this);
+        auto adaptor
+            = PropertyAdaptorFactory::create(ObjectInstance(&gadget,
+                                                            &Gadget::staticMetaObject), this);
         QVERIFY(adaptor);
         QCOMPARE(adaptor->count(), 1);
         verifyPropertyData(adaptor);
-        testProperty(adaptor, "prop1", "int", "Gadget", PropertyData::Writable | PropertyData::Resettable);
+        testProperty(adaptor, "prop1", "int", "Gadget",
+                     PropertyData::Writable | PropertyData::Resettable);
         QVERIFY(!adaptor->canAddProperty());
 
         QSignalSpy spy(adaptor, SIGNAL(propertyChanged(int,int)));
         QVERIFY(spy.isValid());
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
         QCOMPARE(adaptor->propertyData(0).value(), QVariant(42));
         adaptor->writeProperty(0, 23);
         QCOMPARE(adaptor->propertyData(0).value(), QVariant(23));
@@ -124,7 +123,6 @@ private slots:
         adaptor->resetProperty(0);
         QCOMPARE(adaptor->propertyData(0).value(), QVariant(5));
         QCOMPARE(spy.size(), 2);
-#endif
     }
 
     void testROMetaObject()
@@ -153,7 +151,7 @@ private slots:
         QVERIFY(spy.isValid());
 
         auto idx = indexOfProperty(adaptor, "priority");
-        QCOMPARE(adaptor->propertyData(idx).flags(), PropertyData::Writable);
+        QCOMPARE(adaptor->propertyData(idx).accessFlags(), PropertyData::Writable);
         adaptor->writeProperty(idx, QThread::LowPriority);
         QCOMPARE(spy.size(), 1);
         QCOMPARE(spy.at(0).at(0).toInt(), idx);
@@ -166,7 +164,6 @@ private slots:
 
     void testSequentialContainer()
     {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
         auto v = QVector<int>() << 2 << 3 << 5 << 12;
         auto adaptor = PropertyAdaptorFactory::create(ObjectInstance(QVariant::fromValue(v)), this);
 
@@ -176,12 +173,10 @@ private slots:
         testProperty(adaptor, "0", "int", "QVector<int>", PropertyData::Readable);
         testProperty(adaptor, "3", "int", "QVector<int>", PropertyData::Readable);
         QVERIFY(!adaptor->canAddProperty());
-#endif
     }
 
     void testAssociativeContainer()
     {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
         QHash<QString, int> h;
         h["A"] = 2;
         h["B"] = 3;
@@ -195,7 +190,6 @@ private slots:
         testProperty(adaptor, "A", "int", "QHash<QString,int>", PropertyData::Readable);
         testProperty(adaptor, "C", "int", "QHash<QString,int>", PropertyData::Readable);
         QVERIFY(!adaptor->canAddProperty());
-#endif
     }
 
     void testQtObject()
@@ -211,15 +205,19 @@ private slots:
 
         testProperty(adaptor, "signalsBlocked", "bool", "QObject", PropertyData::Readable);
         testProperty(adaptor, "intProp", "int", "PropertyTestObject", PropertyData::Writable);
-        testProperty(adaptor, "readOnlyProp", "int", "PropertyTestObject", PropertyData::Resettable);
-        testProperty(adaptor, "dynamicProperty", "int", "<dynamic>", PropertyData::Writable | PropertyData::Deletable);
+        testProperty(adaptor, "readOnlyProp", "int", "PropertyTestObject",
+                     PropertyData::Resettable);
+        testProperty(adaptor, "dynamicProperty", "int", "<dynamic>",
+                     PropertyData::Writable | PropertyData::Deletable);
 
         QSignalSpy changeSpy(adaptor, SIGNAL(propertyChanged(int,int)));
         QVERIFY(changeSpy.isValid());
 
         auto propIdx = indexOfProperty(adaptor, "intProp");
         QVERIFY(propIdx >= 0);
-        QVERIFY(!adaptor->propertyData(propIdx).details().isEmpty());
+        QCOMPARE(adaptor->propertyData(propIdx).revision(), 0);
+        QCOMPARE(adaptor->propertyData(propIdx).notifySignal(), QLatin1String("void intPropChanged()"));
+        QCOMPARE(adaptor->propertyData(propIdx).propertyFlags(), PropertyModel::Writable | PropertyModel::Designable | PropertyModel::Stored | PropertyModel::Scriptable);
         QCOMPARE(adaptor->propertyData(propIdx).value(), QVariant(0));
         adaptor->writeProperty(propIdx, 2);
         QCOMPARE(adaptor->propertyData(propIdx).value(), QVariant(2));
@@ -235,7 +233,9 @@ private slots:
 
         propIdx = indexOfProperty(adaptor, "readOnlyProp");
         QVERIFY(propIdx >= 0);
-        QVERIFY(!adaptor->propertyData(propIdx).details().isEmpty());
+        QCOMPARE(adaptor->propertyData(propIdx).revision(), 0);
+        QCOMPARE(adaptor->propertyData(propIdx).notifySignal(), QString());
+        QCOMPARE(adaptor->propertyData(propIdx).propertyFlags(), PropertyModel::Resetable | PropertyModel::Designable | PropertyModel::Stored | PropertyModel::Scriptable);
         adaptor->resetProperty(propIdx);
         QCOMPARE(obj->intProp(), 5);
         QVERIFY(changeSpy.size() >= 3);
@@ -273,12 +273,15 @@ private slots:
         QSignalSpy invalidatedSpy(adaptor, SIGNAL(objectInvalidated()));
         QVERIFY(invalidatedSpy.isValid());
         delete obj;
-        QVERIFY(invalidatedSpy.size() > 0);
+        QVERIFY(!invalidatedSpy.isEmpty());
     }
 
     void testQtMetaObject()
     {
-        auto adaptor = PropertyAdaptorFactory::create(ObjectInstance(0, &PropertyTestObject::staticMetaObject), this);
+        auto adaptor
+            = PropertyAdaptorFactory::create(ObjectInstance(nullptr,
+                                                            &PropertyTestObject::staticMetaObject),
+                                             this);
         QVERIFY(adaptor);
         QVERIFY(adaptor->count() >= 5);
         verifyPropertyData(adaptor);
@@ -290,7 +293,6 @@ private slots:
         auto valuePen = QVariant::fromValue(pen);
         auto pointerPen = QVariant::fromValue(&pen);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
         auto adaptor = PropertyAdaptorFactory::create(ObjectInstance(valuePen), this);
         QVERIFY(adaptor);
         QVERIFY(adaptor->count() >= 2);
@@ -300,7 +302,6 @@ private slots:
         QVERIFY(adaptor);
         QVERIFY(adaptor->count() >= 2);
         verifyPropertyData(adaptor);
-#endif
     }
 };
 

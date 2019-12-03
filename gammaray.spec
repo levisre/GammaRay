@@ -1,21 +1,18 @@
 Name:           gammaray
-Version:        2.4.1
+Version:        2.11.0
 Release:        1
 Summary:        An introspection tool for Qt applications
 Source:         %{name}-%{version}.tar.gz
-Url:            http://github.com/KDAB/GammaRay
+Url:            https://github.com/KDAB/GammaRay
 Group:          Development/Tools
 License:        GPL-2.0+
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Vendor:         Klaralvdalens Datakonsult AB (KDAB)
 Packager:       Klaralvdalens Datakonsult AB (KDAB) <info@kdab.com>
 
-BuildRequires: cmake kdstatemachineeditor-devel graphviz-devel
+BuildRequires: cmake kdstatemachineeditor-devel
 %if %{defined suse_version}
-BuildRequires: libqt5-qtdeclarative-private-headers-devel libQt5Concurrent-devel libqt5-qttools-devel libqt5-qtsvg-devel libQt5PrintSupport-devel libqt5-qtscript-devel libQt5WebKitWidgets-devel
-%if 0%{?suse_version} > 1320
-BuildRequires: libqt5-qtconnectivity-devel
-%endif
+BuildRequires: libqt5-qtbase-private-headers-devel libqt5-qtdeclarative-private-headers-devel libQt5Concurrent-devel libqt5-qttools-devel libqt5-qtsvg-devel libQt5PrintSupport-devel libqt5-qtscript-devel libQt5WebKitWidgets-devel libqt5-qtconnectivity-devel libqt5-qt3d-devel wayland-devel libqt5-qtwayland-devel bluez-qt-devel
 # TODO: this seems only to be in the update repo?
 BuildRequires: kcoreaddons-devel
 %endif
@@ -24,6 +21,15 @@ BuildRequires: kcoreaddons-devel
 BuildRequires: qt5-qtdeclarative-devel qt5-qtconnectivity-devel qt5-qttools-devel qt5-qtsvg-devel qt5-qtscript-devel qt5-qtwebkit-devel
 %if 0%{?fedora} >= 21
 BuildRequires:  kf5-kcoreaddons-devel
+%endif
+%if 0%{?fedora} > 23
+BuildRequires:  ghostscript-core
+%endif
+%if 0%{?fedora} > 24
+BuildRequires:  qt5-qt3d-devel wayland-devel qt5-qtwayland-devel kf5-syndication-devel
+%endif
+%if 0%{?fedora} > 30
+BuildRequires:  qt5-qtbase-private-devel
 %endif
 %endif
 
@@ -48,6 +54,9 @@ Authors:
 --------
      The GammaRay Team <gammaray-interest@kdab.com>
 
+%define debug_package %{nil}
+%global __debug_install_post %{nil}
+
 %package kf5-plugins
 Summary:        GammaRay plug-ins to introspect KF5 applications
 Group:          Development/Tools
@@ -70,15 +79,7 @@ developing GammaRay plug-ins.
 %setup -q
 
 %build
-%if %{defined fedora}
-%cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE_QT_SYS_PATHS=ON
-%else
-%if "%{_lib}"=="lib64"
-cmake . -DLIB_SUFFIX=64 -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE_QT_SYS_PATHS=ON
-%else
 cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE_QT_SYS_PATHS=ON
-%endif
-%endif
 %__make %{?_smp_mflags}
 
 %post -p /sbin/ldconfig
@@ -101,6 +102,9 @@ cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE
 %{_prefix}/share/appdata/GammaRay.appdata.xml
 %{_prefix}/share/icons/hicolor
 %{_prefix}/share/doc/gammaray
+%dir %{_prefix}/share/gammaray/
+%dir %{_prefix}/share/gammaray/translations/
+%{_prefix}/share/gammaray/translations/gammaray_*.qm
 %{_mandir}/man1/gammaray.1.gz
 %{_bindir}/gammaray
 %{_libdir}/gammaray/libexec/gammaray-client
@@ -110,6 +114,7 @@ cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE
 %{_libdir}/libgammaray_ui-*.so.*
 %{_libdir}/libgammaray_client.so.*
 %{_libdir}/libgammaray_kitemmodels*
+%{_libdir}/libgammaray_kuserfeedback*
 %{_libdir}/libgammaray_launcher*
 %dir %{_libdir}/gammaray/
 %dir %{_libdir}/gammaray/*/
@@ -118,22 +123,39 @@ cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE
 %{_libdir}/gammaray/*/*/gammaray_probe.so
 %{_libdir}/gammaray/*/*/gammaray_inprocessui.so
 %{_libdir}/gammaray/*/*/gammaray_actioninspector*
-%{_libdir}/gammaray/*/*/gammaray_bluetooth.so
+%{_libdir}/gammaray/*/*/gammaray_bluetooth*
 %{_libdir}/gammaray/*/*/gammaray_codecbrowser*
+%{_libdir}/gammaray/*/*/gammaray_eventmonitor*
 %{_libdir}/gammaray/*/*/gammaray_fontbrowser*
-%{_libdir}/gammaray/*/*/gammaray_selectionmodelinspector*
+%{_libdir}/gammaray/*/*/gammaray_guisupport*
+%{_libdir}/gammaray/*/*/gammaray_localeinspector*
+%{_libdir}/gammaray/*/*/gammaray_mimetypes*
+%{_libdir}/gammaray/*/*/gammaray_modelinspector*
+%{_libdir}/gammaray/*/*/gammaray_network*
+%{_libdir}/gammaray/*/*/gammaray_objectvisualizer*
+%{_libdir}/gammaray/*/*/gammaray_qmlsupport*
+%{_libdir}/gammaray/*/*/gammaray_qtivi_ui*
+%{_libdir}/gammaray/*/*/gammaray_quickinspector*
+%{_libdir}/gammaray/*/*/gammaray_quickwidgetsupport*
+%{_libdir}/gammaray/*/*/gammaray_sceneinspector*
+%{_libdir}/gammaray/*/*/gammaray_scriptenginedebugger*
 %{_libdir}/gammaray/*/*/gammaray_signalmonitor*
 %{_libdir}/gammaray/*/*/gammaray_statemachineviewer*
-%{_libdir}/gammaray/*/*/gammaray_timertop*
-%{_libdir}/gammaray/*/*/gammaray_widgetinspector*
-%{_libdir}/gammaray/*/*/gammaray_sceneinspector*
 %{_libdir}/gammaray/*/*/gammaray_styleinspector*
-%{_libdir}/gammaray/*/*/gammaray_scriptenginedebugger*
-%{_libdir}/gammaray/*/*/gammaray_webinspector*
-%{_libdir}/gammaray/*/*/gammaray_qmlsupport*
-%{_libdir}/gammaray/*/*/gammaray_quickinspector*
+%{_libdir}/gammaray/*/*/gammaray_sysinfo*
+%{_libdir}/gammaray/*/*/gammaray_textdocumentinspector*
+%{_libdir}/gammaray/*/*/gammaray_timertop*
 %{_libdir}/gammaray/*/*/gammaray_translatorinspector*
+%{_libdir}/gammaray/*/*/gammaray_webinspector*
+%{_libdir}/gammaray/*/*/gammaray_widgetinspector*
+%{_libdir}/gammaray/*/*/gammaray_wlcompositorinspector*
 %{_libdir}/gammaray/*/*/styles/
+%if 0%{?fedora} > 24
+%{_libdir}/gammaray/*/*/gammaray_3dinspector*
+%endif
+%if 0%{?suse_version} > 1320
+%{_libdir}/gammaray/*/*/gammaray_3dinspector*
+%endif
 
 %files kf5-plugins
 %defattr(-,root,root)
@@ -148,9 +170,31 @@ cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE
 %{_libdir}/libgammaray_ui-*.so
 %{_libdir}/libgammaray_client.so
 %{_libdir}/cmake/GammaRay/
-%{_libdir}/qt5/mkspecs/modules/*
+%dir %{_prefix}/mkspecs/
+%dir %{_prefix}/mkspecs/modules/
+%{_prefix}/mkspecs/modules/*.pri
 
 %changelog
+* Wed Jul 03 2019 Allen Winter <allen.winter@kdab.com> 2.11.0
+  2.11.0 final
+* Sun Dec 16 2018 Allen Winter <allen.winter@kdab.com> 2.10.0
+  2.10.0 final
+* Wed Aug 01 2018 Allen Winter <allen.winter@kdab.com> 2.9.1
+  2.9.1 final
+* Wed Feb 07 2018 Allen Winter <allen.winter@kdab.com> 2.9.0
+  2.9.0 final
+* Tue Sep 05 2017 Allen Winter <allen.winter@kdab.com> 2.8.1
+  2.8.1 bugfix release
+* Wed Jun 07 2017 Allen Winter <allen.winter@kdab.com> 2.8.0
+  2.8.0 final
+* Tue Feb 14 2017 Allen Winter <allen.winter@kdab.com> 2.7.0
+  2.7.0 final
+* Thu Sep 29 2016 Allen Winter <allen.winter@kdab.com> 2.6.0
+  2.6.0 final
+* Wed Jul 27 2016 Allen Winter <allen.winter@kdab.com> 2.5.1
+  2.5.1 bugfix release
+* Fri Jul 08 2016 Allen Winter <allen.winter@kdab.com> 2.5.0
+  2.5.0 final
 * Fri Mar 11 2016 Allen Winter <allen.winter@kdab.com> 2.4.1
   2.4.1 final
 * Tue Dec 22 2015 Allen Winter <allen.winter@kdab.com> 2.4.0

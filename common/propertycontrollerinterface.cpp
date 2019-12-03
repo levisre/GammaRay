@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -32,31 +32,28 @@
 using namespace GammaRay;
 
 PropertyControllerInterface::PropertyControllerInterface(const QString &name, QObject *parent)
-  : QObject(parent)
-  , m_name(name)
+    : QObject(parent)
+    , m_name(name)
 {
-  ObjectBroker::registerObject(name, this);
+    ObjectBroker::registerObject(name, this);
 }
 
-PropertyControllerInterface::~PropertyControllerInterface()
-{
-
-}
+PropertyControllerInterface::~PropertyControllerInterface() = default;
 
 QString PropertyControllerInterface::name() const
 {
-  return m_name;
+    return m_name;
 }
 
 QStringList PropertyControllerInterface::availableExtensions() const
 {
-  return m_availableExtensions;
+    return m_availableExtensions;
 }
 
-void PropertyControllerInterface::setAvailableExtensions(const QStringList& availableExtensions)
+void PropertyControllerInterface::setAvailableExtensions(const QStringList &availableExtensions)
 {
-  if (m_availableExtensions == availableExtensions)
-    return;
-  m_availableExtensions = availableExtensions;
-  emit availableExtensionsChanged();
+    if (m_availableExtensions == availableExtensions)
+        return;
+    m_availableExtensions = availableExtensions;
+    emit availableExtensionsChanged();
 }

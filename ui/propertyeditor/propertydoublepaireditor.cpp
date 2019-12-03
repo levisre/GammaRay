@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,43 +33,42 @@
 using namespace GammaRay;
 
 PropertyDoublePairEditor::PropertyDoublePairEditor(QWidget *parent)
-  : QWidget(parent), ui(new Ui::PropertyDoublePairEditor)
+    : QWidget(parent)
+    , ui(new Ui::PropertyDoublePairEditor)
 {
-  ui->setupUi(this);
+    ui->setupUi(this);
 }
 
-PropertyDoublePairEditor::~PropertyDoublePairEditor()
-{
-}
+PropertyDoublePairEditor::~PropertyDoublePairEditor() = default;
 
 PropertyPointFEditor::PropertyPointFEditor(QWidget *parent)
-  : PropertyDoublePairEditor(parent)
+    : PropertyDoublePairEditor(parent)
 {
 }
 
 QPointF PropertyPointFEditor::pointF() const
 {
-  return QPointF(ui->xBox->value(), ui->yBox->value());
+    return {ui->xBox->value(), ui->yBox->value()};
 }
 
 void PropertyPointFEditor::setPointF(const QPointF &point)
 {
-  ui->xBox->setValue(point.x());
-  ui->yBox->setValue(point.y());
+    ui->xBox->setValue(point.x());
+    ui->yBox->setValue(point.y());
 }
 
-PropertySizeFEditor::PropertySizeFEditor(QWidget *parent) : PropertyDoublePairEditor(parent)
+PropertySizeFEditor::PropertySizeFEditor(QWidget *parent)
+    : PropertyDoublePairEditor(parent)
 {
 }
 
 QSizeF PropertySizeFEditor::sizeF() const
 {
-  return QSizeF(ui->xBox->value(), ui->yBox->value());
+    return {ui->xBox->value(), ui->yBox->value()};
 }
 
 void PropertySizeFEditor::setSizeF(const QSizeF &size)
 {
-  ui->xBox->setValue(size.width());
-  ui->yBox->setValue(size.height());
+    ui->xBox->setValue(size.width());
+    ui->yBox->setValue(size.height());
 }
-

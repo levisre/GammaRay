@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,36 +32,32 @@
 
 using namespace GammaRay;
 
-ClientResourceModel::ClientResourceModel(QObject* parent): QIdentityProxyModel(parent)
+ClientResourceModel::ClientResourceModel(QObject *parent)
+    : QIdentityProxyModel(parent)
 {
 }
 
-ClientResourceModel::~ClientResourceModel()
+ClientResourceModel::~ClientResourceModel() = default;
+
+QVariant ClientResourceModel::data(const QModelIndex &index, int role) const
 {
+    if (role == Qt::DecorationRole && index.column() == 0) {
+        if (!index.parent().isValid())
+            return m_iconProvider.icon(QFileIconProvider::Drive);
+        if (hasChildren(index))
+            return m_iconProvider.icon(QFileIconProvider::Folder);
 
-}
-
-QVariant ClientResourceModel::data(const QModelIndex& index, int role) const
-{
-  if (role == Qt::DecorationRole && index.column() == 0) {
-    if (!index.parent().isValid())
-      return m_iconProvider.icon(QFileIconProvider::Drive);
-    if (hasChildren(index))
-      return m_iconProvider.icon(QFileIconProvider::Folder);
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    QList<QMimeType> types = m_mimeDb.mimeTypesForFileName(index.data(Qt::DisplayRole).toString());
-    foreach( const QMimeType &mt, types) {
-      QIcon icon = QIcon::fromTheme(mt.iconName());
-      if (!icon.isNull())
-        return icon;
-      icon = QIcon::fromTheme(mt.genericIconName());
-      if (!icon.isNull())
-        return icon;
+        const QList<QMimeType> types = m_mimeDb.mimeTypesForFileName(index.data(
+                                                                   Qt::DisplayRole).toString());
+        for (const QMimeType &mt : types) {
+            QIcon icon = QIcon::fromTheme(mt.iconName());
+            if (!icon.isNull())
+                return icon;
+            icon = QIcon::fromTheme(mt.genericIconName());
+            if (!icon.isNull())
+                return icon;
+        }
+        return m_iconProvider.icon(QFileIconProvider::File);
     }
-#endif
-    return m_iconProvider.icon(QFileIconProvider::File);
-  }
-  return QIdentityProxyModel::data(index, role);
+    return QIdentityProxyModel::data(index, role);
 }
-

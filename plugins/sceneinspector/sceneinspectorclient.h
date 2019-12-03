@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,20 +32,18 @@
 #include "sceneinspectorinterface.h"
 
 namespace GammaRay {
-
 class SceneInspectorClient : public SceneInspectorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::SceneInspectorInterface)
-  public:
-    explicit SceneInspectorClient(QObject *parent = 0);
-    ~SceneInspectorClient();
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::SceneInspectorInterface)
+public:
+    explicit SceneInspectorClient(QObject *parent = nullptr);
+    ~SceneInspectorClient() override;
 
-    void initializeGui() Q_DECL_OVERRIDE;
-    void renderScene(const QTransform &transform, const QSize &size) Q_DECL_OVERRIDE;
-    void sceneClicked(const QPointF &pos) Q_DECL_OVERRIDE;
+    void initializeGui() override;
+    void renderScene(const QTransform &transform, const QSize &size) override;
+    void sceneClicked(const QPointF &pos) override;
 };
-
 }
 
 #endif // GAMMARAY_SCENEINSPECTORCLIENT_H

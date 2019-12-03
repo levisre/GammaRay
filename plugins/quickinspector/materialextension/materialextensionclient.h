@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,20 +32,18 @@
 #include "materialextensioninterface.h"
 
 namespace GammaRay {
-
 class MaterialExtensionClient : public MaterialExtensionInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::MaterialExtensionInterface)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::MaterialExtensionInterface)
 
-  public:
-    explicit MaterialExtensionClient(const QString &name, QObject *parent = 0);
-    virtual ~MaterialExtensionClient();
+public:
+    explicit MaterialExtensionClient(const QString &name, QObject *parent = nullptr);
+    ~MaterialExtensionClient() override;
 
-  public slots:
-    void getShader(const QString &fileName) Q_DECL_OVERRIDE;
+public slots:
+    void getShader(int row) override;
 };
-
 }
 
 #endif // GAMMARAY_MATERIALEXTENSIONCLIENT_H

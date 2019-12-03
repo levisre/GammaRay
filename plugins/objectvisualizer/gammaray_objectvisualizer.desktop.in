@@ -1,6 +1,0 @@
-[Desktop Entry]
-Name=Object Visualization
-X-GammaRay-Id=${plugin_id}
-X-GammaRay-Types=QObject;
-X-GammaRay-ServiceTypes=com.kdab.GammaRay.ToolFactory
-Exec=${plugin_exec}

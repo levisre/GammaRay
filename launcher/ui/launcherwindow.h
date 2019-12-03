@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,34 +29,36 @@
 #ifndef GAMMARAY_LAUNCHERWINDOW_H
 #define GAMMARAY_LAUNCHERWINDOW_H
 
+#include "gammaray_launcher_ui_export.h"
+
 #include <QDialog>
 
 namespace GammaRay {
-
 class LaunchOptions;
 namespace Ui {
-  class LauncherWindow;
+class LauncherWindow;
 }
 
-class LauncherWindow : public QDialog
+/*! Widget for launching a new process with GammaRay injected. */
+class GAMMARAY_LAUNCHER_UI_EXPORT LauncherWindow : public QDialog
 {
-  Q_OBJECT
-  public:
-    explicit LauncherWindow(QWidget *parent = 0);
-    ~LauncherWindow();
+    Q_OBJECT
+public:
+    explicit LauncherWindow(QWidget *parent = nullptr);
+    ~LauncherWindow() override;
 
     /// returns all information required to perform the launch/attach
     LaunchOptions launchOptions() const;
 
-    void accept() Q_DECL_OVERRIDE;
+    void accept() override;
 
-  private slots:
+private slots:
     void tabChanged();
+    void help();
 
-  private:
+private:
     Ui::LauncherWindow *ui;
 };
-
 }
 
 #endif // GAMMARAY_LAUNCHERWINDOW_H

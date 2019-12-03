@@ -1,6 +1,6 @@
 # Basic cmake toolchain file for BlackBerry 10
 
-# Copyright (c) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
+# Copyright (c) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
 # All rights reserved.
 #
 # Author: Rafael Roquetto <rafael.roquetto@kdab.com>
@@ -51,5 +51,6 @@ set(CMAKE_RANLIB "$ENV{QNX_HOST}/usr/bin/ntoarmv7-ranlib${HOST_EXECUTABLE_SUFFIX
 # search headers and libraries in the target environment, search
 # programs in the host environment
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)

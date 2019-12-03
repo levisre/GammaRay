@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,6 +35,7 @@
 #include "sequentialpropertyadaptor.h"
 #include "associativepropertyadaptor.h"
 #include "metapropertyadaptor.h"
+#include "jsonpropertyadaptor.h"
 
 #include <QVector>
 
@@ -42,36 +43,41 @@
 
 using namespace GammaRay;
 
-Q_GLOBAL_STATIC(QVector<AbstractPropertyAdaptorFactory*>, s_propertyAdaptorFactories)
+Q_GLOBAL_STATIC(QVector<AbstractPropertyAdaptorFactory *>, s_propertyAdaptorFactories)
 
-AbstractPropertyAdaptorFactory::AbstractPropertyAdaptorFactory()
-{
-}
+AbstractPropertyAdaptorFactory::AbstractPropertyAdaptorFactory() = default;
 
-AbstractPropertyAdaptorFactory::~AbstractPropertyAdaptorFactory()
-{
-}
+AbstractPropertyAdaptorFactory::~AbstractPropertyAdaptorFactory() = default;
 
-PropertyAdaptor* PropertyAdaptorFactory::create(const ObjectInstance& oi, QObject *parent)
+PropertyAdaptor *PropertyAdaptorFactory::create(const ObjectInstance &oi, QObject *parent)
 {
-    QVector<PropertyAdaptor*> adaptors;
+    QVector<PropertyAdaptor *> adaptors;
 
     if (oi.metaObject())
         adaptors.push_back(new QMetaPropertyAdaptor(parent));
     if (oi.type() == ObjectInstance::QtObject)
         adaptors.push_back(new DynamicPropertyAdaptor(parent));
-    if (oi.type() == ObjectInstance::QtObject || oi.type() == ObjectInstance::Object || oi.type() == ObjectInstance::Value || oi.type() == ObjectInstance::QtGadget)
+    if (oi.type() == ObjectInstance::QtObject || oi.type() == ObjectInstance::Object
+        || oi.type() == ObjectInstance::Value || oi.type() == ObjectInstance::QtGadgetPointer || oi.type() == ObjectInstance::QtGadgetValue)
         adaptors.push_back(new MetaPropertyAdaptor(parent));
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
-    if (oi.type() == ObjectInstance::QtVariant && oi.typeName() != "QJSValue") {
-        const auto v = oi.variant();
-        if (v.canConvert<QVariantList>())
-            adaptors.push_back(new SequentialPropertyAdaptor(parent));
-        else if (v.canConvert<QVariantHash>())
-            adaptors.push_back(new AssociativePropertyAdaptor(parent));
+    if (oi.type() == ObjectInstance::QtVariant) {
+
+        if (oi.typeName() == "QJsonObject" || oi.typeName() == "QJsonArray")
+            adaptors.push_back(new JsonPropertyAdaptor(parent));
+        else if (oi.typeName() == "QJsonValue") {
+            if (oi.variant().toJsonValue().isObject() || oi.variant().toJsonValue().isArray()) {
+                adaptors.push_back(new JsonPropertyAdaptor(parent));
+            }
+        } else if(oi.typeName() == "QJSValue") {
+        } else {
+            const auto v = oi.variant();
+            if (v.canConvert<QVariantList>())
+                adaptors.push_back(new SequentialPropertyAdaptor(parent));
+            else if (v.canConvert<QVariantHash>())
+                adaptors.push_back(new AssociativePropertyAdaptor(parent));
+        }
     }
-#endif
 
     foreach (auto factory, *s_propertyAdaptorFactories()) {
         auto a = factory->create(oi, parent);
@@ -80,7 +86,7 @@ PropertyAdaptor* PropertyAdaptorFactory::create(const ObjectInstance& oi, QObjec
     }
 
     if (adaptors.isEmpty())
-        return 0;
+        return nullptr;
     if (adaptors.size() == 1) {
         adaptors.first()->setObject(oi);
         return adaptors.first();
@@ -95,7 +101,7 @@ PropertyAdaptor* PropertyAdaptorFactory::create(const ObjectInstance& oi, QObjec
     return aggregator;
 }
 
-void PropertyAdaptorFactory::registerFactory(AbstractPropertyAdaptorFactory* factory)
+void PropertyAdaptorFactory::registerFactory(AbstractPropertyAdaptorFactory *factory)
 {
     s_propertyAdaptorFactories()->push_back(factory);
 }

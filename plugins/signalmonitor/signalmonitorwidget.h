@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Mathias Hasselmann <mathias.hasselmann@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,26 +34,31 @@
 
 #include <QWidget>
 
-namespace GammaRay {
+QT_BEGIN_NAMESPACE
+class QItemSelection;
+QT_END_NAMESPACE
 
+namespace GammaRay {
 namespace Ui {
-  class SignalMonitorWidget;
+class SignalMonitorWidget;
 }
 
 class SignalMonitorWidget : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit SignalMonitorWidget(QWidget *parent = 0);
-    ~SignalMonitorWidget();
+    Q_OBJECT
+public:
+    explicit SignalMonitorWidget(QWidget *parent = nullptr);
+    ~SignalMonitorWidget() override;
 
-  private slots:
+private slots:
     void intervalScaleValueChanged(int value);
     void adjustEventScrollBarSize();
     void pauseAndResume(bool pause);
     void eventDelegateIsActiveChanged(bool active);
+    void contextMenu(QPoint pos);
+    void selectionChanged(const QItemSelection &selection);
 
-  private:
+private:
     static const QString ITEM_TYPE_NAME_OBJECT;
     QScopedPointer<Ui::SignalMonitorWidget> ui;
     UIStateManager m_stateManager;
@@ -61,11 +66,10 @@ class SignalMonitorWidget : public QWidget
 
 class SignalMonitorUiFactory : public QObject, public StandardToolUiFactory<SignalMonitorWidget>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolUiFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_signalmonitor.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolUiFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_signalmonitor.json")
 };
-
 } // namespace GammaRay
 
 #endif // GAMMARAY_SIGNALMONITORWIDGET_H

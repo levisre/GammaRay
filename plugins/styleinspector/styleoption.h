@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,37 +37,34 @@ class QString;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /**
  * Various helper methods for dealing with QStyleOption.
  */
 namespace StyleOption {
+int stateCount();
+QString stateDisplayName(int index);
+QStyle::State prettyState(int index);
 
-  int stateCount();
-  QString stateDisplayName(int index);
-  QStyle::State prettyState(int index);
+QStyleOption *makeStyleOption();
+QStyleOption *makeStyleOptionComplex();
 
-  QStyleOption *makeStyleOption();
-  QStyleOption *makeStyleOptionComplex();
-
-  QStyleOption *makeButtonStyleOption();
-  QStyleOption *makeComboBoxStyleOption();
-  QStyleOption *makeFrameStyleOption();
-  QStyleOption *makeGroupBoxStyleOption();
-  QStyleOption *makeHeaderStyleOption();
-  QStyleOption *makeItemViewStyleOption();
-  QStyleOption *makeMenuStyleOption();
-  QStyleOption *makeProgressBarStyleOption();
-  QStyleOption *makeSliderStyleOption();
-  QStyleOption *makeSpinBoxStyleOption();
-  QStyleOption *makeTabStyleOption();
-  QStyleOption *makeTabBarBaseStyleOption();
-  QStyleOption *makeTabWidgetFrameStyleOption();
-  QStyleOption *makeTitleBarStyleOption();
-  QStyleOption *makeToolBoxStyleOption();
-  QStyleOption *makeToolButtonStyleOption();
+QStyleOption *makeButtonStyleOption();
+QStyleOption *makeComboBoxStyleOption();
+QStyleOption *makeFrameStyleOption();
+QStyleOption *makeGroupBoxStyleOption();
+QStyleOption *makeHeaderStyleOption();
+QStyleOption *makeItemViewStyleOption();
+QStyleOption *makeMenuStyleOption();
+QStyleOption *makeProgressBarStyleOption();
+QStyleOption *makeSliderStyleOption();
+QStyleOption *makeSpinBoxStyleOption();
+QStyleOption *makeTabStyleOption();
+QStyleOption *makeTabBarBaseStyleOption();
+QStyleOption *makeTabWidgetFrameStyleOption();
+QStyleOption *makeTitleBarStyleOption();
+QStyleOption *makeToolBoxStyleOption();
+QStyleOption *makeToolButtonStyleOption();
 }
-
 }
 
 #endif // GAMMARAY_STYLEOPTION_H

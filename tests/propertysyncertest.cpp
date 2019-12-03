@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,7 +40,9 @@ class MyObject : public QObject
     Q_PROPERTY(int intProp READ intProp WRITE setIntProp NOTIFY intPropChanged)
     Q_OBJECT
 public:
-    explicit MyObject(QObject *parent = 0) : QObject(parent), p1(0) {}
+    explicit MyObject(QObject *parent = nullptr)
+        : QObject(parent)
+    {}
     int intProp() { return p1; }
     void setIntProp(int i)
     {
@@ -54,18 +56,15 @@ signals:
     void intPropChanged();
 
 private:
-    int p1;
+    int p1 = 0;
 };
 
 class PropertySyncerTest : public QObject
 {
     Q_OBJECT
 public:
-    explicit PropertySyncerTest(QObject *parent = 0) : QObject(parent),
-        m_server2ClientCount(0),
-        m_client2ServerCount(0),
-        m_client(0),
-        m_server(0)
+    explicit PropertySyncerTest(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
 
@@ -104,15 +103,17 @@ private slots:
         MyObject serverObj;
         serverObj.setIntProp(14);
         m_server = new PropertySyncer(this);
-        connect(m_server, SIGNAL(message(GammaRay::Message)), this, SLOT(server2client(GammaRay::Message)));
+        connect(m_server, &PropertySyncer::message, this,
+                &PropertySyncerTest::server2client);
         m_server->setAddress(1);
         m_server->addObject(42, &serverObj);
 
         // client setup
-        MyObject *clientObj = new MyObject(this);
+        auto *clientObj = new MyObject(this);
         m_client = new PropertySyncer(this);
         m_client->setRequestInitialSync(true);
-        connect(m_client, SIGNAL(message(GammaRay::Message)), this, SLOT(client2server(GammaRay::Message)));
+        connect(m_client, &PropertySyncer::message, this,
+                &PropertySyncerTest::client2server);
         m_client->setAddress(1);
         m_client->addObject(42, clientObj);
         m_server->setObjectEnabled(42, true);
@@ -145,9 +146,9 @@ private slots:
     }
 
 private:
-    int m_server2ClientCount, m_client2ServerCount;
-    PropertySyncer *m_client;
-    PropertySyncer *m_server;
+    int m_server2ClientCount = 0, m_client2ServerCount = 0;
+    PropertySyncer *m_client = nullptr;
+    PropertySyncer *m_server = nullptr;
 };
 
 QTEST_MAIN(PropertySyncerTest)

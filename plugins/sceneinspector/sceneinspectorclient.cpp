@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,27 +35,24 @@
 using namespace GammaRay;
 
 SceneInspectorClient::SceneInspectorClient(QObject *parent)
-  : SceneInspectorInterface(parent)
+    : SceneInspectorInterface(parent)
 {
-
 }
 
-SceneInspectorClient::~SceneInspectorClient()
-{
-
-}
+SceneInspectorClient::~SceneInspectorClient() = default;
 
 void SceneInspectorClient::initializeGui()
 {
-  Endpoint::instance()->invokeObject(objectName(), "initializeGui");
+    Endpoint::instance()->invokeObject(objectName(), "initializeGui");
 }
 
 void SceneInspectorClient::renderScene(const QTransform &transform, const QSize &size)
 {
-  Endpoint::instance()->invokeObject(objectName(), "renderScene", QVariantList() << transform << size);
+    Endpoint::instance()->invokeObject(objectName(), "renderScene",
+                                       QVariantList() << transform << size);
 }
 
 void SceneInspectorClient::sceneClicked(const QPointF &pos)
 {
-  Endpoint::instance()->invokeObject(objectName(), "sceneClicked", QVariantList() << pos);
+    Endpoint::instance()->invokeObject(objectName(), "sceneClicked", QVariantList() << pos);
 }

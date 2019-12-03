@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,11 +27,12 @@
 */
 
 #include <config-gammaray.h>
+#include <config-gammaray-version.h>
 
 #include <common/paths.h>
 
-#include <launcher/launcher.h>
-#include <launcher/launchoptions.h>
+#include <launcher/core/launcher.h>
+#include <launcher/core/launchoptions.h>
 #include <launcher/ui/launcherwindow.h>
 
 #include <client/clientconnectionmanager.h>
@@ -45,13 +46,14 @@ class InternalLauncher : public Launcher
 {
     Q_OBJECT
 public:
-    explicit InternalLauncher(const LaunchOptions& options, QObject* parent = 0) : Launcher(options, parent) {}
+    explicit InternalLauncher(const LaunchOptions &options, QObject *parent = nullptr)
+        : Launcher(options, parent) {}
 
 signals:
     void launchClient(const QUrl &serverAddress);
 
 protected:
-    void startClient(const QUrl& serverAddress) Q_DECL_OVERRIDE
+    void startClient(const QUrl &serverAddress) override
     {
         emit launchClient(serverAddress);
     }
@@ -61,8 +63,8 @@ class Orchestrator : public QObject
 {
     Q_OBJECT
 public:
-    explicit Orchestrator(QObject *parent = 0) :
-        QObject(parent)
+    explicit Orchestrator(QObject *parent = nullptr)
+        : QObject(parent)
     {
         m_launcherWindow = new LauncherWindow;
         // For some reason, Qt4 on OSX does not respect setQuitOnLastWindowClosed(false)
@@ -95,7 +97,8 @@ public slots:
         auto *conMan = new ClientConnectionManager(this);
         connect(conMan, SIGNAL(ready()), conMan, SLOT(createMainWindow()));
         connect(conMan, SIGNAL(disconnected()), QApplication::instance(), SLOT(quit()));
-        connect(conMan, SIGNAL(persistentConnectionError(QString)), conMan, SLOT(handlePersistentConnectionError(QString)));
+        connect(conMan, SIGNAL(persistentConnectionError(QString)), conMan,
+                SLOT(handlePersistentConnectionError(QString)));
         conMan->connectToHost(serverAddress);
     }
 
@@ -109,12 +112,15 @@ private:
     QPointer<Launcher> m_launcher;
 };
 
-
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     QCoreApplication::setOrganizationName("KDAB");
     QCoreApplication::setOrganizationDomain("kdab.com");
     QCoreApplication::setApplicationName("GammaRay");
+    QCoreApplication::setApplicationVersion(GAMMARAY_COMPACT_VERSION_STRING);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
     QApplication::setQuitOnLastWindowClosed(false);
 
     QApplication app(argc, argv);
@@ -124,7 +130,7 @@ int main(int argc, char** argv)
 #else
         GAMMARAY_INVERSE_BIN_DIR
 #endif
-    );
+        );
     ClientConnectionManager::init();
 
     Orchestrator o;

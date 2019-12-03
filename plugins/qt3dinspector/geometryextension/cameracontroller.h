@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -43,7 +43,6 @@ class QKeyboardDevice;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class CameraController : public Qt3DCore::QEntity
 {
     Q_OBJECT
@@ -64,8 +63,9 @@ private:
     Qt3DRender::QCamera *m_camera;
 
     Qt3DInput::QAction *m_leftMouseButtonAction;
+    Qt3DInput::QAction *m_midMouseButtonAction;
 
-    Qt3DInput::QAxis* m_axis[AXISCOUNT];
+    Qt3DInput::QAxis *m_axis[AXISCOUNT];
 
     Qt3DInput::QKeyboardDevice *m_keyboardDevice;
 

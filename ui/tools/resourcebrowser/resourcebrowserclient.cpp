@@ -4,7 +4,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Milian Wolff <milian.wolff@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,20 +34,21 @@
 using namespace GammaRay;
 
 ResourceBrowserClient::ResourceBrowserClient(QObject *parent)
-  : ResourceBrowserInterface(parent)
+    : ResourceBrowserInterface(parent)
 {
 }
 
-ResourceBrowserClient::~ResourceBrowserClient()
-{
-}
+ResourceBrowserClient::~ResourceBrowserClient() = default;
 
-void ResourceBrowserClient::downloadResource(const QString &sourceFilePath, const QString &targetFilePath)
+void ResourceBrowserClient::downloadResource(const QString &sourceFilePath,
+                                             const QString &targetFilePath)
 {
-  Endpoint::instance()->invokeObject(objectName(), "downloadResource", QVariantList() << sourceFilePath << targetFilePath);
+    Endpoint::instance()->invokeObject(objectName(), "downloadResource",
+                                       QVariantList() << sourceFilePath << targetFilePath);
 }
 
 void ResourceBrowserClient::selectResource(const QString &sourceFilePath, int line, int column)
 {
-  Endpoint::instance()->invokeObject(objectName(), "selectResource", QVariantList() << sourceFilePath << line << column);
+    Endpoint::instance()->invokeObject(objectName(), "selectResource",
+                                       QVariantList() << sourceFilePath << line << column);
 }

@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -32,35 +32,33 @@
 #include <QDataStream>
 
 namespace GammaRay {
-
 /** Custom QDataStream streaming operators. */
-namespace StreamOperators
+namespace StreamOperators {
+/** Call once early during startup. */
+void registerOperators();
+
+namespace Internal {
+template<typename T> QDataStream &writeEnum(QDataStream &out, T value)
 {
-    /** Call once early during startup. */
-    void registerOperators();
+    out << static_cast<qint32>(value);
+    return out;
+}
 
-    namespace Internal {
-    template <typename T> QDataStream& writeEnum(QDataStream &out, T value)
-    {
-        out << static_cast<qint32>(value);
-        return out;
-    }
-
-    template <typename T> QDataStream& readEnum(QDataStream &in, T &value)
-    {
-        qint32 v;
-        in >> v;
-        value = static_cast<T>(v);
-        return in;
-    }
-    }
+template<typename T> QDataStream &readEnum(QDataStream &in, T &value)
+{
+    qint32 v;
+    in >> v;
+    value = static_cast<T>(v);
+    return in;
+}
+}
 }
 
 #define GAMMARAY_ENUM_STREAM_OPERATORS(enumType) \
     QDataStream &operator<<(QDataStream &out, enumType value) \
-        { return GammaRay::StreamOperators::Internal::writeEnum(out, value); } \
+    { return GammaRay::StreamOperators::Internal::writeEnum(out, value); } \
     QDataStream &operator>>(QDataStream &in, enumType &value) \
-        { return GammaRay::StreamOperators::Internal::readEnum(in, value); }
+    { return GammaRay::StreamOperators::Internal::readEnum(in, value); }
 }
 
 #endif // GAMMARAY_STREAMOPERATORS_H

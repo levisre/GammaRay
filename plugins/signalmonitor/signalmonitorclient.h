@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,19 +32,17 @@
 #include "signalmonitorinterface.h"
 
 namespace GammaRay {
-
 class SignalMonitorClient : public SignalMonitorInterface
 {
     Q_OBJECT
     Q_INTERFACES(GammaRay::SignalMonitorInterface)
 public:
-    explicit SignalMonitorClient(QObject* parent = 0);
-    ~SignalMonitorClient();
+    explicit SignalMonitorClient(QObject *parent = nullptr);
+    ~SignalMonitorClient() override;
 
 public slots:
-    void sendClockUpdates(bool enabled) Q_DECL_OVERRIDE;
+    void sendClockUpdates(bool enabled) override;
 };
-
 }
 
 #endif // GAMMARAY_SIGNALMONITORCLIENT_H

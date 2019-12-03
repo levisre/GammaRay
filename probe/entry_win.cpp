@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,26 +26,51 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "hooks.h"
+#include <config-gammaray.h>
 
-#include <core/probe.h>
+#include <windows.h>
+#include <string>
 
-#include <qt_windows.h>
+typedef void (*gammaray_probe_inject)(void);
 
-using namespace GammaRay;
+namespace {
+static const std::wstring LOADER_NAME = L"gammaray_winloader";
+static const std::string PROBE_NAME = GAMMARAY_PROBE_BASENAME;
+}
 
-extern "C" BOOL WINAPI DllMain(HINSTANCE/*hInstance*/, DWORD dwReason, LPVOID/*lpvReserved*/)
+extern "C" BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID /*lpvReserved*/)
 {
-  switch(dwReason) {
+    switch (dwReason) {
     case DLL_PROCESS_ATTACH:
-    case DLL_THREAD_ATTACH:
     {
-      Hooks::installHooks();
-      if (!Probe::isInitialized()) {
-        gammaray_probe_inject();
-      }
-      break;
+        wchar_t buffer[MAX_PATH * 2];
+        const int size = GetModuleFileNameW(hInstance, buffer, MAX_PATH * 2);
+        if (!size) {
+            OutputDebugStringW(L"GammaRay: GetModuleFileNameW failed");
+            break;
+        }
+        const std::wstring probeName(PROBE_NAME.cbegin(), PROBE_NAME.cend());
+        std::wstring path(buffer, size);
+        path.replace(path.find(LOADER_NAME), LOADER_NAME.length(), probeName);
+
+        HMODULE probe = GetModuleHandleW(path.c_str());
+        if (!probe) {
+            probe = LoadLibraryW(path.c_str());
+            if (!probe) {
+                OutputDebugStringW(L"GammaRay: Failed to load: ");
+                OutputDebugStringW(path.c_str());
+                break;
+            }
+        }
+        gammaray_probe_inject inject = (gammaray_probe_inject)GetProcAddress(probe, "gammaray_probe_inject");
+        if (!inject) {
+            OutputDebugStringW(L"GammaRay: Failed to resolve gammaray_probe_inject");
+            break;
+        }
+        inject();
     }
-  };
-  return TRUE; //krazy:exclude=captruefalse
+        break;
+    }
+    // return false to get unloaded
+    return FALSE; // krazy:exclude=captruefalse
 }

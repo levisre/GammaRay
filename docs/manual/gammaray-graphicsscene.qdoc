@@ -3,7 +3,7 @@
 
     This file is part of the GammaRay documentation.
 
-    Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+    Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
     Author: Volker Krause <volker.krause@kdab.com>
 
     Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -12,12 +12,13 @@
     Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
     This work is also licensed under the Creative Commons Attribution-ShareAlike 4.0
-    International License. See <http://creativecommons.org/licenses/by-sa/4.0/>.
+    International License. See <https://creativecommons.org/licenses/by-sa/4.0/>.
 */
 
 /*!
+    \contentspage {Tools}
     \contentspage {Graphics Scene Inspector}
-    \nextpage {Styles}
+    \nextpage {Qt3D Inspector}
     \previouspage {Widget Inspector}
     \page gammaray-graphicsscene-inspector.html
 
@@ -25,39 +26,39 @@
 
     \section1 Overview
 
-    The graphcis scene inspector allows you to inspect the structure of a QGraphicsScene and to view and edit the properties of the QGraphicsItem instances contained in it. It provides:
+    The graphcis scene inspector allows you to inspect the structure of a QGraphicsScene, and to view and edit the properties of the QGraphicsItem instances contained in it. It enables:
 
     \list
         \li Inspecting the graphics item hierarchy.
         \li Remote view of the rendered content with diagnostic overlays.
-        \li Inspecting individual QPainter commands per graphics item.
+        \li Inspecting individual QPainter commands for each graphics item.
     \endlist
 
     If your target has multiple QGraphicsScene instances, the combo box at the top can be used to switch between them.
 
     \section1 Item Tree
 
-    The item tree is shown on the top left, and contains the visual hierarchy of QGraphicsItem instances in the currently selected graphics scene.
-    The right side contains the same property view for the selected item.
+    The item tree is shown to the top left, and contains the visual hierarchy of QGraphicsItem instances in the currently selected graphics scene.
+    The right side contains the \l{Object Inspection} view for the selected item.
 
     \image gammaray-graphicsscene-inspector.png
 
-    You can navigate to the object inspector (and other applicable tools) using the context menu on the item tree. This feature is only available
-    for QGraphicsObject sub-classes though.
+    You can navigate to the object browser (and other applicable tools) using the context menu on the item tree. This feature is available
+    for QGraphicsObject sub-classes only.
 
     \section1 Remote View
 
-    The remote view is shown on the left lower part of the graphics view inspector. Besides giving you a zoomable view of the rendered content,
+    The remote view is shown to the lower left of graphics view inspector. Besides giving you a zoomable view of the rendered content,
     it provides a number of additional features:
 
     \list
         \li Element picking.
-        \li Diagnostic overlays with bounding shape, bounding box and tranformation origin information.
+        \li Diagnostic overlays with bounding shape, bounding box, and tranformation origin information.
     \endlist
 
     \section1 Paint Analyzer
 
-    When selecting a graphics item in the item tree, the paint analyzer tab is activated in the property view on the right.
+    When selecting a graphics item in the item tree, the \l{Paint Analyzer} tab is activated in the property view on the right.
 
     \image gammaray-graphicsitem-paint-analyzer.png
 

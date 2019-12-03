@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,36 +34,34 @@
 #include <QVector>
 
 namespace GammaRay {
-
 class Probe;
 
 class ObjectTreeModel : public ObjectModelBase<QAbstractItemModel>
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     explicit ObjectTreeModel(Probe *probe);
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QModelIndex parent(const QModelIndex &child) const Q_DECL_OVERRIDE;
-    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
+    QModelIndex index(int row, int column,
+                      const QModelIndex &parent = QModelIndex()) const override;
 
-  public slots:
-    QPair<int, QVariant> defaultSelectedItem() const;
+    Q_INVOKABLE QPair<int, QVariant> defaultSelectedItem() const;
 
-  private slots:
+private slots:
     void objectAdded(QObject *obj);
     void objectRemoved(QObject *obj);
     void objectReparented(QObject *obj);
 
-  private:
+private:
     QModelIndex indexForObject(QObject *object) const;
 
-  private:
-    QHash<QObject*, QObject*> m_childParentMap;
-    QHash<QObject*, QVector<QObject*> > m_parentChildMap;
+private:
+    QHash<QObject *, QObject *> m_childParentMap;
+    QHash<QObject *, QVector<QObject *> > m_parentChildMap;
 };
-
 }
 
 #endif // GAMMARAY_OBJECTTREEMODEL_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -50,145 +50,183 @@
 using namespace GammaRay;
 using namespace std;
 
-Server::Server(QObject *parent) :
-  Endpoint(parent),
-  m_serverDevice(0),
-  m_nextAddress(endpointAddress()),
-  m_broadcastTimer(new QTimer(this)),
-  m_signalMapper(new MultiSignalMapper(this))
+Server::Server(QObject *parent)
+    : Endpoint(parent)
+    , m_serverDevice(nullptr)
+    , m_nextAddress(endpointAddress())
+    , m_broadcastTimer(new QTimer(this))
+    , m_signalMapper(new MultiSignalMapper(this))
 {
-  if (!ProbeSettings::value(QStringLiteral("RemoteAccessEnabled"), true).toBool())
-    return;
+    Message::resetNegotiatedDataVersion();
 
-  m_serverDevice = ServerDevice::create(serverAddress(), this);
-  if (!m_serverDevice)
-    return;
+    if (!ProbeSettings::value(QStringLiteral("RemoteAccessEnabled"), true).toBool())
+        return;
 
-  connect(m_serverDevice, SIGNAL(newConnection()), this, SLOT(newConnection()));
-  if (!m_serverDevice->listen()) {
-    qWarning() << "Failed to start server:" << m_serverDevice->errorString();
-    return;
-  }
+    m_serverDevice = ServerDevice::create(serverAddress(), this);
+    if (!m_serverDevice)
+        return;
 
-  m_broadcastTimer->setInterval(5 * 1000);
-  m_broadcastTimer->setSingleShot(false);
-#ifndef Q_OS_ANDROID
-  m_broadcastTimer->start();
-#endif
-  connect(m_broadcastTimer, SIGNAL(timeout()), SLOT(broadcast()));
-  connect(this, SIGNAL(disconnected()), m_broadcastTimer, SLOT(start()));
+    connect(m_serverDevice, &ServerDevice::newConnection, this, &Server::newConnection);
+    connect(m_serverDevice, &ServerDevice::externalAddressChanged, this, &Server::externalAddressChanged);
 
-  connect(m_signalMapper, SIGNAL(signalEmitted(QObject*,int,QVector<QVariant>)),
-          this, SLOT(forwardSignal(QObject*,int,QVector<QVariant>)));
+    m_broadcastTimer->setInterval(5 * 1000);
+    m_broadcastTimer->setSingleShot(false);
+    if (serverAddress().scheme() == QLatin1String("tcp")) {
+        m_broadcastTimer->start();
+    }
+    connect(m_broadcastTimer, &QTimer::timeout, this, &Server::broadcast);
+    connect(this, &Server::disconnected, m_broadcastTimer, [this]{ m_broadcastTimer->start(); });
 
-  Endpoint::addObjectNameAddressMapping(QStringLiteral("com.kdab.GammaRay.PropertySyncer"), ++m_nextAddress);
-  m_propertySyncer->setAddress(m_nextAddress);
-  Endpoint::registerObject(QStringLiteral("com.kdab.GammaRay.PropertySyncer"), m_propertySyncer);
-  registerMessageHandler(m_nextAddress, m_propertySyncer, "handleMessage");
+    connect(m_signalMapper, &MultiSignalMapper::signalEmitted,
+            this, &Server::forwardSignal);
+
+    Endpoint::addObjectNameAddressMapping(QStringLiteral(
+                                              "com.kdab.GammaRay.PropertySyncer"), ++m_nextAddress);
+    m_propertySyncer->setAddress(m_nextAddress);
+    Endpoint::registerObject(QStringLiteral("com.kdab.GammaRay.PropertySyncer"), m_propertySyncer);
+    registerMessageHandler(m_nextAddress, m_propertySyncer, "handleMessage");
 }
 
-Server::~Server()
+Server::~Server() = default;
+
+bool Server::listen()
 {
+    Q_ASSERT(!m_serverDevice->isListening());
+    if (!m_serverDevice->listen()) {
+        return false;
+    }
+
+    return true;
 }
 
-Server* Server::instance()
+bool Server::isListening() const
 {
-  Q_ASSERT(s_instance);
-  return static_cast<Server*>(s_instance);
+    return m_serverDevice->isListening();
+}
+
+Server *Server::instance()
+{
+    Q_ASSERT(s_instance);
+    return static_cast<Server *>(s_instance);
 }
 
 bool Server::isRemoteClient() const
 {
-  return false;
+    return false;
 }
 
 QUrl Server::serverAddress() const
 {
 #ifdef Q_OS_ANDROID
-    QUrl url(QString(QLatin1String("local://%1/+gammaray_socket")).arg(QDir::homePath()));
+    const QString defaultServerAddr = QLatin1String("local://") + QDir::homePath() + QLatin1String("/+gammaray_socket");
 #else
-    QUrl url(ProbeSettings::value(QStringLiteral("ServerAddress"), GAMMARAY_DEFAULT_ANY_TCP_URL).toString());
+    const QString defaultServerAddr = QString::fromUtf8(GAMMARAY_DEFAULT_ANY_TCP_URL);
+#endif
+    QUrl url(ProbeSettings::value(QStringLiteral("ServerAddress"), defaultServerAddr).toString());
     if (url.scheme().isEmpty())
         url.setScheme(QStringLiteral("tcp"));
     if (url.port() <= 0)
         url.setPort(defaultPort());
-#endif
     return url;
 }
 
 void Server::newConnection()
 {
-  if (isConnected()) {
-    cerr << Q_FUNC_INFO << " connected already, refusing incoming connection." << endl;
-    m_serverDevice->nextPendingConnection()->close();
-    return;
-  }
+    if (isConnected()) {
+        cerr << Q_FUNC_INFO << " connected already, refusing incoming connection." << endl;
+        auto con = m_serverDevice->nextPendingConnection();
+        con->close();
+        con->deleteLater();
+        return;
+    }
 
-  m_broadcastTimer->stop();
-  setDevice(m_serverDevice->nextPendingConnection());
+    m_broadcastTimer->stop();
+    auto con = m_serverDevice->nextPendingConnection();
+    // FIXME Use proper type for m_serverDevice->nextPendingConnection, instead
+    // of relying on runtime-connect to a slot which doesn't exist in QIODevice
+    connect(con, SIGNAL(disconnected()), con, SLOT(deleteLater()));
+    setDevice(con);
 
-  sendServerGreeting();
+    sendServerGreeting();
+
+    emit connectionEstablished();
 }
 
 void Server::sendServerGreeting()
 {
-  // send greeting message for protocol version check
-  {
-    Message msg(endpointAddress(), Protocol::ServerVersion);
-    msg.payload() << Protocol::version();
-    send(msg);
-  }
-
-  {
-    Message msg(endpointAddress(), Protocol::ServerInfo);
-    msg.payload() << label(); // TODO: expand with anything else needed here: Qt/GammaRay version, hostname, that kind of stuff
-    send(msg);
-  }
-
-  {
-    Message msg(endpointAddress(), Protocol::ObjectMapReply);
-    msg.payload() << objectAddresses();
-    send(msg);
-  }
-}
-
-void Server::messageReceived(const Message& msg)
-{
-  if (msg.address() == endpointAddress()) {
-    switch (msg.type()) {
-      case Protocol::ObjectMonitored:
-      case Protocol::ObjectUnmonitored:
-      {
-        Protocol::ObjectAddress addr;
-        msg.payload() >> addr;
-        Q_ASSERT(addr > Protocol::InvalidObjectAddress);
-        m_propertySyncer->setObjectEnabled(addr, msg.type() == Protocol::ObjectMonitored);
-        const QHash<Protocol::ObjectAddress, QPair<QObject*, QByteArray> >::const_iterator it = m_monitorNotifiers.constFind(addr);
-        if (it == m_monitorNotifiers.constEnd())
-          break;
-        //cout << Q_FUNC_INFO << " un/monitor " << (int)addr << endl;
-        QMetaObject::invokeMethod(it.value().first, it.value().second, Q_ARG(bool, msg.type() == Protocol::ObjectMonitored));
-        break;
-      }
+    // send greeting message for protocol version check
+    {
+        Message msg(endpointAddress(), Protocol::ServerVersion);
+        msg << Protocol::version();
+        send(msg);
     }
-  } else {
-    dispatchMessage(msg);
-  }
+
+    {
+        Message msg(endpointAddress(), Protocol::ServerInfo);
+        msg << label() << key() << pid() << Message::highestSupportedDataVersion(); // TODO: expand with anything else needed here: Qt/GammaRay version, hostname, that kind of stuff
+        send(msg);
+    }
+
+    {
+        Message msg(endpointAddress(), Protocol::ObjectMapReply);
+        msg << objectAddresses();
+        send(msg);
+    }
 }
 
-void Server::invokeObject(const QString &objectName, const char *method, const QVariantList &args) const
+void Server::messageReceived(const Message &msg)
 {
-  Endpoint::invokeObject(objectName, method, args);
+    if (msg.address() == endpointAddress()) {
+        switch (msg.type()) {
+        case Protocol::ClientDataVersionNegotiated:
+        {
+            quint8 version;
+            msg >> version;
 
-  QObject* object = ObjectBroker::objectInternal(objectName);
-  Q_ASSERT(object);
-  // also invoke locally for in-process mode
-  invokeObjectLocal(object, method, args);
+            {
+                Message msg(endpointAddress(), Protocol::ServerDataVersionNegotiated);
+                msg << version;
+                send(msg);
+            }
+
+            Message::setNegotiatedDataVersion(version);
+            break;
+        }
+        case Protocol::ObjectMonitored:
+        case Protocol::ObjectUnmonitored:
+        {
+            Protocol::ObjectAddress addr;
+            msg >> addr;
+            Q_ASSERT(addr > Protocol::InvalidObjectAddress);
+            m_propertySyncer->setObjectEnabled(addr, msg.type() == Protocol::ObjectMonitored);
+            auto it = m_monitorNotifiers.constFind(addr);
+            if (it == m_monitorNotifiers.constEnd())
+                break;
+            // cout << Q_FUNC_INFO << " un/monitor " << (int)addr << endl;
+            QMetaObject::invokeMethod(it.value().first, it.value().second,
+                                      Q_ARG(bool, msg.type() == Protocol::ObjectMonitored));
+            break;
+        }
+        }
+    } else {
+        dispatchMessage(msg);
+    }
+}
+
+void Server::invokeObject(const QString &objectName, const char *method,
+                          const QVariantList &args) const
+{
+    Endpoint::invokeObject(objectName, method, args);
+
+    QObject *object = ObjectBroker::objectInternal(objectName);
+    Q_ASSERT(object);
+    // also invoke locally for in-process mode
+    invokeObjectLocal(object, method, args);
 }
 
 Protocol::ObjectAddress Server::registerObject(const QString &name, QObject *object)
 {
-  return registerObject(name, object, ExportEverything);
+    return registerObject(name, object, ExportEverything);
 }
 
 static bool isNotifySignal(const QMetaObject *mo, const QMetaMethod &method)
@@ -203,109 +241,118 @@ static bool isNotifySignal(const QMetaObject *mo, const QMetaMethod &method)
     return false;
 }
 
-Protocol::ObjectAddress Server::registerObject(const QString& name, QObject* object, Server::ObjectExportOptions exportOptions)
+Protocol::ObjectAddress Server::registerObject(const QString &name, QObject *object,
+                                               Server::ObjectExportOptions exportOptions)
 {
-  addObjectNameAddressMapping(name, ++m_nextAddress);
-  Protocol::ObjectAddress address = Endpoint::registerObject(name, object);
-  Q_ASSERT(m_nextAddress);
-  Q_ASSERT(m_nextAddress == address);
+    addObjectNameAddressMapping(name, ++m_nextAddress);
+    Protocol::ObjectAddress address = Endpoint::registerObject(name, object);
+    Q_ASSERT(m_nextAddress);
+    Q_ASSERT(m_nextAddress == address);
 
-  if (isConnected()) {
-    Message msg(endpointAddress(), Protocol::ObjectAdded);
-    msg.payload() <<  name << m_nextAddress;
-    send(msg);
-  }
-
-  if (exportOptions & ExportSignals) {
-    const QMetaObject *meta = object->metaObject();
-    for(int i = 0; i < meta->methodCount(); ++i) {
-      const QMetaMethod method = meta->method(i);
-      if (method.methodType() != QMetaMethod::Signal)
-        continue;
-      if ((exportOptions & ExportProperties) && isNotifySignal(meta, method))
-        continue; // no need to forward property change signals if we forward the property already
-      m_signalMapper->connectToSignal(object, method);
+    if (isConnected()) {
+        Message msg(endpointAddress(), Protocol::ObjectAdded);
+        msg <<  name << m_nextAddress;
+        send(msg);
     }
-  }
 
-  if (exportOptions & ExportProperties)
-    m_propertySyncer->addObject(address, object);
+    if (exportOptions & ExportSignals) {
+        const QMetaObject *meta = object->metaObject();
+        for (int i = 0; i < meta->methodCount(); ++i) {
+            const QMetaMethod method = meta->method(i);
+            if (method.methodType() != QMetaMethod::Signal)
+                continue;
+            if ((exportOptions & ExportProperties) && isNotifySignal(meta, method))
+                continue; // no need to forward property change signals if we forward the property already
+            m_signalMapper->connectToSignal(object, method);
+        }
+    }
 
-  return address;
+    if (exportOptions & ExportProperties)
+        m_propertySyncer->addObject(address, object);
+
+    return address;
 }
 
-void Server::forwardSignal(QObject* sender, int signalIndex, const QVector< QVariant >& args)
+void Server::forwardSignal(QObject *sender, int signalIndex, const QVector< QVariant > &args)
 {
-  if (!isConnected())
-    return;
+    if (!isConnected())
+        return;
 
-  Q_ASSERT(sender);
-  Q_ASSERT(signalIndex >= 0);
-  const QMetaMethod signal = sender->metaObject()->method(signalIndex);
-  Q_ASSERT(signal.methodType() == QMetaMethod::Signal);
+    Q_ASSERT(sender);
+    Q_ASSERT(signalIndex >= 0);
+    const QMetaMethod signal = sender->metaObject()->method(signalIndex);
+    Q_ASSERT(signal.methodType() == QMetaMethod::Signal);
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-  QByteArray name = signal.signature();
-#else
-  QByteArray name = signal.methodSignature();
-#endif
-  // get the name of the function to invoke, excluding the parens and function arguments.
-  name = name.mid(0, name.indexOf('('));
+    QByteArray name = signal.methodSignature();
+    // get the name of the function to invoke, excluding the parens and function arguments.
+    name = name.mid(0, name.indexOf('('));
 
-  QVariantList v;
-  v.reserve(args.size());
-  foreach(const QVariant &arg, args)
-    v.push_back(arg);
-  Endpoint::invokeObject(sender->objectName(), name, v);
+    QVariantList v;
+    v.reserve(args.size());
+    foreach (const QVariant &arg, args)
+        v.push_back(arg);
+    Endpoint::invokeObject(sender->objectName(), name, v);
 }
 
-void Server::registerMonitorNotifier(Protocol::ObjectAddress address, QObject* receiver, const char* monitorNotifier)
+void Server::registerMonitorNotifier(Protocol::ObjectAddress address, QObject *receiver,
+                                     const char *monitorNotifier)
 {
-  Q_ASSERT(address != Protocol::InvalidObjectAddress);
-  Q_ASSERT(receiver);
-  Q_ASSERT(monitorNotifier);
+    Q_ASSERT(address != Protocol::InvalidObjectAddress);
+    Q_ASSERT(receiver);
+    Q_ASSERT(monitorNotifier);
 
-  m_monitorNotifiers.insert(address, qMakePair<QObject*, QByteArray>(receiver, monitorNotifier));
+    m_monitorNotifiers.insert(address, qMakePair<QObject *, QByteArray>(receiver, monitorNotifier));
 }
 
-void Server::handlerDestroyed(Protocol::ObjectAddress objectAddress, const QString& objectName)
+void Server::handlerDestroyed(Protocol::ObjectAddress objectAddress, const QString &objectName)
 {
-  removeObjectNameAddressMapping(objectName);
-  m_monitorNotifiers.remove(objectAddress);
+    removeObjectNameAddressMapping(objectName);
+    m_monitorNotifiers.remove(objectAddress);
 
-  if (isConnected()) {
-    Message msg(endpointAddress(), Protocol::ObjectRemoved);
-    msg.payload() << objectName;
-    send(msg);
-  }
+    if (isConnected()) {
+        Message msg(endpointAddress(), Protocol::ObjectRemoved);
+        msg << objectName;
+        send(msg);
+    }
 }
 
-void Server::objectDestroyed(Protocol::ObjectAddress /*objectAddress*/, const QString &objectName, QObject *object)
+void Server::objectDestroyed(Protocol::ObjectAddress /*objectAddress*/, const QString &objectName,
+                             QObject *object)
 {
-  Q_UNUSED(object);
-  removeObjectNameAddressMapping(objectName);
+    Q_UNUSED(object);
+    removeObjectNameAddressMapping(objectName);
 
-  if (isConnected()) {
-    Message msg(endpointAddress(), Protocol::ObjectRemoved);
-    msg.payload() << objectName;
-    send(msg);
-  }
+    if (isConnected()) {
+        Message msg(endpointAddress(), Protocol::ObjectRemoved);
+        msg << objectName;
+        send(msg);
+    }
 }
 
 void Server::broadcast()
 {
-  QByteArray datagram;
-  QDataStream stream(&datagram, QIODevice::WriteOnly);
-  stream << Protocol::broadcastFormatVersion();
-  stream << Protocol::version();
-  stream << externalAddress();
-  stream << label(); // TODO integrate hostname
-  m_serverDevice->broadcast(datagram);
+    if (!Server::instance()->isListening())
+        return;
+
+    QByteArray datagram;
+    QDataStream stream(&datagram, QIODevice::WriteOnly);
+    stream << Protocol::broadcastFormatVersion();
+    stream << Protocol::version();
+    stream << externalAddress();
+    stream << label(); // TODO integrate hostname
+    m_serverDevice->broadcast(datagram);
 }
 
 QUrl Server::externalAddress() const
 {
-  if (!m_serverDevice)
-    return QUrl();
-  return m_serverDevice->externalAddress();
+    if (!m_serverDevice)
+        return QUrl();
+    return m_serverDevice->externalAddress();
+}
+
+QString Server::errorString() const
+{
+    if (!m_serverDevice)
+        return QString();
+    return m_serverDevice->errorString();
 }

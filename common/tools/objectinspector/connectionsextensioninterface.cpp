@@ -4,11 +4,11 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
-  acuordance with GammaRay Commercial License Agreement provided with the Software.
+  accordance with GammaRay Commercial License Agreement provided with the Software.
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
@@ -32,18 +32,16 @@
 
 using namespace GammaRay;
 
-ConnectionsExtensionInterface::ConnectionsExtensionInterface(const QString& name, QObject* parent):
-  QObject(parent),
-  m_name(name)
+ConnectionsExtensionInterface::ConnectionsExtensionInterface(const QString &name, QObject *parent)
+    : QObject(parent)
+    , m_name(name)
 {
-  ObjectBroker::registerObject(name, this);
+    ObjectBroker::registerObject(name, this);
 }
 
-ConnectionsExtensionInterface::~ConnectionsExtensionInterface()
-{
-}
+ConnectionsExtensionInterface::~ConnectionsExtensionInterface() = default;
 
 QString ConnectionsExtensionInterface::name() const
 {
-  return m_name;
+    return m_name;
 }

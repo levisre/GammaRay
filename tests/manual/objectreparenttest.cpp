@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,39 +32,39 @@ class MyObject : public QObject
 {
     Q_OBJECT
 public:
-    explicit MyObject(QObject *parent = 0) :
-        QObject(parent),
-        c(new QObject(this)),
-        p1(new QObject(this)),
-        p2(new QObject(this))
+    explicit MyObject(QObject *parent = nullptr)
+        : QObject(parent)
+        , c(new QObject(this))
+        , p1(new QObject(this))
+        , p2(new QObject(this))
     {
         c->setObjectName(QStringLiteral("MovingSubtree"));
 
         auto t = new QTimer(this);
         t->start(10000);
-        connect(t, SIGNAL(timeout()), SLOT(reparent()));
+        connect(t, &QTimer::timeout, this, &MyObject::reparent);
 
         auto gc = new QObject(c);
         new QObject(gc);
         c->setParent(p1);
     }
+
 public slots:
     void reparent()
     {
         if (c->parent() == p1)
-          c->setParent(p2);
+            c->setParent(p2);
         else if (c->parent() == p2)
-          c->setParent(0);
+            c->setParent(nullptr);
         else
-          c->setParent(p1);
+            c->setParent(p1);
     }
 
 private:
     QObject *c, *p1, *p2;
 };
 
-
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
 

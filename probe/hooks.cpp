@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -25,23 +25,20 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-//krazy:excludeall=cpp due to low-level stuff in here
+// krazy:excludeall=cpp due to low-level stuff in here
 
 #include <config-gammaray.h>
 
 #include "hooks.h"
-#include "functionoverwriterfactory.h"
 #include "probecreator.h"
 
 #include <core/probe.h>
 
 #include <QCoreApplication>
 
-#ifdef GAMMARAY_USE_QHOOKS
 #include <private/qhooks_p.h>
-#endif
 
-#include <stdio.h>
+#include <stdio.h> //cannot use cstdio on QNX6.6
 #include <cassert>
 
 #ifdef Q_OS_MAC
@@ -49,108 +46,117 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/errno.h>
+#elif defined(Q_OS_WIN)
+#include <qt_windows.h>
 #endif
 
 #define IF_DEBUG(x)
 
 using namespace GammaRay;
 
+static void log_injection(const char *msg) {
+#ifdef Q_OS_WIN
+    OutputDebugStringA(msg);
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    printf(msg); // NOLINT clang-tidy
+#pragma GCC diagnostic pop
+#endif
+}
+
+static void gammaray_pre_routine()
+{
+#ifdef Q_OS_WIN
+    if (qApp) // DllMain will do a better job at this, we are too early here and might not even have our staticMetaObject properly resolved
+        return;
+#endif
+    new ProbeCreator(ProbeCreator::Create | ProbeCreator::FindExistingObjects);
+}
+Q_COREAPP_STARTUP_FUNCTION(gammaray_pre_routine)
+
 // previously installed Qt hooks, for daisy-chaining
-static void(*gammaray_next_startup_hook)() = 0;
-static void(*gammaray_next_addObject)(QObject*) = 0;
-static void(*gammaray_next_removeObject)(QObject*) = 0;
+static void (*gammaray_next_startup_hook)() = nullptr;
+static void (*gammaray_next_addObject)(QObject *) = nullptr;
+static void (*gammaray_next_removeObject)(QObject *) = nullptr;
 
 extern "C" Q_DECL_EXPORT void gammaray_startup_hook()
 {
-  Probe::startupHookReceived();
-  new ProbeCreator(ProbeCreator::Create);
+    Probe::startupHookReceived();
+    new ProbeCreator(ProbeCreator::Create);
 
-  if (gammaray_next_startup_hook)
-    gammaray_next_startup_hook();
+    if (gammaray_next_startup_hook)
+        gammaray_next_startup_hook();
 }
 
 extern "C" Q_DECL_EXPORT void gammaray_addObject(QObject *obj)
 {
-  Probe::objectAdded(obj, true);
+    Probe::objectAdded(obj, true);
 
-  if (gammaray_next_addObject)
-    gammaray_next_addObject(obj);
+    if (gammaray_next_addObject)
+        gammaray_next_addObject(obj);
 }
 
 extern "C" Q_DECL_EXPORT void gammaray_removeObject(QObject *obj)
 {
-  Probe::objectRemoved(obj);
+    Probe::objectRemoved(obj);
 
-  if (gammaray_next_removeObject)
-    gammaray_next_removeObject(obj);
+    if (gammaray_next_removeObject)
+        gammaray_next_removeObject(obj);
 }
 
-#ifdef GAMMARAY_USE_QHOOKS
 static void installQHooks()
 {
-  Q_ASSERT(qtHookData[QHooks::HookDataVersion] >= 1);
-  Q_ASSERT(qtHookData[QHooks::HookDataSize] >= 6);
+    Q_ASSERT(qtHookData[QHooks::HookDataVersion] >= 1);
+    Q_ASSERT(qtHookData[QHooks::HookDataSize] >= 6);
 
-  gammaray_next_addObject = reinterpret_cast<QHooks::AddQObjectCallback>(qtHookData[QHooks::AddQObject]);
-  gammaray_next_removeObject = reinterpret_cast<QHooks::RemoveQObjectCallback>(qtHookData[QHooks::RemoveQObject]);
-  gammaray_next_startup_hook = reinterpret_cast<QHooks::StartupCallback>(qtHookData[QHooks::Startup]);
+    gammaray_next_addObject
+        = reinterpret_cast<QHooks::AddQObjectCallback>(qtHookData[QHooks::AddQObject]);
+    gammaray_next_removeObject
+        = reinterpret_cast<QHooks::RemoveQObjectCallback>(qtHookData[QHooks::RemoveQObject]);
+    gammaray_next_startup_hook
+        = reinterpret_cast<QHooks::StartupCallback>(qtHookData[QHooks::Startup]);
 
-  qtHookData[QHooks::AddQObject] = reinterpret_cast<quintptr>(&gammaray_addObject);
-  qtHookData[QHooks::RemoveQObject] = reinterpret_cast<quintptr>(&gammaray_removeObject);
-  qtHookData[QHooks::Startup] = reinterpret_cast<quintptr>(&gammaray_startup_hook);
+    qtHookData[QHooks::AddQObject] = reinterpret_cast<quintptr>(&gammaray_addObject);
+    qtHookData[QHooks::RemoveQObject] = reinterpret_cast<quintptr>(&gammaray_removeObject);
+    qtHookData[QHooks::Startup] = reinterpret_cast<quintptr>(&gammaray_startup_hook);
 }
-#endif
-
-#ifdef GAMMARAY_USE_FUNCTION_OVERWRITE
-static bool functionsOverwritten = false;
-
-static void overwriteQtFunctions()
-{
-  functionsOverwritten = true;
-  AbstractFunctionOverwriter *overwriter = FunctionOverwriterFactory::createFunctionOverwriter();
-
-  overwriter->overwriteFunction(QLatin1String("qt_startup_hook"), (void*)gammaray_startup_hook);
-  overwriter->overwriteFunction(QLatin1String("qt_addObject"), (void*)gammaray_addObject);
-  overwriter->overwriteFunction(QLatin1String("qt_removeObject"), (void*)gammaray_removeObject);
-}
-#endif
 
 bool Hooks::hooksInstalled()
 {
-#ifdef GAMMARAY_USE_QHOOKS
-  return qtHookData[QHooks::AddQObject] == reinterpret_cast<quintptr>(&gammaray_addObject);
-#elif defined(GAMMARAY_USE_FUNCTION_OVERWRITE)
-  return functionsOverwritten;
-#else
-  return false;
-#endif
+    return qtHookData[QHooks::AddQObject] == reinterpret_cast<quintptr>(&gammaray_addObject);
 }
 
 void Hooks::installHooks()
 {
-  if (hooksInstalled())
-    return;
+    if (hooksInstalled())
+        return;
 
-#ifdef GAMMARAY_USE_QHOOKS
-  installQHooks();
-#elif defined(GAMMARAY_USE_FUNCTION_OVERWRITE)
-  overwriteQtFunctions();
-#endif
+    installQHooks();
 }
 
 extern "C" Q_DECL_EXPORT void gammaray_probe_inject()
 {
-  if (!qApp) {
-    return;
-  }
-  printf("gammaray_probe_inject()\n");
-  new ProbeCreator(ProbeCreator::Create | ProbeCreator::FindExistingObjects);
+    if (!qApp) {
+        return;
+    }
+    Hooks::installHooks();
+    log_injection("gammaray_probe_inject()\n");
+    new ProbeCreator(ProbeCreator::Create | ProbeCreator::FindExistingObjects);
 }
 
 extern "C" Q_DECL_EXPORT void gammaray_probe_attach()
 {
-  if (!qApp)
-    return;
-  printf("gammaray_probe_attach()\n");
-  new ProbeCreator(ProbeCreator::Create | ProbeCreator::FindExistingObjects | ProbeCreator::ResendServerAddress);
+    if (!qApp) {
+        return;
+    }
+    log_injection("gammaray_probe_attach()\n");
+    new ProbeCreator(ProbeCreator::Create |
+                     ProbeCreator::FindExistingObjects |
+                     ProbeCreator::ResendServerAddress);
+}
+
+extern "C" Q_DECL_EXPORT void gammaray_install_hooks()
+{
+    Hooks::installHooks();
 }

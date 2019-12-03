@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -24,38 +24,21 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <config-gammaray.h>
+#include "baseprobetest.h"
 
-#include <probe/hooks.h>
-#include <probe/probecreator.h>
-#include <core/probe.h>
-#include <common/paths.h>
 #include <common/objectbroker.h>
 
 #include <3rdparty/qt/modeltest.h>
 
-#include <QtTest/qtest.h>
-
 #include <QAbstractItemModel>
-#include <QObject>
 #include <QWidget>
 
 using namespace GammaRay;
 
-class WidgetTest : public QObject
+class WidgetTest : public BaseProbeTest
 {
     Q_OBJECT
 private:
-    void createProbe()
-    {
-        Paths::setRelativeRootPath(GAMMARAY_INVERSE_BIN_DIR);
-        qputenv("GAMMARAY_ProbePath", Paths::currentProbePath().toUtf8());
-        Hooks::installHooks();
-        Probe::startupHookReceived();
-        new ProbeCreator(ProbeCreator::Create);
-        QTest::qWait(1); // event loop re-entry
-    }
-
     int visibleRowCount(QAbstractItemModel *model)
     {
         int count = 0;

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,75 +30,70 @@
 
 using namespace GammaRay;
 
-MetaObject::MetaObject()
-{
-}
+MetaObject::MetaObject() = default;
 
 MetaObject::~MetaObject()
 {
-  qDeleteAll(m_properties);
+    qDeleteAll(m_properties);
 }
 
 int MetaObject::propertyCount() const
 {
-  int count = 0;
-  foreach (MetaObject *mo, m_baseClasses) {
-    count += mo->propertyCount();
-  }
-  return count + m_properties.size();
+    int count = 0;
+    for (MetaObject *mo : m_baseClasses)
+        count += mo->propertyCount();
+    return count + m_properties.size();
 }
 
 MetaProperty *MetaObject::propertyAt(int index) const
 {
-  foreach (MetaObject *mo, m_baseClasses) {
-    if (index >= mo->propertyCount()) {
-      index -= mo->propertyCount();
-    } else {
-      return mo->propertyAt(index);
+    for (MetaObject *mo : m_baseClasses) {
+        if (index >= mo->propertyCount())
+            index -= mo->propertyCount();
+        else
+            return mo->propertyAt(index);
     }
-  }
-  Q_ASSERT(index >= 0 && index < m_properties.size());
-  return m_properties.at(index);
+    Q_ASSERT(index >= 0 && index < m_properties.size());
+    return m_properties.at(index);
 }
 
 void MetaObject::addBaseClass(MetaObject *baseClass)
 {
-  Q_ASSERT(baseClass);
-  m_baseClasses.push_back(baseClass);
+    Q_ASSERT(baseClass);
+    m_baseClasses.push_back(baseClass);
 }
 
 void MetaObject::addProperty(MetaProperty *property)
 {
-  Q_ASSERT(property);
-  // TODO: sort
-  property->setMetaObject(this);
-  m_properties.push_back(property);
+    Q_ASSERT(property);
+    // TODO: sort
+    property->setMetaObject(this);
+    m_properties.push_back(property);
 }
 
 QString MetaObject::className() const
 {
-  return m_className;
+    return m_className;
 }
 
 void MetaObject::setClassName(const QString &className)
 {
-  m_className = className;
+    m_className = className;
 }
 
 void *MetaObject::castForPropertyAt(void *object, int index) const
 {
-  for (int i = 0; i < m_baseClasses.size(); ++i) {
-    const MetaObject *base = m_baseClasses.at(i);
-    if (index >= base->propertyCount()) {
-      index -= base->propertyCount();
-    } else {
-      return base->castForPropertyAt(castToBaseClass(object, i), index);
+    for (int i = 0; i < m_baseClasses.size(); ++i) {
+        const MetaObject *base = m_baseClasses.at(i);
+        if (index >= base->propertyCount())
+            index -= base->propertyCount();
+        else
+            return base->castForPropertyAt(castToBaseClass(object, i), index);
     }
-  }
-  return object; // our own property
+    return object; // our own property
 }
 
-void* MetaObject::castTo(void* object, const QString& baseClass) const
+void *MetaObject::castTo(void *object, const QString &baseClass) const
 {
     if (className() == baseClass)
         return object;
@@ -110,23 +105,42 @@ void* MetaObject::castTo(void* object, const QString& baseClass) const
             return result;
     }
 
-    return Q_NULLPTR;
+    return nullptr;
 }
 
-MetaObject* MetaObject::superClass(int index) const
+bool MetaObject::isPolymorphic() const
 {
-  if (m_baseClasses.size() <= index)
-    return 0;
-  return m_baseClasses[index];
+    if (isClassPolymorphic())
+        return true;
+    for (const auto &baseClass : m_baseClasses) {
+        if (baseClass->isPolymorphic())
+            return true;
+    }
+    return false;
 }
 
-bool MetaObject::inherits(const QString& className) const
+void* MetaObject::castFrom(void *object, MetaObject *baseClass) const
 {
-  if (className == m_className)
-    return true;
-  foreach (MetaObject *metaObject, m_baseClasses) {
-    if (metaObject->inherits(className))
-      return true;
-  }
-  return false;
+    const auto idx = m_baseClasses.indexOf(baseClass);
+    if (idx < 0)
+        return nullptr;
+    return castFromBaseClass(object, idx);
+}
+
+MetaObject *MetaObject::superClass(int index) const
+{
+    if (m_baseClasses.size() <= index)
+        return nullptr;
+    return m_baseClasses[index];
+}
+
+bool MetaObject::inherits(const QString &className) const
+{
+    if (className == m_className)
+        return true;
+    for (MetaObject *metaObject : m_baseClasses) {
+        if (metaObject->inherits(className))
+            return true;
+    }
+    return false;
 }

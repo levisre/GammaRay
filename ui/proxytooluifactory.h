@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,28 +31,28 @@
 #include <ui/tooluifactory.h>
 
 namespace GammaRay {
-
 /**
  * A wrapper around a plugin ToolUiFactory that only loads the actual plugin once really needed.
  * Until then, meta-data is provided based on a plugin spec file.
  */
 class ProxyToolUiFactory : public ProxyFactory<ToolUiFactory>
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     /**
-     * @param path Path to the plugin spec file
+     * @param pluginInfo Plugin spec file
      */
-    explicit ProxyToolUiFactory(const PluginInfo &pluginInfo, QObject *parent = 0);
+    explicit ProxyToolUiFactory(const PluginInfo &pluginInfo, QObject *parent = nullptr);
+
+    QString name() const override;
 
     /** Returns @c true if the plugin seems valid from all the information we have so far. */
     bool isValid() const;
 
-    bool remotingSupported() const Q_DECL_OVERRIDE;
-    QWidget *createWidget(QWidget *parentWidget) Q_DECL_OVERRIDE;
-    void initUi() Q_DECL_OVERRIDE;
+    bool remotingSupported() const override;
+    QWidget *createWidget(QWidget *parentWidget) override;
+    void initUi() override;
 };
-
 }
 
 #endif // GAMMARAY_PROXYTOOLUIFACTORY_H

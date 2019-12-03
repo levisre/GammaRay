@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,6 +30,8 @@
 #include "propertydata.h"
 #include "objectinstance.h"
 
+#include <compat/qasconst.h>
+
 #include <QDebug>
 
 #include <algorithm>
@@ -37,15 +39,14 @@
 
 using namespace GammaRay;
 
-PropertyAggregator::PropertyAggregator(QObject* parent): PropertyAdaptor(parent)
+PropertyAggregator::PropertyAggregator(QObject *parent)
+    : PropertyAdaptor(parent)
 {
 }
 
-PropertyAggregator::~PropertyAggregator()
-{
-}
+PropertyAggregator::~PropertyAggregator() = default;
 
-void PropertyAggregator::doSetObject(const ObjectInstance& oi)
+void PropertyAggregator::doSetObject(const ObjectInstance &oi)
 {
     std::for_each(m_propertyAdaptors.begin(), m_propertyAdaptors.end(), [&oi](PropertyAdaptor *pa) {
         pa->setObject(oi);
@@ -56,7 +57,8 @@ int PropertyAggregator::count() const
 {
     if (!object().isValid())
         return 0;
-    return std::accumulate(m_propertyAdaptors.constBegin(), m_propertyAdaptors.constEnd(), 0, [](int lhs, PropertyAdaptor *rhs) {
+    return std::accumulate(m_propertyAdaptors.constBegin(), m_propertyAdaptors.constEnd(), 0,
+                           [](int lhs, PropertyAdaptor *rhs) {
         return lhs + rhs->count();
     });
 }
@@ -67,7 +69,7 @@ PropertyData PropertyAggregator::propertyData(int index) const
         return PropertyData();
 
     int offset = 0;
-    foreach (const auto adaptor, m_propertyAdaptors) {
+    for (const auto adaptor : m_propertyAdaptors) {
         if (index < offset + adaptor->count())
             return adaptor->propertyData(index - offset);
         offset += adaptor->count();
@@ -77,15 +79,18 @@ PropertyData PropertyAggregator::propertyData(int index) const
     return PropertyData();
 }
 
-void PropertyAggregator::writeProperty(int index, const QVariant& value)
+void PropertyAggregator::writeProperty(int index, const QVariant &value)
 {
     if (!object().isValid())
         return;
 
     int offset = 0;
-    foreach (const auto adaptor, m_propertyAdaptors) {
-        if (index < offset + adaptor->count())
-            return adaptor->writeProperty(index - offset, value);
+    for (const auto adaptor : qAsConst(m_propertyAdaptors)) {
+        if (index < offset + adaptor->count()) {
+            adaptor->writeProperty(index - offset, value);
+            m_oi = adaptor->object(); // propagate changes back to us, particularly matters for value types
+            return;
+        }
         offset += adaptor->count();
     }
 
@@ -94,20 +99,22 @@ void PropertyAggregator::writeProperty(int index, const QVariant& value)
 
 bool PropertyAggregator::canAddProperty() const
 {
-    auto count = std::count_if(m_propertyAdaptors.constBegin(), m_propertyAdaptors.constEnd(), [](PropertyAdaptor *pa) {
+    auto count
+        = std::count_if(m_propertyAdaptors.constBegin(), m_propertyAdaptors.constEnd(),
+                        [](PropertyAdaptor *pa) {
         return pa->canAddProperty();
     });
     return count == 1;
 }
 
-void PropertyAggregator::addProperty(const PropertyData& data)
+void PropertyAggregator::addProperty(const PropertyData &data)
 {
     if (!object().isValid())
         return;
 
     Q_ASSERT(canAddProperty());
 
-    foreach (const auto adaptor, m_propertyAdaptors) {
+    for (const auto adaptor : qAsConst(m_propertyAdaptors)) {
         if (adaptor->canAddProperty()) {
             adaptor->addProperty(data);
             return;
@@ -123,7 +130,7 @@ void PropertyAggregator::resetProperty(int index)
         return;
 
     int offset = 0;
-    foreach (const auto adaptor, m_propertyAdaptors) {
+    for (const auto adaptor : qAsConst(m_propertyAdaptors)) {
         if (index < offset + adaptor->count()) {
             adaptor->resetProperty(index - offset);
             return;
@@ -134,13 +141,13 @@ void PropertyAggregator::resetProperty(int index)
     Q_ASSERT(false);
 }
 
-void PropertyAggregator::addPropertyAdaptor(PropertyAdaptor* adaptor)
+void PropertyAggregator::addPropertyAdaptor(PropertyAdaptor *adaptor)
 {
     m_propertyAdaptors.push_back(adaptor);
-    connect(adaptor, SIGNAL(propertyChanged(int,int)), this, SLOT(slotPropertyChanged(int,int)));
-    connect(adaptor, SIGNAL(propertyAdded(int,int)), this, SLOT(slotPropertyAdded(int,int)));
-    connect(adaptor, SIGNAL(propertyRemoved(int,int)), this, SLOT(slotPropertyRemoved(int,int)));
-    connect(adaptor, SIGNAL(objectInvalidated()), this, SIGNAL(objectInvalidated()));
+    connect(adaptor, &PropertyAdaptor::propertyChanged, this, &PropertyAggregator::slotPropertyChanged);
+    connect(adaptor, &PropertyAdaptor::propertyAdded, this, &PropertyAggregator::slotPropertyAdded);
+    connect(adaptor, &PropertyAdaptor::propertyRemoved, this, &PropertyAggregator::slotPropertyRemoved);
+    connect(adaptor, &PropertyAdaptor::objectInvalidated, this, &PropertyAdaptor::objectInvalidated);
 }
 
 void PropertyAggregator::slotPropertyChanged(int first, int last)
@@ -149,7 +156,7 @@ void PropertyAggregator::slotPropertyChanged(int first, int last)
     Q_ASSERT(source);
 
     int offset = 0;
-    foreach (auto pa, m_propertyAdaptors) {
+    for (auto pa : qAsConst(m_propertyAdaptors)) {
         if (pa == source) {
             emit propertyChanged(first + offset, last + offset);
             return;
@@ -165,7 +172,7 @@ void PropertyAggregator::slotPropertyAdded(int first, int last)
     Q_ASSERT(source);
 
     int offset = 0;
-    foreach (auto pa, m_propertyAdaptors) {
+    for (auto pa : qAsConst(m_propertyAdaptors)) {
         if (pa == source) {
             emit propertyAdded(first + offset, last + offset);
             return;
@@ -181,7 +188,7 @@ void PropertyAggregator::slotPropertyRemoved(int first, int last)
     Q_ASSERT(source);
 
     int offset = 0;
-    foreach (auto pa, m_propertyAdaptors) {
+    for (auto pa : qAsConst(m_propertyAdaptors)) {
         if (pa == source) {
             emit propertyRemoved(first + offset, last + offset);
             return;

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,49 +31,79 @@
 
 #include <QColorDialog>
 #include <QKeyEvent>
+#include <QLabel>
+
 using namespace GammaRay;
 
 PropertyExtendedEditor::PropertyExtendedEditor(QWidget *parent)
-  : QWidget(parent), ui(new Ui::PropertyExtendedEditor)
+    : QWidget(parent)
+    , ui(new Ui::PropertyExtendedEditor)
 {
-  ui->setupUi(this);
-  // TODO: make button content smaller by using a tiny icon
-  connect(ui->editButton, SIGNAL(clicked()),SLOT(edit()));
+    ui->setupUi(this);
+    setInlineEditable(false);
+    setReadOnly(false);
+
+    // TODO: make button content smaller by using a tiny icon
+    connect(ui->editButton, &QAbstractButton::clicked, this, &PropertyExtendedEditor::slotEdit);
 }
 
-PropertyExtendedEditor::~PropertyExtendedEditor()
-{
-  delete ui;
-}
-
-Qt::Alignment PropertyExtendedEditor::alignment() const
-{
-    return ui->valueLabel->alignment();
-}
-
-void PropertyExtendedEditor::setAlignment(const Qt::Alignment &alignment)
-{
-    ui->valueLabel->setAlignment(alignment);
-}
+PropertyExtendedEditor::~PropertyExtendedEditor() = default;
 
 QVariant PropertyExtendedEditor::value() const
 {
-  return m_value;
+    if (isInlineEditable())
+        return ui->lineEdit->text();
+    return m_value;
 }
 
 void PropertyExtendedEditor::setValue(const QVariant &value)
 {
-  m_value = value;
-  const QString displayValue = property("displayString").toString();
-  ui->valueLabel->setText(displayValue.isEmpty() ? value.toString() : displayValue);
+    m_value = value;
+    const QString displayValue = property("displayString").toString();
+    ui->lineEdit->setText(displayValue.isEmpty() ? value.toString() : displayValue);
 }
 
 void PropertyExtendedEditor::save(const QVariant &value)
 {
-  setValue(value);
+    if (isReadOnly())
+        return;
 
-  // The user already pressed Apply, don't force her/him to do again
-  QKeyEvent event(QEvent::KeyPress, Qt::Key_Enter, Qt::NoModifier);
-  QApplication::sendEvent(this, &event);
+    setValue(value);
+
+    // The user already pressed Apply, don't force her/him to do again
+    QKeyEvent event(QEvent::KeyPress, Qt::Key_Enter, Qt::NoModifier);
+    QApplication::sendEvent(this, &event);
 }
 
+bool PropertyExtendedEditor::isInlineEditable() const
+{
+    return m_inlineEditable;
+}
+
+void PropertyExtendedEditor::setInlineEditable(bool editable)
+{
+    m_inlineEditable = editable;
+    ui->lineEdit->setReadOnly(!isInlineEditable());
+
+    if (editable)
+        setFocusProxy(ui->lineEdit);
+    else
+        setFocusProxy(ui->editButton);
+    ui->lineEdit->setFrame(editable);
+}
+
+bool PropertyExtendedEditor::isReadOnly() const
+{
+    return m_readOnly;
+}
+
+void PropertyExtendedEditor::setReadOnly(bool readOnly)
+{
+    m_readOnly = readOnly;
+    setInlineEditable(false);
+}
+
+void PropertyExtendedEditor::slotEdit()
+{
+    showEditor(this);
+}

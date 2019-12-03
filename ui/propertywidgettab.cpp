@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -26,21 +26,19 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include "propertywidgettab.h"
 
 using namespace GammaRay;
 
-PropertyWidgetTabFactoryBase::PropertyWidgetTabFactoryBase(const QString& name, const QString& label, int priority) :
-    m_name(name),
-    m_label(label),
-    m_priority(priority)
+PropertyWidgetTabFactoryBase::PropertyWidgetTabFactoryBase(const QString &name,
+                                                           const QString &label, int priority)
+    : m_name(name)
+    , m_label(label)
+    , m_priority(priority)
 {
 }
 
-PropertyWidgetTabFactoryBase::~PropertyWidgetTabFactoryBase()
-{
-}
+PropertyWidgetTabFactoryBase::~PropertyWidgetTabFactoryBase() = default;
 
 QString PropertyWidgetTabFactoryBase::name() const
 {

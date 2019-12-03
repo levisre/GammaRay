@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,7 +29,7 @@
 
 #include "gammaray_ui_export.h"
 
-#include <common/probecontrollerinterface.h>
+#include <common/toolmanagerinterface.h>
 #include <common/sourcelocation.h>
 
 #include <QObject>
@@ -41,37 +41,33 @@ class QModelIndex;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-class GAMMARAY_UI_EXPORT ContextMenuExtension : public QObject
+class GAMMARAY_UI_EXPORT ContextMenuExtension
 {
-  Q_OBJECT
-
 public:
-  // UI presentation depend the order of this enum
-  enum Location {
-    GoTo,
-    ShowSource,
-    Creation,
-    Declaration
-  };
+    // UI presentation depend the order of this enum
+    enum Location {
+        GoTo,
+        ShowSource,
+        Creation,
+        Declaration
+    };
 
-  explicit ContextMenuExtension(ObjectId id = ObjectId());
+    explicit ContextMenuExtension(const ObjectId &id = ObjectId());
 
-  void setLocation(Location location, const SourceLocation &sourceLocation);
+    void setLocation(Location location, const SourceLocation &sourceLocation);
 
-  bool discoverSourceLocation(Location location, const QUrl &url);
-  // Given a model index from a PropertyModel, try to found a valid url and call
-  // setLocation() with the given location.
-  bool discoverPropertySourceLocation(Location location, const QModelIndex &index);
+    bool discoverSourceLocation(Location location, const QUrl &url);
+    // Given a model index from a PropertyModel, try to found a valid url and call
+    // setLocation() with the given location.
+    bool discoverPropertySourceLocation(Location location, const QModelIndex &index);
 
-  /// Populate @p menu with entries related to the captured object id. Only supported on Qt5
-  void populateMenu(QMenu *menu);
+    /// Populate @p menu with entries related to the captured object id. Only supported on Qt5
+    void populateMenu(QMenu *menu);
 
 private:
-  ObjectId m_id;
-  QMap<Location, SourceLocation> m_locations;
+    ObjectId m_id;
+    QVector<QPair<Location, SourceLocation>> m_locations;
 };
-
 }
 
 #endif // GAMMARAY_CONTEXTMENUEXTENSION_H

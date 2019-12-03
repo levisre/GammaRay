@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -37,32 +37,30 @@ class QItemSelectionModel;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-class ProbeInterface;
 class FontModel;
+class Probe;
 
 class FontBrowserServer : public FontBrowserInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::FontBrowserInterface)
-  public:
-    explicit FontBrowserServer(ProbeInterface *probe, QObject *parent = 0);
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::FontBrowserInterface)
+public:
+    explicit FontBrowserServer(Probe *probe, QObject *parent = nullptr);
 
-  private slots:
+private slots:
     void updateFonts();
 
-    void setPointSize(int size) Q_DECL_OVERRIDE;
-    void toggleBoldFont(bool bold) Q_DECL_OVERRIDE;
-    void toggleItalicFont(bool italic) Q_DECL_OVERRIDE;
-    void toggleUnderlineFont(bool underline) Q_DECL_OVERRIDE;
-    void updateText(const QString &text) Q_DECL_OVERRIDE;
-    void setColors(const QColor &foreground, const QColor &background) Q_DECL_OVERRIDE;
+    void setPointSize(int size) override;
+    void toggleBoldFont(bool bold) override;
+    void toggleItalicFont(bool italic) override;
+    void toggleUnderlineFont(bool underline) override;
+    void updateText(const QString &text) override;
+    void setColors(const QColor &foreground, const QColor &background) override;
 
-  private:
+private:
     FontModel *m_selectedFontModel;
     QItemSelectionModel *m_fontSelectionModel;
 };
-
 }
 
 #endif // FONTBROWSERSERVER_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,191 +27,117 @@
 */
 
 #include "clienttoolmodel.h"
+#include "clienttoolmanager.h"
 
-#include <ui/tools/localeinspector/localeinspectorwidget.h>
-#include <ui/tools/messagehandler/messagehandlerwidget.h>
-#include <ui/tools/metaobjectbrowser/metaobjectbrowserwidget.h>
-#include <ui/tools/metatypebrowser/metatypebrowserwidget.h>
-#include <ui/tools/mimetypes/mimetypeswidget.h>
-#include <ui/tools/modelinspector/modelinspectorwidget.h>
-#include <ui/tools/objectinspector/objectinspectorwidget.h>
-#include <ui/tools/resourcebrowser/resourcebrowserwidget.h>
-#include <ui/tools/standardpaths/standardpathswidget.h>
-#include <ui/tools/textdocumentinspector/textdocumentinspectorwidget.h>
-
-#include <common/modelroles.h>
-#include <common/pluginmanager.h>
 #include <common/endpoint.h>
-#include <ui/proxytooluifactory.h>
+#include <common/modelroles.h>
 
-#include <QCoreApplication>
-#include <QDir>
 #include <QWidget>
 
 using namespace GammaRay;
 
-#define MAKE_FACTORY(type, remote) \
-class type ## Factory : public ToolUiFactory { \
-public: \
-  virtual inline QString id() const { return "GammaRay::" #type; } \
-  virtual inline QWidget *createWidget(QWidget *parentWidget) { return new type ## Widget(parentWidget); } \
-  virtual inline bool remotingSupported() const { return remote; } \
+ClientToolModel::ClientToolModel(ClientToolManager *manager)
+    : QAbstractListModel(manager)
+    , m_toolManager(manager)
+{
+    connect(m_toolManager, &ClientToolManager::aboutToReceiveData, this, &ClientToolModel::startReset);
+    connect(m_toolManager, &ClientToolManager::toolListAvailable, this, &ClientToolModel::finishReset);
+    connect(m_toolManager, &ClientToolManager::aboutToReset, this, &ClientToolModel::startReset);
+    connect(m_toolManager, &ClientToolManager::reset, this, &ClientToolModel::finishReset);
+    connect(m_toolManager, &ClientToolManager::toolEnabledByIndex, this, &ClientToolModel::toolEnabled);
 }
 
-MAKE_FACTORY(LocaleInspector, true);
-MAKE_FACTORY(MessageHandler, true);
-MAKE_FACTORY(MetaObjectBrowser, true);
-MAKE_FACTORY(MetaTypeBrowser, true);
-MAKE_FACTORY(MimeTypes, true);
-MAKE_FACTORY(ModelInspector, true);
-MAKE_FACTORY(ResourceBrowser, true);
-MAKE_FACTORY(StandardPaths, true);
-MAKE_FACTORY(TextDocumentInspector, true);
+ClientToolModel::~ClientToolModel() = default;
 
-struct PluginRepository {
-    PluginRepository() {}
-    Q_DISABLE_COPY(PluginRepository)
-    ~PluginRepository() {
-        qDeleteAll(factories);
-    }
-
-    // ToolId -> ToolUiFactory
-    QHash<QString, ToolUiFactory*> factories;
-    // so far unused tools that yet have to be loaded/initialized
-    QSet<ToolUiFactory*> inactiveTools;
-};
-
-Q_GLOBAL_STATIC(PluginRepository, s_pluginRepository)
-
-static void insertFactory(ToolUiFactory* factory)
+QVariant ClientToolModel::data(const QModelIndex &index, int role) const
 {
-    s_pluginRepository()->factories.insert(factory->id(), factory);
-    s_pluginRepository()->inactiveTools.insert(factory);
-}
-
-static void initPluginRepository()
-{
-    if (!s_pluginRepository()->factories.isEmpty())
-        return;
-
-    insertFactory(new LocaleInspectorFactory);
-    insertFactory(new MessageHandlerFactory);
-    insertFactory(new MetaObjectBrowserFactory);
-    insertFactory(new MetaTypeBrowserFactory);
-    insertFactory(new MimeTypesFactory);
-    insertFactory(new ModelInspectorFactory);
-    insertFactory(new ObjectInspectorFactory);
-    insertFactory(new ResourceBrowserFactory);
-    insertFactory(new StandardPathsFactory);
-    insertFactory(new TextDocumentInspectorFactory);
-
-    PluginManager<ToolUiFactory, ProxyToolUiFactory> pm;
-    foreach(ToolUiFactory* factory, pm.plugins())
-        insertFactory(factory);
-}
-
-
-ClientToolModel::ClientToolModel(QObject* parent) : QSortFilterProxyModel(parent)
-{
-  setDynamicSortFilter(true);
-  initPluginRepository();
-}
-
-ClientToolModel::~ClientToolModel()
-{
-  for(auto it = m_widgets.constBegin(); it != m_widgets.constEnd(); ++it)
-    delete it.value().data();
-}
-
-QVariant ClientToolModel::data(const QModelIndex& index, int role) const
-{
-  if (role == ToolModelRole::ToolFactory || role == ToolModelRole::ToolWidget || role == Qt::ToolTipRole) {
-    const QString toolId = QSortFilterProxyModel::data(index, ToolModelRole::ToolId).toString();
-    if (toolId.isEmpty())
-      return QVariant();
-
-    if (role == ToolModelRole::ToolFactory)
-      return QVariant::fromValue(s_pluginRepository()->factories.value(toolId));
-    if (role == ToolModelRole::ToolWidget) {
-      const WidgetsHash::const_iterator it = m_widgets.constFind(toolId);
-      if (it != m_widgets.constEnd() && it.value())
-        return QVariant::fromValue<QWidget*>(it.value());
-      ToolUiFactory *factory = s_pluginRepository()->factories.value(toolId);
-      if (!factory)
+    if (!index.isValid())
         return QVariant();
-      if (s_pluginRepository()->inactiveTools.contains(factory)) {
-        factory->initUi();
-        s_pluginRepository()->inactiveTools.remove(factory);
-      }
-      QWidget *widget = factory->createWidget(m_parentWidget);
-      m_widgets.insert(toolId, widget);
-      return QVariant::fromValue(widget);
-    }
-    if (role == Qt::ToolTipRole) {
-      ToolUiFactory *factory = s_pluginRepository()->factories.value(toolId);
-      if (factory && (!factory->remotingSupported() && Endpoint::instance()->isRemoteClient()))
-        return tr("This tool does not work in out-of-process mode.");
-    }
-  }
 
-  return QSortFilterProxyModel::data(index, role);
+    const ToolInfo &tool = m_toolManager->tools().at(index.row());
+    switch (role) {
+        case Qt::DisplayRole:
+            return tool.name();
+        case ToolModelRole::ToolId:
+            return tool.id();
+        case ToolModelRole::ToolWidget:
+            return QVariant::fromValue(m_toolManager->widgetForIndex(index.row()));
+        case Qt::ToolTipRole:
+            if (!tool.remotingSupported() && Endpoint::instance()->isRemoteClient())
+                return tr("This tool does not work in out-of-process mode.");
+            return QVariant();
+        case ToolModelRole::ToolEnabled:
+            return tool.isEnabled();
+        case ToolModelRole::ToolHasUi:
+            return tool.hasUi();
+        case ToolModelRole::ToolFeedbackId:
+        {
+            auto id = tool.id().toLower();
+            if (id.startsWith(QLatin1String("gammaray_")))
+                id = id.mid(9);
+            else if (id.startsWith(QLatin1String("gammaray::")))
+                id = id.mid(10);
+            return id;
+        }
+    }
+    return QVariant();
 }
 
-bool ClientToolModel::setData(const QModelIndex& index, const QVariant& value, int role)
+void ClientToolModel::toolEnabled(int toolIndex)
 {
-  if (index.isValid() && role == ToolModelRole::ToolWidget) {
-    const QString toolId = QSortFilterProxyModel::data(index, ToolModelRole::ToolId).toString();
-    Q_ASSERT(!toolId.isEmpty());
-    Q_ASSERT(!m_widgets.contains(toolId));
-    m_widgets.insert(toolId, value.value<QWidget*>());
-    return true;
-  } else if (role == ToolModelRole::ToolWidgetParent) {
-    m_parentWidget = value.value<QWidget*>();
-    return true;
-  }
+    QModelIndex i = index(toolIndex, 0);
+    emit dataChanged(i, i, QVector<int>() << ToolModelRole::ToolEnabled);
+}
 
-  return QSortFilterProxyModel::setData(index, value, role);
+void ClientToolModel::startReset()
+{
+    beginResetModel();
+}
+
+void ClientToolModel::finishReset()
+{
+    endResetModel();
 }
 
 Qt::ItemFlags ClientToolModel::flags(const QModelIndex &index) const
 {
-  Qt::ItemFlags ret = QSortFilterProxyModel::flags(index);
-  const QString toolId = QSortFilterProxyModel::data(index, ToolModelRole::ToolId).toString();
-  ToolUiFactory *factory = s_pluginRepository()->factories.value(toolId);
-  if (!factory || (!factory->remotingSupported() && Endpoint::instance()->isRemoteClient())) {
-    ret &= ~Qt::ItemIsEnabled;
-  }
-  return ret;
+    Qt::ItemFlags flags = QAbstractListModel::flags(index);
+    if (!index.isValid())
+        return flags;
+
+    const auto &tool = m_toolManager->tools().at(index.row());
+    if (!tool.isEnabled() || (!tool.remotingSupported() && Endpoint::instance()->isRemoteClient()))
+        flags &= ~(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    return flags;
 }
 
-void ClientToolModel::setSourceModel(QAbstractItemModel *sourceModel)
+int ClientToolModel::rowCount(const QModelIndex &parent) const
 {
-    QSortFilterProxyModel::setSourceModel(sourceModel);
-    connect(sourceModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(updateToolInitialization(QModelIndex,QModelIndex)));
+    if (parent.isValid())
+        return 0;
+    return m_toolManager->tools().count();
 }
 
-bool ClientToolModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
-{
-    if (!sourceModel() || source_parent.isValid())
-        return false;
 
-    const auto srcIdx = sourceModel()->index(source_row, 0);
-    return srcIdx.data(ToolModelRole::ToolHasUi).toBool();
+ClientToolSelectionModel::ClientToolSelectionModel(ClientToolManager *manager)
+    : QItemSelectionModel(manager->model())
+    , m_toolManager(manager)
+{
+    connect(manager, &ClientToolManager::toolSelectedByIndex, this, &ClientToolSelectionModel::selectTool);
+    connect(manager, &ClientToolManager::toolListAvailable, this, &ClientToolSelectionModel::selectDefaultTool);
 }
 
-void ClientToolModel::updateToolInitialization(const QModelIndex& topLeft, const QModelIndex& bottomRight)
+ClientToolSelectionModel::~ClientToolSelectionModel() = default;
+
+void ClientToolSelectionModel::selectTool(int index)
 {
-  for (int i = topLeft.row(); i <= bottomRight.row(); i++) {
-    const auto index = sourceModel()->index(i, 0);
+    select(model()->index(index, 0), QItemSelectionModel::Select
+           | QItemSelectionModel::Clear
+           | QItemSelectionModel::Rows
+           | QItemSelectionModel::Current);
+}
 
-    if (sourceModel()->data(index, ToolModelRole::ToolEnabled).toBool()) {
-      const QString toolId = sourceModel()->data(index, ToolModelRole::ToolId).toString();
-      ToolUiFactory *factory = s_pluginRepository()->factories.value(toolId);
-
-      if (factory && (factory->remotingSupported() || !Endpoint::instance()->isRemoteClient()) && s_pluginRepository()->inactiveTools.contains(factory)) {
-        factory->initUi();
-        s_pluginRepository()->inactiveTools.remove(factory);
-      }
-    }
-  }
+void ClientToolSelectionModel::selectDefaultTool()
+{
+    selectTool(m_toolManager->toolIndexForToolId(QStringLiteral("GammaRay::ObjectInspector")));
 }

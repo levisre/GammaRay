@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,22 +39,22 @@ class QUdpSocket;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class TcpServerDevice : public ServerDeviceImpl<QTcpServer>
 {
     Q_OBJECT
 public:
-    explicit TcpServerDevice(QObject* parent = 0);
-    ~TcpServerDevice();
+    explicit TcpServerDevice(QObject *parent = nullptr);
+    ~TcpServerDevice() override;
 
-    bool listen() Q_DECL_OVERRIDE;
-    QUrl externalAddress() const Q_DECL_OVERRIDE;
-    void broadcast(const QByteArray &data) Q_DECL_OVERRIDE;
+    bool listen() override;
+    bool isListening() const override;
+    QUrl externalAddress() const override;
+    void broadcast(const QByteArray &data) override;
 
 private:
-    QUdpSocket* m_broadcastSocket;
+    QUdpSocket *m_broadcastSocket;
+    QString bestAvailableIP(const QHostAddress &address) const;
 };
-
 }
 
 #endif // GAMMARAY_TCPSERVERDEVICE_H

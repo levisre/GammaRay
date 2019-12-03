@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -39,7 +39,7 @@
 #define GAMMARAY_TOOLFACTORY_H
 
 #include "gammaray_core_export.h"
-#include "probeinterface.h"
+#include "probe.h"
 
 #include <QMetaType>
 #include <QStringList>
@@ -48,72 +48,71 @@
 
 namespace GammaRay {
 
-class ProbeInterface;
-
-/**
- * @brief An abstract interface for probe tools.
+/*!
+ * An abstract interface for probe tools.
  *
  * The ToolFactory class is an abstract base class for creating probe tools
  * for GammaRay.  Each tool must have a unique identifier.
  */
 class GAMMARAY_CORE_EXPORT ToolFactory
 {
-  public:
+public:
     ToolFactory();
     virtual ~ToolFactory();
 
-    /**
+    /*!
      * Unique id of this tool
      * @return a QString containing the tool id.
      */
     virtual QString id() const = 0;
 
-    /**
-     * Human readable name of this tool.
-     * @return a QString containing the tool name.
-     */
-    virtual QString name() const = 0;
-
-    /**
+    /*!
      * Class names of types this tool can handle.
      * The tool will only be activated if an object of one of these types
      * is seen in the probed application.
      * @return a QVector<QByteArray> of class names of types this tool supports.
      */
     const QVector<QByteArray> &supportedTypes() const;
+    /*!
+     * Set names of supported classes.
+     * @see supportedTypes()
+     * @since 2.5
+     */
     void setSupportedTypes(const QVector<QByteArray> &types);
 
-    /**
+    /*!
      * Class names of types this tool can handle as a string.
      * @return a comma separated QString of class names of types this tool supports.
      */
     QString supportedTypesString() const;
 
-    /**
+    /*!
      * Initialize the tool.
      * Implement this method to do non-GUI initialization, such as creating
      * object tracking models etc.
      * @param probe The probe interface allowing access to the object models.
      */
-    virtual void init(ProbeInterface *probe) = 0;
+    virtual void init(Probe *probe) = 0;
 
-    /**
+    /*!
      * Allows to hide a plug-in from the UI.
      * This is useful for plug-ins that only provide support for additional
-     * data types.
+     * data types. The value is usually filled in by the plug-in loader
+     * @return @c true if the plug-in has no tool view.
      * @since 2.1
      */
-    virtual bool isHidden() const = 0;
+    virtual bool isHidden() const;
 
-    /**
+    /*!
      * Class names of types this tool can select.
      * This must be a subset of supportedTypes(), and is used to check if this
      * tool is a viable candidate for object navigation.
-     * When returning an non-empty result here, you must the Probe::objectSelected signal.
+     * When returning an non-empty result here, you must handle the Probe::objectSelected()
+     * signal.
      */
     virtual QVector<QByteArray> selectableTypes() const;
 
-  private:
+private:
     Q_DISABLE_COPY(ToolFactory)
     QVector<QByteArray> m_types;
 };
@@ -121,40 +120,30 @@ class GAMMARAY_CORE_EXPORT ToolFactory
 /**
  * @brief A templated generic ToolFactory for some data type and tool.
  */
-template <typename Type, typename Tool>
+template<typename Type, typename Tool>
 class StandardToolFactory : public ToolFactory
 {
 public:
-  StandardToolFactory()
-  {
-    setSupportedTypes(QVector<QByteArray>() << Type::staticMetaObject.className());
-  }
+    StandardToolFactory()
+    {
+        setSupportedTypes(QVector<QByteArray>() << Type::staticMetaObject.className());
+    }
 
-  QString id() const Q_DECL_OVERRIDE
-  {
-    return Tool::staticMetaObject.className();
-  }
+    QString id() const override
+    {
+        return Tool::staticMetaObject.className();
+    }
 
-  void init(ProbeInterface *probe) Q_DECL_OVERRIDE
-  {
-    new Tool(probe, probe->probe());
-  }
-
-  bool isHidden() const Q_DECL_OVERRIDE
-  {
-    return false;
-  }
+    void init(Probe *probe) override
+    {
+        new Tool(probe, probe);
+    }
 };
-
 }
 
 QT_BEGIN_NAMESPACE
 Q_DECLARE_INTERFACE(GammaRay::ToolFactory, "com.kdab.GammaRay.ToolFactory/1.0")
 QT_END_NAMESPACE
 Q_DECLARE_METATYPE(GammaRay::ToolFactory *)
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-#define Q_PLUGIN_METADATA(x)
-#endif
 
 #endif

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,21 +36,19 @@
 #endif
 
 namespace GammaRay {
-
 class MessageGenerator : public QWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
+public:
     MessageGenerator();
 
-  private slots:
+private slots:
     void generateDebug();
     void generateWarning();
     void generateCritical();
-    Q_NORETURN void generateFatal();
+    void generateFatal(); //FIXME: Q_RETURN fails on some configurations
 };
-
 }
 
 #endif // GAMMARAY_MESSAGEMODELTEST_H

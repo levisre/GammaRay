@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,24 +41,24 @@ void categoryFilter(QLoggingCategory *category)
 }
 }
 
-LoggingCategoryModel* LoggingCategoryModel::m_instance = Q_NULLPTR;
+LoggingCategoryModel *LoggingCategoryModel::m_instance = nullptr;
 
-LoggingCategoryModel::LoggingCategoryModel(QObject* parent) :
-    QAbstractTableModel(parent),
-    m_previousFilter(Q_NULLPTR)
+LoggingCategoryModel::LoggingCategoryModel(QObject *parent)
+    : QAbstractTableModel(parent)
+    , m_previousFilter(nullptr)
 {
-    Q_ASSERT(m_instance == Q_NULLPTR);
+    Q_ASSERT(m_instance == nullptr);
     m_instance = this;
     m_previousFilter = QLoggingCategory::installFilter(categoryFilter);
 }
 
 LoggingCategoryModel::~LoggingCategoryModel()
 {
-    m_instance = Q_NULLPTR;
+    m_instance = nullptr;
     QLoggingCategory::installFilter(m_previousFilter);
 }
 
-void LoggingCategoryModel::addCategory(QLoggingCategory* category)
+void LoggingCategoryModel::addCategory(QLoggingCategory *category)
 {
     beginInsertRows(QModelIndex(), m_categories.size(), m_categories.size());
     m_categories.push_back(category);
@@ -78,10 +78,10 @@ int LoggingCategoryModel::columnCount(const QModelIndex &parent) const
     return 5;
 }
 
-QVariant LoggingCategoryModel::data(const QModelIndex& index, int role) const
+QVariant LoggingCategoryModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
-      return QVariant();
+        return QVariant();
 
     if (role == Qt::DisplayRole && index.column() == 0)
         return QString::fromUtf8(m_categories.at(index.row())->categoryName());
@@ -89,25 +89,25 @@ QVariant LoggingCategoryModel::data(const QModelIndex& index, int role) const
     if (role == Qt::CheckStateRole) {
         auto cat = m_categories.at(index.row());
         switch (index.column()) {
-            case 1: return cat->isDebugEnabled() ? Qt::Checked : Qt::Unchecked;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
-            case 2: return cat->isInfoEnabled() ? Qt::Checked : Qt::Unchecked;
-#endif
-            case 3: return cat->isWarningEnabled() ? Qt::Checked : Qt::Unchecked;
-            case 4: return cat->isCriticalEnabled() ? Qt::Checked : Qt::Unchecked;
+        case 1:
+            return cat->isDebugEnabled() ? Qt::Checked : Qt::Unchecked;
+        case 2:
+            return cat->isInfoEnabled() ? Qt::Checked : Qt::Unchecked;
+        case 3:
+            return cat->isWarningEnabled() ? Qt::Checked : Qt::Unchecked;
+        case 4:
+            return cat->isCriticalEnabled() ? Qt::Checked : Qt::Unchecked;
         }
     }
 
     return QVariant();
 }
 
-Qt::ItemFlags LoggingCategoryModel::flags(const QModelIndex& index) const
+Qt::ItemFlags LoggingCategoryModel::flags(const QModelIndex &index) const
 {
     const auto baseFlags = QAbstractTableModel::flags(index);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
     if (index.column() == 2) // info not available in Qt < 5.5
         return baseFlags;
-#endif
     if (index.column() > 0)
         return baseFlags | Qt::ItemIsUserCheckable;
     return baseFlags;
@@ -118,11 +118,8 @@ bool LoggingCategoryModel::setData(const QModelIndex &index, const QVariant &val
     if (!index.isValid() || index.column() == 0 || role != Qt::CheckStateRole)
         return false;
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
-    static const QtMsgType type_map[] = { QtDebugMsg, QtDebugMsg, QtInfoMsg, QtWarningMsg, QtCriticalMsg };
-#else
-    static const QtMsgType type_map[] = { QtDebugMsg, QtDebugMsg, QtDebugMsg, QtWarningMsg, QtCriticalMsg };
-#endif
+    static const QtMsgType type_map[]
+        = { QtDebugMsg, QtDebugMsg, QtInfoMsg, QtWarningMsg, QtCriticalMsg };
 
     const auto enabled = value.toInt() == Qt::Checked;
     auto cat = m_categories.at(index.row());
@@ -135,11 +132,16 @@ QVariant LoggingCategoryModel::headerData(int section, Qt::Orientation orientati
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
         switch (section) {
-            case 0: return tr("Category");
-            case 1: return tr("Debug");
-            case 2: return tr("Info");
-            case 3: return tr("Warning");
-            case 4: return tr("Critical");
+        case 0:
+            return tr("Category");
+        case 1:
+            return tr("Debug");
+        case 2:
+            return tr("Info");
+        case 3:
+            return tr("Warning");
+        case 4:
+            return tr("Critical");
         }
     }
     return QAbstractTableModel::headerData(section, orientation, role);

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,22 +36,29 @@
 #include <QComboBox>
 #include <QDebug>
 #include <QLabel>
-#include <QToolBar>
+#include <QSettings>
 
 using namespace GammaRay;
 
 PaintBufferViewer::PaintBufferViewer(const QString &name, QWidget *parent)
-  : QDialog(parent)
-  , ui(new Ui::PaintBufferViewer)
+    : QDialog(parent)
+    , ui(new Ui::PaintBufferViewer)
 {
-  ui->setupUi(this);
+    ui->setupUi(this);
 
-  setAttribute(Qt::WA_DeleteOnClose);
-  setModal(true);
+    setAttribute(Qt::WA_DeleteOnClose);
+    setModal(true);
 
-  ui->paintAnalyzerWidget->setBaseName(name);
+    ui->paintAnalyzerWidget->setBaseName(name);
+
+    QSettings settings;
+    settings.beginGroup(QStringLiteral("PaintBufferViewer"));
+    restoreGeometry(settings.value(QStringLiteral("Geometry")).toByteArray());
 }
 
 PaintBufferViewer::~PaintBufferViewer()
 {
+    QSettings settings;
+    settings.beginGroup(QStringLiteral("PaintBufferViewer"));
+    settings.setValue(QStringLiteral("Geometry"), saveGeometry());
 }

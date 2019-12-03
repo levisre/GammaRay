@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,16 +41,21 @@
 #include <QThread>
 #include <QWaitCondition>
 
+#ifdef Q_OS_ANDROID
+#include <QtAndroid>
+#endif
+
+#include <iostream>
+
 using namespace GammaRay;
 
 namespace GammaRay {
-
 class ProbeSettingsReceiver;
 
 struct ProbeSettingsData
 {
     QHash<QByteArray, QByteArray> settings;
-    ProbeSettingsReceiver* receiver;
+    ProbeSettingsReceiver *receiver;
 };
 
 Q_GLOBAL_STATIC(ProbeSettingsData, s_probeSettings)
@@ -59,8 +64,10 @@ class ProbeSettingsReceiver : public QObject
 {
     Q_OBJECT
 public:
-    explicit ProbeSettingsReceiver(QObject *parent = Q_NULLPTR);
+    explicit ProbeSettingsReceiver(QObject *parent = nullptr);
+    ~ProbeSettingsReceiver() override;
     Q_INVOKABLE void sendServerAddress(const QUrl &address);
+    Q_INVOKABLE void sendServerLaunchError(const QString &reason);
 
     void waitForSettingsReceived();
 
@@ -71,15 +78,19 @@ private slots:
 private:
     Q_INVOKABLE void run();
     void setRootPathFromProbePath(const QString &probePath);
-    QLocalSocket *m_socket;
+    QLocalSocket *m_socket = nullptr;
     QWaitCondition m_waitCondition;
     QMutex m_mutex;
 };
 
-ProbeSettingsReceiver::ProbeSettingsReceiver(QObject* parent):
-    QObject(parent),
-    m_socket(Q_NULLPTR)
+ProbeSettingsReceiver::ProbeSettingsReceiver(QObject *parent)
+    : QObject(parent)
 {
+}
+
+ProbeSettingsReceiver::~ProbeSettingsReceiver()
+{
+    delete m_socket;
 }
 
 void ProbeSettingsReceiver::run()
@@ -88,12 +99,17 @@ void ProbeSettingsReceiver::run()
     m_mutex.unlock();
 
     m_socket = new QLocalSocket;
-    connect(m_socket, SIGNAL(disconnected()), this, SLOT(settingsReceivedFallback()));
-    connect(m_socket, SIGNAL(error(QLocalSocket::LocalSocketError)), this, SLOT(settingsReceivedFallback()));
-    connect(m_socket, SIGNAL(readyRead()), this, SLOT(readyRead()));
-    m_socket->connectToServer(QStringLiteral("gammaray-") + QString::number(ProbeSettings::launcherIdentifier()));
+    connect(m_socket, &QLocalSocket::disconnected, this, &ProbeSettingsReceiver::settingsReceivedFallback);
+    connect(m_socket, static_cast<void(QLocalSocket::*)(QLocalSocket::LocalSocketError)>(&QLocalSocket::error),
+            this, &ProbeSettingsReceiver::settingsReceivedFallback);
+    connect(m_socket, &QIODevice::readyRead, this, &ProbeSettingsReceiver::readyRead);
+    m_socket->connectToServer(QStringLiteral("gammaray-")
+                              + QString::number(ProbeSettings::launcherIdentifier()));
     if (!m_socket->waitForConnected(10000)) {
-        qWarning() << "Failed to connect to launcher, can't receive probe settings!" << m_socket->errorString();
+#ifndef Q_OS_ANDROID
+        qWarning() << "Failed to connect to launcher, can't receive probe settings!"
+                   << m_socket->errorString();
+#endif
         settingsReceivedFallback();
     }
 }
@@ -111,48 +127,68 @@ void ProbeSettingsReceiver::readyRead()
     while (Message::canReadMessage(m_socket)) {
         auto msg = Message::readMessage(m_socket);
         switch (msg.type()) {
-            case Protocol::ServerVersion:
-            {
-                qint32 version;
-                msg.payload() >> version;
-                if (version != Protocol::version()) {
-                    qWarning() << "Unable to receive probe settings, mismatching protocol versions (expected:" << Protocol::version() << "got:" << version << ")";
-                    qWarning() << "Continuing anyway, but this is likely going to fail.";
-                    settingsReceivedFallback();
-                    return;
-                }
-                break;
-            }
-            case Protocol::ProbeSettings:
-            {
-                msg.payload() >> s_probeSettings()->settings;
-                //qDebug() << Q_FUNC_INFO << s_probeSettings()->settings;
-                const QString probePath = ProbeSettings::value(QStringLiteral("ProbePath")).toString();
-                setRootPathFromProbePath(probePath);
-
-                m_waitCondition.wakeAll();
+        case Protocol::ServerVersion:
+        {
+            qint32 version;
+            msg >> version;
+            if (version != Protocol::version()) {
+                qWarning()
+                        <<
+                        "Unable to receive probe settings, mismatching protocol versions (expected:"
+                        << Protocol::version() << "got:" << version << ")";
+                qWarning() << "Continuing anyway, but this is likely going to fail.";
+                settingsReceivedFallback();
                 return;
             }
-            default:
-                continue;
+            break;
+        }
+        case Protocol::ProbeSettings:
+        {
+            msg >> s_probeSettings()->settings;
+            // qDebug() << Q_FUNC_INFO << s_probeSettings()->settings;
+            const QString probePath = ProbeSettings::value(QStringLiteral("ProbePath")).toString();
+            setRootPathFromProbePath(probePath);
+
+            m_waitCondition.wakeAll();
+            return;
+        }
+        default:
+            continue;
         }
     }
 }
 
-void ProbeSettingsReceiver::sendServerAddress(const QUrl& address)
+void ProbeSettingsReceiver::sendServerAddress(const QUrl &address)
 {
     if (!m_socket || m_socket->state() != QLocalSocket::ConnectedState)
         return;
 
     Message msg(Protocol::LauncherAddress, Protocol::ServerAddress);
-    msg.payload() << address;
+    msg << address;
     msg.write(m_socket);
 
     m_socket->waitForBytesWritten();
     m_socket->close();
 
     deleteLater();
-    s_probeSettings()->receiver = Q_NULLPTR;
+    s_probeSettings()->receiver = nullptr;
+    thread()->quit();
+}
+
+void ProbeSettingsReceiver::sendServerLaunchError(const QString &reason)
+{
+    if (!m_socket || m_socket->state() != QLocalSocket::ConnectedState)
+        return;
+
+    Message msg(Protocol::LauncherAddress, Protocol::ServerLaunchError);
+    msg << reason;
+    msg.write(m_socket);
+
+    m_socket->waitForBytesWritten();
+    m_socket->close();
+
+    deleteLater();
+    s_probeSettings()->receiver = nullptr;
     thread()->quit();
 }
 
@@ -176,33 +212,61 @@ void ProbeSettingsReceiver::setRootPathFromProbePath(const QString &probePath)
     else
         Paths::setRootPath(probePath + QDir::separator() + GAMMARAY_INVERSE_PROBE_DIR);
 }
-
 }
 
-QVariant ProbeSettings::value(const QString& key, const QVariant& defaultValue)
+#ifdef QT_ANDROIDEXTRAS_LIB
+static QVariant getPackageMetaData(const QString &key, const QVariant &defaultValue)
 {
-  QByteArray v = s_probeSettings()->settings.value(key.toUtf8());
-  if (v.isEmpty())
-    v = qgetenv("GAMMARAY_" + key.toLocal8Bit());
-  if (v.isEmpty())
-    return defaultValue;
+    auto pm = QtAndroid::androidContext().callObjectMethod("getPackageManager", "()Landroid/content/pm/PackageManager;");
+    auto packageName = QtAndroid::androidContext().callObjectMethod("getPackageName", "()Ljava/lang/String;");
+    auto GET_META_DATA = QAndroidJniObject::getStaticField<jint>("android/content/pm/PackageManager", "GET_META_DATA");
+    auto appInfo = pm.callObjectMethod("getApplicationInfo", "(Ljava/lang/String;I)Landroid/content/pm/ApplicationInfo;", packageName.object(), GET_META_DATA);
+    auto metaData = appInfo.getObjectField("metaData", "Landroid/os/Bundle;");
+    if (!metaData.isValid()) {
+        return defaultValue;
+    }
 
-  switch (defaultValue.type()) {
+    // TODO handle different type cases based on defaultValue.type()
+    auto value = metaData.callObjectMethod("getString", "(Ljava/lang/String;)Ljava/lang/String;", QAndroidJniObject::fromString(key).object());
+    if (value.isValid()) {
+        return value.toString();
+    }
+
+    return defaultValue;
+}
+#endif
+
+QVariant ProbeSettings::value(const QString &key, const QVariant &defaultValue)
+{
+    QByteArray v = s_probeSettings()->settings.value(key.toUtf8());
+    if (v.isEmpty())
+        v = qgetenv("GAMMARAY_" + key.toLocal8Bit());
+
+#ifdef QT_ANDROIDEXTRAS_LIB
+    if (v.isEmpty()) {
+        return getPackageMetaData("com.kdab.gammaray." + key, defaultValue);
+    }
+#endif
+
+    if (v.isEmpty())
+        return defaultValue;
+
+    switch (defaultValue.type()) {
     case QVariant::String:
-      return QString::fromUtf8(v);
+        return QString::fromUtf8(v);
     case QVariant::Bool:
-      return v == "true" || v == "1" || v == "TRUE";
+        return v == "true" || v == "1" || v == "TRUE";
     case QVariant::Int:
-      return v.toInt();
+        return v.toInt();
     default:
-      return v;
-  }
+        return v;
+    }
 }
 
 void ProbeSettings::receiveSettings()
 {
     auto t = new QThread;
-    QObject::connect(t, SIGNAL(finished()), t, SLOT(deleteLater()));
+    QObject::connect(t, &QThread::finished, t, &QObject::deleteLater);
     t->start();
     auto receiver = new ProbeSettingsReceiver;
     s_probeSettings()->receiver = receiver;
@@ -212,24 +276,30 @@ void ProbeSettings::receiveSettings()
 
 qint64 ProbeSettings::launcherIdentifier()
 {
-  bool ok;
-  const qint64 id = qgetenv("GAMMARAY_LAUNCHER_ID").toLongLong(&ok);
-  if (ok && id > 0)
-    return id;
-  return QCoreApplication::applicationPid();
+    bool ok;
+    const qint64 id = qgetenv("GAMMARAY_LAUNCHER_ID").toLongLong(&ok);
+    if (ok && id > 0)
+        return id;
+    return QCoreApplication::applicationPid();
 }
 
 void ProbeSettings::resetLauncherIdentifier()
 {
-  // if we were launch by GammaRay, and we later try to re-attach, we need to make sure
-  // to not end up with an outdated launcher id
-  qputenv("GAMMARAY_LAUNCHER_ID", "");
+    // if we were launch by GammaRay, and we later try to re-attach, we need to make sure
+    // to not end up with an outdated launcher id
+    qputenv("GAMMARAY_LAUNCHER_ID", "");
 }
 
-void ProbeSettings::sendServerAddress(const QUrl& addr)
+void ProbeSettings::sendServerAddress(const QUrl &addr)
 {
     Q_ASSERT(s_probeSettings()->receiver);
     QMetaObject::invokeMethod(s_probeSettings()->receiver, "sendServerAddress", Q_ARG(QUrl, addr));
+}
+
+void ProbeSettings::sendServerLaunchError(const QString &reason)
+{
+    Q_ASSERT(s_probeSettings()->receiver);
+    QMetaObject::invokeMethod(s_probeSettings()->receiver, "sendServerLaunchError", Q_ARG(QString, reason));
 }
 
 #include "probesettings.moc"

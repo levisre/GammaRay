@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,6 +27,7 @@
 */
 
 #include "objectdataprovider.h"
+#include "probe.h"
 
 #include <common/sourcelocation.h>
 
@@ -35,19 +36,19 @@
 
 namespace GammaRay {
 
-AbstractObjectDataProvider::~AbstractObjectDataProvider()
-{
-}
+AbstractObjectDataProvider::AbstractObjectDataProvider() = default;
 
-Q_GLOBAL_STATIC(QVector<AbstractObjectDataProvider*>, s_providers)
+AbstractObjectDataProvider::~AbstractObjectDataProvider() = default;
 
-void ObjectDataProvider::registerProvider(AbstractObjectDataProvider* provider)
+Q_GLOBAL_STATIC(QVector<AbstractObjectDataProvider *>, s_providers)
+
+void ObjectDataProvider::registerProvider(AbstractObjectDataProvider *provider)
 {
     if (!s_providers()->contains(provider))
         s_providers()->push_back(provider);
 }
 
-QString ObjectDataProvider::name(const QObject* obj)
+QString ObjectDataProvider::name(const QObject *obj)
 {
     if (!obj)
         return QStringLiteral("0x0");
@@ -75,7 +76,20 @@ QString ObjectDataProvider::typeName(QObject *obj)
     return obj->metaObject()->className();
 }
 
-SourceLocation ObjectDataProvider::creationLocation(QObject* obj)
+QString ObjectDataProvider::shortTypeName(QObject *obj)
+{
+    if (!obj)
+        return QString();
+
+    foreach (auto provider, *s_providers()) {
+        const auto name = provider->shortTypeName(obj);
+        if (!name.isEmpty())
+            return name;
+    }
+    return obj->metaObject()->className();
+}
+
+SourceLocation ObjectDataProvider::creationLocation(QObject *obj)
 {
     SourceLocation loc;
     if (!obj)
@@ -87,10 +101,11 @@ SourceLocation ObjectDataProvider::creationLocation(QObject* obj)
             return loc;
     }
 
+    loc = Probe::instance()->objectCreationSourceLocation(obj);
     return loc;
 }
 
-SourceLocation ObjectDataProvider::declarationLocation(QObject* obj)
+SourceLocation ObjectDataProvider::declarationLocation(QObject *obj)
 {
     SourceLocation loc;
     if (!obj)
@@ -104,5 +119,4 @@ SourceLocation ObjectDataProvider::declarationLocation(QObject* obj)
 
     return loc;
 }
-
 }

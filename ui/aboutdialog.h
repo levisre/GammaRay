@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,25 +32,28 @@
 #include <QDialog>
 
 namespace GammaRay {
-
-namespace Ui
-{
-class AboutDialog;
-}
+class AboutWidget;
 
 class AboutDialog : public QDialog
 {
     Q_OBJECT
 public:
-    explicit AboutDialog(QWidget* parent = 0);
-    ~AboutDialog();
+    explicit AboutDialog(QWidget *parent = nullptr);
+    ~AboutDialog() override;
 
-    void setTitle(const QString &title);
-    void setText(const QString &text);
     void setLogo(const QString &iconFileName);
+    void setThemeLogo(const QString &fileName);
+    void setTitle(const QString &title);
+    void setHeader(const QString &header);
+    void setAuthors(const QString &authors);
+    void setFooter(const QString &footer);
+
+    void setText(const QString &text);
+
+    QSize sizeHint() const override;
 
 private:
-    QScopedPointer<Ui::AboutDialog> ui;
+    AboutWidget *ui;
 };
 }
 

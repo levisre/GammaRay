@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,30 +29,30 @@
 #ifndef GAMMARAY_REMOTEVIEWSERVER_H
 #define GAMMARAY_REMOTEVIEWSERVER_H
 
+#include <memory>
+
 #include "gammaray_core_export.h"
 
 #include <common/remoteviewinterface.h>
 
+#include <QPointer>
+
 QT_BEGIN_NAMESPACE
 class QTimer;
 class QWindow;
+class QTouchDevice;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 /** Server part of the remote view widget. */
 class GAMMARAY_CORE_EXPORT RemoteViewServer : public RemoteViewInterface
 {
     Q_OBJECT
     Q_INTERFACES(GammaRay::RemoteViewInterface)
 public:
-    explicit RemoteViewServer(const QString& name, QObject* parent = Q_NULLPTR);
+    explicit RemoteViewServer(const QString &name, QObject *parent = nullptr);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    typedef QWindow EventReceiver;
-#else
-    typedef QObject EventReceiver;
-#endif
+    using EventReceiver = QWindow;
     /// event receiver for input redirection
     void setEventReceiver(EventReceiver *receiver);
 
@@ -62,25 +62,40 @@ public:
     /// returns @c true if there is a client displaying our content
     bool isActive() const;
 
+    /// set the grabber ready state
+    void setGrabberReady(bool ready);
+
     /// sends a new frame to the client
     void sendFrame(const RemoteViewFrame &frame);
 
+    QRectF userViewport() const;
+
 public slots:
-    /// call this to indicate the source has changed and the client reuqires an update
+    /// call this to indicate the source has changed and the client requires an update
     void sourceChanged();
+    void requestCompleteFrame() override;
 
 signals:
-    void doPickElement(const QPoint &pos);
+    void elementsAtRequested(const QPoint &pos, GammaRay::RemoteViewInterface::RequestMode mode);
+    void doPickElementId(const GammaRay::ObjectId &id);
     /// when receiving this signal, obtain a new frame and send it to the client
     void requestUpdate();
 
 private:
-    void pickElementAt(const QPoint& pos) Q_DECL_OVERRIDE;
-    void sendKeyEvent(int type, int key, int modifiers, const QString& text, bool autorep, ushort count) Q_DECL_OVERRIDE;
-    void sendMouseEvent(int type, const QPoint& localPos, int button, int buttons, int modifiers) Q_DECL_OVERRIDE;
-    void sendWheelEvent(const QPoint& localPos, QPoint pixelDelta, QPoint angleDelta, int buttons, int modifiers) Q_DECL_OVERRIDE;
-    void setViewActive(bool active) Q_DECL_OVERRIDE;
-    void clientViewUpdated() Q_DECL_OVERRIDE;
+    void requestElementsAt(const QPoint &pos, GammaRay::RemoteViewInterface::RequestMode mode) override;
+    void pickElementId(const GammaRay::ObjectId &id) override;
+    void sendKeyEvent(int type, int key, int modifiers, const QString &text, bool autorep,
+                      ushort count) override;
+    void sendMouseEvent(int type, const QPoint &localPos, int button, int buttons,
+                        int modifiers) override;
+    void sendWheelEvent(const QPoint &localPos, QPoint pixelDelta, QPoint angleDelta, int buttons,
+                        int modifiers) override;
+    void sendTouchEvent(int type, int touchDeviceType, int deviceCaps, int touchDeviceMaxTouchPoints, int modifiers,
+                        Qt::TouchPointStates touchPointStates, const QList<QTouchEvent::TouchPoint> &touchPoints) 
+                        override;
+    void setViewActive(bool active) override;
+    void sendUserViewport(const QRectF &userViewport) override;
+    void clientViewUpdated() override;
 
     void checkRequestUpdate();
 
@@ -89,13 +104,19 @@ private slots:
     void requestUpdateTimeout();
 
 private:
-    EventReceiver *m_eventReceiver;
+    QPointer<EventReceiver> m_eventReceiver;
     QTimer *m_updateTimer;
+    QRectF m_lastTransmittedViewRect;
+    QRectF m_lastTransmittedImageRect;
+    QRectF m_userViewport;
     bool m_clientActive;
     bool m_sourceChanged;
     bool m_clientReady;
+    bool m_grabberReady;
+    bool m_pendingReset;
+    bool m_pendingCompleteFrame;
+    std::unique_ptr<QTouchDevice> m_touchDevice;
 };
-
 }
 
 #endif // GAMMARAY_REMOTEVIEWSERVER_H

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,33 +37,31 @@ class QGraphicsItem;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class GraphicsView;
 
 namespace Ui {
-  class GraphicsSceneView;
+class GraphicsSceneView;
 }
 
 class GraphicsSceneView : public QWidget
 {
-  Q_OBJECT
-  public:
-    explicit GraphicsSceneView(QWidget *parent = 0);
-    ~GraphicsSceneView();
+    Q_OBJECT
+public:
+    explicit GraphicsSceneView(QWidget *parent = nullptr);
+    ~GraphicsSceneView() override;
 
-    GraphicsView* view() const;
+    GraphicsView *view() const;
 
     void showGraphicsItem(QGraphicsItem *item);
     void setGraphicsScene(QGraphicsScene *scene);
 
-  private slots:
+private slots:
     void sceneCoordinatesChanged(const QPointF &coord);
     void itemCoordinatesChanged(const QPointF &coord);
 
-  private:
+private:
     Ui::GraphicsSceneView *ui;
 };
-
 }
 
 #endif // GAMMARAY_GRAPHICSSCENEVIEW_H

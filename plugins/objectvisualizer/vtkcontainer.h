@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,33 +30,31 @@
 #include <QWidget>
 
 namespace GammaRay {
-
 class VtkPanel;
 class VtkWidget;
 
 class GraphWidget : public QWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit GraphWidget(QWidget *parent = 0);
+public:
+    explicit GraphWidget(QWidget *parent = nullptr);
     virtual ~GraphWidget();
 
     VtkWidget *vtkWidget() const
     {
-      return m_vtkWidget;
+        return m_vtkWidget;
     }
 
     VtkPanel *vtkPanel() const
     {
-      return m_vtkPanel;
+        return m_vtkPanel;
     }
 
-  private:
+private:
     VtkWidget *m_vtkWidget;
     VtkPanel *m_vtkPanel;
 };
-
 }
 
 #endif // GAMMARAY_GRAPHWIDGET_H

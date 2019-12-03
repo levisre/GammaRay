@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,23 +30,27 @@
 
 using namespace GammaRay;
 
-ObjectFilterProxyModelBase::ObjectFilterProxyModelBase(QObject *parent) :
-    QSortFilterProxyModel(parent)
+ObjectFilterProxyModelBase::ObjectFilterProxyModelBase(QObject *parent)
+    : QSortFilterProxyModel(parent)
 {
     setDynamicSortFilter(true);
 }
 
-bool ObjectFilterProxyModelBase::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
+QMap<int, QVariant> ObjectFilterProxyModelBase::itemData(const QModelIndex& index) const
+{
+    return sourceModel()->itemData(mapToSource(index));
+}
+
+bool ObjectFilterProxyModelBase::filterAcceptsRow(int source_row,
+                                                  const QModelIndex &source_parent) const
 {
     const QModelIndex source_index = sourceModel()->index(source_row, 0, source_parent);
-    if (!source_index.isValid()) {
+    if (!source_index.isValid())
         return false;
-    }
 
-    QObject *obj = source_index.data(ObjectModel::ObjectRole).value<QObject*>();
-    if (!obj || !filterAcceptsObject(obj)) {
+    QObject *obj = source_index.data(ObjectModel::ObjectRole).value<QObject *>();
+    if (!obj || !filterAcceptsObject(obj))
         return false;
-    }
 
     return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
 }

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,48 +40,47 @@ class QItemSelection;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
 class ComplexControlModel;
 class ControlModel;
 class PaletteModel;
 class PixelMetricModel;
 class PrimitiveModel;
 class StandardIconModel;
+class StyleHintModel;
 
 class StyleInspector : public StyleInspectorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::StyleInspectorInterface)
-  public:
-    explicit StyleInspector(ProbeInterface *probe, QObject *parent = 0);
-    virtual ~StyleInspector();
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::StyleInspectorInterface)
+public:
+    explicit StyleInspector(Probe *probe, QObject *parent = nullptr);
+    ~StyleInspector() override;
 
-  private slots:
+private slots:
     void styleSelected(const QItemSelection &selection);
 
-  private:
+private:
     PrimitiveModel *m_primitiveModel;
     ControlModel *m_controlModel;
     ComplexControlModel *m_complexControlModel;
     PixelMetricModel *m_pixelMetricModel;
     StandardIconModel *m_standardIconModel;
     PaletteModel *m_standardPaletteModel;
+    StyleHintModel *m_styleHintModel;
 };
 
 class StyleInspectorFactory : public QObject, public StandardToolFactory<QStyle, StyleInspector>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_styleinspector.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolFactory" FILE "gammaray_styleinspector.json")
 
-  public:
-    explicit StyleInspectorFactory(QObject *parent = 0) : QObject(parent)
+public:
+    explicit StyleInspectorFactory(QObject *parent = nullptr)
+        : QObject(parent)
     {
     }
-
-    QString name() const Q_DECL_OVERRIDE;
 };
-
 }
 
 #endif // GAMMARAY_STYLEINSPECTOR_H

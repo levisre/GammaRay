@@ -9,7 +9,7 @@
 
   Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
 
   This program is free software; you can redistribute it and/or modify
@@ -26,8 +26,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "statemodel.h"
+#include "statemachinedebuginterface.h"
 #include "statemachinewatcher.h"
 
+#include <compat/qasconst.h>
+
+#include <core/objectmodelbase.h>
 #include <core/util.h>
 
 #include <QAbstractTransition>
@@ -42,271 +46,273 @@
 using namespace GammaRay;
 
 namespace GammaRay {
-
 class StateModelPrivate
 {
-  StateModelPrivate(StateModel *qq)
-    : q_ptr(qq),
-      m_stateMachineWatcher(new StateMachineWatcher(qq)),
-      m_stateMachine(0)
-  {
-    qq->connect(m_stateMachineWatcher, SIGNAL(stateEntered(QAbstractState*)),
-                         qq, SLOT(stateConfigurationChanged()));
-    qq->connect(m_stateMachineWatcher, SIGNAL(stateExited(QAbstractState*)),
-                         qq, SLOT(stateConfigurationChanged()));
-  }
+    explicit StateModelPrivate(StateModel *qq)
+        : q_ptr(qq)
+        , m_stateMachine(nullptr)
+    {
+    }
 
-  void emitDataChangedForState(QAbstractState *state)
-  {
-    const auto left = indexForState(state);
-    const auto right = left.sibling(left.row(), q_ptr->columnCount() - 1);
-    if (!left.isValid() || !right.isValid())
-      return;
-    emit q_ptr->dataChanged(left, right);
-  }
+    void emitDataChangedForState(State state)
+    {
+        const auto left = indexForState(state);
+        const auto right = left.sibling(left.row(), q_ptr->columnCount() - 1);
+        if (!left.isValid() || !right.isValid())
+            return;
+        emit q_ptr->dataChanged(left, right);
+    }
 
-  Q_DECLARE_PUBLIC(StateModel)
-  StateModel * const q_ptr;
-  StateMachineWatcher * const m_stateMachineWatcher;
-  QStateMachine *m_stateMachine;
-  QSet<QAbstractState*> m_lastConfiguration;
+    Q_DECLARE_PUBLIC(StateModel)
+    StateModel * const q_ptr;
+    StateMachineDebugInterface *m_stateMachine;
+    QVector<State> m_lastConfiguration;
 
-  QList<QObject*> children(QObject *parent) const;
+    QVector<State> children(State parent) const;
 
-  QObject *mapModelIndex2QObject(const QModelIndex &) const;
-  QModelIndex indexForState(QAbstractState *state) const;
+    State mapModelIndex2State(const QModelIndex &) const;
+    QModelIndex indexForState(State state) const;
 
 // private slots:
-  void stateConfigurationChanged();
-  void handleMachineDestroyed(QObject*);
+    void stateConfigurationChanged();
+    void handleMachineDestroyed(QObject *);
 };
-
 }
 
-QList<QObject*> StateModelPrivate::children(QObject *parent) const
+QVector<State> StateModelPrivate::children(State parent) const
 {
-  QList<QObject*> result;
-  if (parent == 0) {
-    parent = m_stateMachine;
-  }
+    if (!m_stateMachine)
+        return QVector<State>();
 
-  // if the state machine is not yet set, return an empty list
-  if (!parent) {
-    return result;
-  }
+    return m_stateMachine->stateChildren(parent);
+}
 
-  foreach (QObject *o, parent->children()) {
-    if (o->inherits("QAbstractState")) {
-      result.append(o);
+State StateModelPrivate::mapModelIndex2State(const QModelIndex &index) const
+{
+    if (!m_stateMachine)
+        return State();
+
+    if (index.isValid()) {
+        QVector<State> c = children(State(index.internalId()));
+        return c[index.row()];
     }
-  }
-
-  std::sort(result.begin(), result.end());
-  return result;
+    return m_stateMachine->rootState();
 }
 
-QObject *StateModelPrivate::mapModelIndex2QObject(const QModelIndex &index) const
+QModelIndex StateModelPrivate::indexForState(State state) const
 {
-  if (index.isValid()) {
-    QObjectList c = children(reinterpret_cast<QObject*>(index.internalPointer()));
-    return c[index.row()];
-  }
-  return m_stateMachine;
-}
+    if (!m_stateMachine)
+        return {};
 
-QModelIndex StateModelPrivate::indexForState(QAbstractState *state) const
-{
-  Q_ASSERT(state);
+    if (state == m_stateMachine->rootState())
+        return QModelIndex();
 
-  if (state == m_stateMachine) {
-    return QModelIndex();
-  }
-
-  Q_ASSERT(state->parentState());
-  Q_Q(const StateModel);
-  int row = children(state->parentState()).indexOf(state);
-  if (row == -1) {
-    return QModelIndex();
-  }
-  return q->index(row, 0, indexForState(state->parentState()));
+    Q_Q(const StateModel);
+    State parentState = m_stateMachine->parentState(state);
+    int row = m_stateMachine->stateChildren(parentState).indexOf(state);
+    if (row == -1)
+        return QModelIndex();
+    return q->index(row, 0, indexForState(parentState));
 }
 
 void StateModelPrivate::stateConfigurationChanged()
 {
-  QSet<QAbstractState *> newConfig = m_stateMachine->configuration();
-  // states which became active
-  foreach (QAbstractState *state, (newConfig - m_lastConfiguration)) {
-    emitDataChangedForState(state);
-  }
-  // states which became inactive
-  foreach (QAbstractState *state, (m_lastConfiguration - newConfig)) {
-    emitDataChangedForState(state);
-  }
-  m_lastConfiguration = newConfig;
+    QVector<State> newConfig = m_stateMachine->configuration();
+    // states which became active
+    QVector<State> difference;
+    std::set_difference(newConfig.begin(), newConfig.end(),
+                        m_lastConfiguration.begin(), m_lastConfiguration.end(),
+                        std::back_inserter(difference));
+    for (State state : qAsConst(difference))
+        emitDataChangedForState(state);
+    // states which became inactive
+    difference.clear();
+    std::set_difference(m_lastConfiguration.begin(), m_lastConfiguration.end(),
+                        newConfig.begin(), newConfig.end(),
+                        std::back_inserter(difference));
+    for (State state : qAsConst(difference))
+        emitDataChangedForState(state);
+    m_lastConfiguration = newConfig;
 }
 
-void StateModelPrivate::handleMachineDestroyed(QObject*)
+void StateModelPrivate::handleMachineDestroyed(QObject *)
 {
-  Q_Q(StateModel);
+    Q_Q(StateModel);
 
-  q->beginResetModel();
-  m_stateMachine = 0;
-  q->endResetModel();
+    q->beginResetModel();
+    m_stateMachine = nullptr;
+    q->endResetModel();
 }
 
 StateModel::StateModel(QObject *parent)
-  : ObjectModelBase<QAbstractItemModel>(parent), d_ptr(new StateModelPrivate(this))
+    : QAbstractItemModel(parent)
+    , d_ptr(new StateModelPrivate(this))
 {
-  QHash<int, QByteArray> _roleNames = roleNames();
-  _roleNames.insert(TransitionsRole, "transitions");
-  _roleNames.insert(IsInitialStateRole, "isInitial");
-  setRoleNames(_roleNames);
 }
 
 StateModel::~StateModel()
 {
-  delete d_ptr;
+    delete d_ptr;
 }
 
-void StateModel::setStateMachine(QStateMachine *stateMachine)
+void StateModel::setStateMachine(StateMachineDebugInterface *stateMachine)
 {
-  Q_D(StateModel);
-  if (d->m_stateMachine == stateMachine) {
-    return;
-  }
+    Q_D(StateModel);
+    if (d->m_stateMachine == stateMachine)
+        return;
 
-  if (d->m_stateMachine) {
-    disconnect(d->m_stateMachine, SIGNAL(destroyed(QObject*)),
-               this, SLOT(handleMachineDestroyed(QObject*)));
-  }
+    if (d->m_stateMachine) {
+        disconnect(d->m_stateMachine, nullptr, this, nullptr);
+    }
 
-  beginResetModel();
-  d->m_stateMachine = stateMachine;
-  d->m_lastConfiguration = (stateMachine ? stateMachine->configuration() : QSet<QAbstractState*>());
-  endResetModel();
+    beginResetModel();
+    d->m_stateMachine = stateMachine;
+    d->m_lastConfiguration = (stateMachine ? stateMachine->configuration() : QVector<State>());
+    endResetModel();
 
-  if (d->m_stateMachine) {
-    connect(d->m_stateMachine, SIGNAL(destroyed(QObject*)),
-            this, SLOT(handleMachineDestroyed(QObject*)));
-  }
-
-  d->m_stateMachineWatcher->setWatchedStateMachine(stateMachine);
+    if (d->m_stateMachine) {
+        connect(d->m_stateMachine, &QObject::destroyed,
+                this, [this](QObject *obj) { Q_D(StateModel); d->handleMachineDestroyed(obj); });
+        connect(d->m_stateMachine, &StateMachineDebugInterface::stateEntered,
+                this, [this] { Q_D(StateModel); d->stateConfigurationChanged(); });
+        connect(d->m_stateMachine, &StateMachineDebugInterface::stateEntered,
+                this, [this] { Q_D(StateModel); d->stateConfigurationChanged(); });
+    }
 }
 
-QStateMachine *StateModel::stateMachine() const
+StateMachineDebugInterface *StateModel::stateMachine() const
 {
-  Q_D(const StateModel);
-  return d->m_stateMachine;
+    Q_D(const StateModel);
+    return d->m_stateMachine;
 }
 
 QVariant StateModel::data(const QModelIndex &index, int role) const
 {
-  Q_D(const StateModel);
-  if (!index.isValid()) {
+    Q_D(const StateModel);
+    if (!index.isValid())
+        return QVariant();
+
+    State state = d->mapModelIndex2State(index);
+    QObject *object = d->m_stateMachine->stateObject(state);
+
+    if (role == TransitionsRole) {
+        return d->m_stateMachine->transitions(state);
+    } else if (role == IsInitialStateRole) {
+        return d->m_stateMachine->isInitialState(state);
+    } else if (role == StateValueRole) {
+        return QVariant::fromValue(state);
+    } else if (role == StateIdRole) {
+        return QVariant::fromValue(GammaRay::StateId(static_cast<quint64>(state.m_id)));
+    } else if (role == Qt::CheckStateRole && index.column() == 0) {
+        return d->m_stateMachine->configuration().contains(state) ? Qt::Checked : Qt::Unchecked;
+    } else if (role == Qt::DisplayRole && index.column() == 0) {
+        return d->m_stateMachine->stateDisplay(state);
+    } else if (role == Qt::DisplayRole && index.column() == 1) {
+        return d->m_stateMachine->stateDisplayType(state);
+    } else if (role == ObjectModel::ObjectRole) {
+        return QVariant::fromValue(object);
+    } else if (role == ObjectModel::ObjectIdRole) {
+        return QVariant::fromValue(ObjectId(object));
+    } else if (role == Qt::ToolTipRole) {
+        return Util::tooltipForObject(object);
+    } else if (role == ObjectModel::DecorationIdRole && index.column() == 0) {
+        return Util::iconIdForObject(object);
+    } else if (role == ObjectModel::CreationLocationRole) {
+        const auto loc = ObjectDataProvider::creationLocation(object);
+        if (loc.isValid())
+            return QVariant::fromValue(loc);
+    } else if (role == ObjectModel::DeclarationLocationRole) {
+        const auto loc = ObjectDataProvider::declarationLocation(object);
+        if (loc.isValid())
+            return QVariant::fromValue(loc);
+    }
+
     return QVariant();
-  }
-
-  if (role == TransitionsRole) {
-    QObject *obj = d->mapModelIndex2QObject(index);
-    QState *state = qobject_cast<QState*>(obj);
-    if (state) {
-      QObjectList l = d->children(state->parent());
-      Q_ASSERT(l.contains(state));
-      QStringList nums;
-      QList<QAbstractTransition*> trs = state->transitions();
-      nums.reserve(trs.size());
-      foreach (QAbstractTransition *t, trs) {
-        QAbstractState *child = t->targetState();
-        Q_ASSERT(l.contains(child));
-        nums << QString::number(l.indexOf(child) - l.indexOf(state));
-      }
-      return nums.join(QStringLiteral(","));
-    }
-  }
-  if (role == IsInitialStateRole) {
-    QObject *obj = d->mapModelIndex2QObject(index);
-    QState *state = qobject_cast<QState*>(obj);
-    if (state) {
-      QState *parentState = state->parentState();
-      return (state == parentState->initialState());
-    }
-  }
-
-  QObject *obj = d->mapModelIndex2QObject(index);
-  if (obj) {
-    if (role == StateObjectRole) {
-      return QVariant::fromValue(obj);
-    }
-
-    if (index.column() == 0 && role == Qt::CheckStateRole) {
-      QAbstractState *s = qobject_cast<QAbstractState*>(obj);
-      if (s) {
-        return d->m_stateMachine->configuration().contains(s) ? Qt::Checked : Qt::Unchecked;
-      }
-    }
-
-    return dataForObject(obj, index, role);
-  }
-  return QVariant();
 }
 
 int StateModel::rowCount(const QModelIndex &parent) const
 {
-  Q_D(const StateModel);
-  return d->children(d->mapModelIndex2QObject(parent)).count();
+    Q_D(const StateModel);
+    return d->children(d->mapModelIndex2State(parent)).count();
 }
 
 QModelIndex StateModel::index(int row, int column, const QModelIndex &parent) const
 {
-  Q_D(const StateModel);
-  if (row < 0 || column < 0 || column > 1) {
-    return QModelIndex();
-  }
+    Q_D(const StateModel);
+    if (row < 0 || column < 0 || column > 1)
+        return {};
 
-  QObject *internalPointer = 0;
-  if (!parent.isValid()) {
-    internalPointer = d->m_stateMachine;
-  } else {
-    QObject *o = reinterpret_cast<QObject*>(parent.internalPointer());
-    QObjectList c = d->children(o);
-    internalPointer = c.at(parent.row());
-  }
+    State internalPointer(0);
+    if (!parent.isValid()) {
+        internalPointer = d->m_stateMachine->rootState();
+    } else {
+        State s = State(parent.internalId());
+        QVector<State> c = d->m_stateMachine->stateChildren(s);
+        internalPointer = c.at(parent.row());
+    }
 
-  QObjectList c = d->children(internalPointer);
-  if (row >= c.size()) {
-    return QModelIndex();
-  }
+    QVector<State> c = d->children(internalPointer);
+    if (row >= c.size())
+        return QModelIndex();
 
-  return createIndex(row, column, internalPointer);
+    return createIndex(row, column, internalPointer);
 }
 
 QModelIndex StateModel::parent(const QModelIndex &index) const
 {
-  Q_D(const StateModel);
-  if (!index.isValid()) {
-    return QModelIndex();
-  }
-  QObject *obj = d->mapModelIndex2QObject(index);
-  QObject *parent = obj->parent();
+    Q_D(const StateModel);
+    if (!index.isValid() || !d->m_stateMachine)
+        return {};
+    State state = d->mapModelIndex2State(index);
+    State parent = d->m_stateMachine->parentState(state);
 
-  if (parent == d->m_stateMachine) {
-    return QModelIndex();
-  }
+    if (parent == d->m_stateMachine->rootState())
+        return QModelIndex();
 
-  QObject *grandParent = parent->parent();
-  int row = d->children(grandParent).indexOf(parent);
-  return createIndex(row, 0, grandParent);
+    State grandParent = d->m_stateMachine->parentState(parent);
+    int row = d->children(grandParent).indexOf(parent);
+    return createIndex(row, 0, grandParent);
 }
 
 QVariant StateModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-  if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
-    switch (section) {
-      case 0: return tr("State");
-      case 1: return tr("Type");
+    if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
+        switch (section) {
+        case 0:
+            return tr("State");
+        case 1:
+            return tr("Type");
+        }
     }
-  }
-  return QAbstractItemModel::headerData(section, orientation, role);
+    return QAbstractItemModel::headerData(section, orientation, role);
+}
+
+int StateModel::columnCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
+    return 2;
+}
+
+QMap<int, QVariant> StateModel::itemData(const QModelIndex &index) const
+{
+    QMap<int, QVariant> map = QAbstractItemModel::itemData(index);
+    map.insert(ObjectModel::ObjectIdRole, this->data(index, ObjectModel::ObjectIdRole));
+    map.insert(ObjectModel::DecorationIdRole, this->data(index, ObjectModel::DecorationIdRole));
+    auto loc = this->data(index, ObjectModel::CreationLocationRole);
+    if (loc.isValid())
+        map.insert(ObjectModel::CreationLocationRole, loc);
+    loc = this->data(index, ObjectModel::DeclarationLocationRole);
+    if (loc.isValid())
+        map.insert(ObjectModel::DeclarationLocationRole, loc);
+    return map;
+}
+
+QHash<int, QByteArray> StateModel::roleNames() const
+{
+    QHash<int, QByteArray> roleNames = QAbstractItemModel::roleNames();
+    roleNames.insert(TransitionsRole, "transitions");
+    roleNames.insert(IsInitialStateRole, "isInitial");
+    return roleNames;
 }
 
 #include "moc_statemodel.cpp"

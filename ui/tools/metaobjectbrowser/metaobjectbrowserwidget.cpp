@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,6 +33,7 @@
 #include <ui/deferredtreeview.h>
 #include <ui/searchlinecontroller.h>
 
+#include <common/endpoint.h>
 #include <common/objectbroker.h>
 
 #include <QDebug>
@@ -43,50 +44,62 @@
 using namespace GammaRay;
 
 MetaObjectBrowserWidget::MetaObjectBrowserWidget(QWidget *parent)
-  : QWidget(parent)
-  , m_stateManager(this)
+    : QWidget(parent)
+    , m_stateManager(this)
 {
-  setObjectName("MetaObjectBrowserWidget");
+    setObjectName("MetaObjectBrowserWidget");
 
-  auto model = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.MetaObjectBrowserTreeModel"));
-  auto proxy = new MetaObjectTreeClientProxyModel(this);
-  proxy->setSourceModel(model);
+    auto model
+        = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.MetaObjectBrowserTreeModel"));
+    auto proxy = new MetaObjectTreeClientProxyModel(this);
+    proxy->setSourceModel(model);
 
-  m_treeView = new DeferredTreeView(this);
-  m_treeView->header()->setObjectName("metaObjectViewHeader");
-  m_treeView->setStretchLastSection(false);
-  m_treeView->setExpandNewContent(true);
-  m_treeView->setDeferredResizeMode(0, QHeaderView::Stretch);
-  m_treeView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
-  m_treeView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
-  m_treeView->setUniformRowHeights(true);
-  m_treeView->setModel(proxy);
-  m_treeView->setSelectionModel(ObjectBroker::selectionModel(proxy));
-  m_treeView->sortByColumn(0, Qt::AscendingOrder);
-  connect(m_treeView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), this, SLOT(selectionChanged(QItemSelection)));
+    m_treeView = new DeferredTreeView(this);
+    m_treeView->header()->setObjectName("metaObjectViewHeader");
+    m_treeView->setStretchLastSection(false);
+    m_treeView->setExpandNewContent(true);
+    m_treeView->setDeferredResizeMode(0, QHeaderView::Stretch);
+    m_treeView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+    m_treeView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+    m_treeView->setDeferredResizeMode(3, QHeaderView::ResizeToContents);
+    m_treeView->setDeferredResizeMode(4, QHeaderView::ResizeToContents);
+    m_treeView->setUniformRowHeights(true);
+    m_treeView->setModel(proxy);
+    m_treeView->setSelectionModel(ObjectBroker::selectionModel(proxy));
+    m_treeView->sortByColumn(0, Qt::AscendingOrder);
+    connect(m_treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this,
+            &MetaObjectBrowserWidget::selectionChanged);
 
-  auto objectSearchLine = new QLineEdit(this);
-  new SearchLineController(objectSearchLine, model);
+    auto objectSearchLine = new QLineEdit(this);
+    new SearchLineController(objectSearchLine, proxy);
 
-  PropertyWidget *propertyWidget = new PropertyWidget(this);
-  m_propertyWidget = propertyWidget;
-  m_propertyWidget->setObjectBaseName(QStringLiteral("com.kdab.GammaRay.MetaObjectBrowser"));
+    auto *propertyWidget = new PropertyWidget(this);
+    m_propertyWidget = propertyWidget;
+    m_propertyWidget->setObjectBaseName(QStringLiteral("com.kdab.GammaRay.MetaObjectBrowser"));
 
-  QVBoxLayout *vbox = new QVBoxLayout;
-  vbox->addWidget(objectSearchLine);
-  vbox->addWidget(m_treeView);
+    auto *vbox = new QVBoxLayout;
+    vbox->addWidget(objectSearchLine);
+    vbox->addWidget(m_treeView);
 
-  QHBoxLayout *hbox = new QHBoxLayout(this);
-  hbox->addLayout(vbox);
-  hbox->addWidget(propertyWidget);
+    auto *hbox = new QHBoxLayout(this);
+    hbox->addLayout(vbox);
+    hbox->addWidget(propertyWidget);
 
-  connect(m_propertyWidget, SIGNAL(tabsUpdated()), &m_stateManager, SLOT(reset()));
+    connect(m_propertyWidget, &PropertyWidget::tabsUpdated, this, &MetaObjectBrowserWidget::propertyWidgetTabsChanged);
+
+	Endpoint::instance()->invokeObject(QStringLiteral("com.kdab.GammaRay.MetaObjectBrowser"), "rescanMetaTypes");
 }
 
-void MetaObjectBrowserWidget::selectionChanged(const QItemSelection& selection)
+void MetaObjectBrowserWidget::selectionChanged(const QItemSelection &selection)
 {
     if (selection.isEmpty())
         return;
 
     m_treeView->scrollTo(selection.first().topLeft()); // in case of remote changes
+}
+
+void MetaObjectBrowserWidget::propertyWidgetTabsChanged()
+{
+    m_stateManager.saveState();
+    m_stateManager.reset();
 }

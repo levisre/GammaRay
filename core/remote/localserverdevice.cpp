@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,20 +33,23 @@
 
 using namespace GammaRay;
 
-LocalServerDevice::LocalServerDevice(QObject* parent):
-    ServerDeviceImpl<QLocalServer>(parent)
+LocalServerDevice::LocalServerDevice(QObject *parent)
+    : ServerDeviceImpl<QLocalServer>(parent)
 {
     m_server = new QLocalServer(this);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     m_server->setSocketOptions(QLocalServer::WorldAccessOption);
-#endif
-    connect(m_server, SIGNAL(newConnection()), this, SIGNAL(newConnection()));
+    connect(m_server, &QLocalServer::newConnection, this, &ServerDevice::newConnection);
 }
 
 bool LocalServerDevice::listen()
 {
     QLocalServer::removeServer(m_address.path());
     return m_server->listen(m_address.path());
+}
+
+bool LocalServerDevice::isListening() const
+{
+    return m_server->isListening();
 }
 
 QUrl LocalServerDevice::externalAddress() const

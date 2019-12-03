@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,27 +36,26 @@
 
 using namespace GammaRay;
 
-ServerDevice::ServerDevice(QObject* parent): QObject(parent)
+ServerDevice::ServerDevice(QObject *parent)
+    : QObject(parent)
 {
 }
 
-ServerDevice::~ServerDevice()
-{
-}
+ServerDevice::~ServerDevice() = default;
 
-void ServerDevice::setServerAddress(const QUrl& serverAddress)
+void ServerDevice::setServerAddress(const QUrl &serverAddress)
 {
     m_address = serverAddress;
 }
 
-void ServerDevice::broadcast(const QByteArray& data)
+void ServerDevice::broadcast(const QByteArray &data)
 {
     Q_UNUSED(data);
 }
 
-ServerDevice* ServerDevice::create(const QUrl& serverAddress, QObject* parent)
+ServerDevice *ServerDevice::create(const QUrl &serverAddress, QObject *parent)
 {
-    ServerDevice *device = 0;
+    ServerDevice *device = nullptr;
     if (serverAddress.scheme() == QLatin1String("tcp"))
         device = new TcpServerDevice(parent);
     else if (serverAddress.scheme() == QLatin1String("local"))
@@ -64,7 +63,7 @@ ServerDevice* ServerDevice::create(const QUrl& serverAddress, QObject* parent)
 
     if (!device) {
         qWarning() << "Unsupported transport protocol:" << serverAddress.toString();
-        return 0;
+        return nullptr;
     }
     device->setServerAddress(serverAddress);
     return device;

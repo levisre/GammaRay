@@ -3,7 +3,7 @@
 
     This file is part of the GammaRay documentation.
 
-    Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+    Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
     Author: Volker Krause <volker.krause@kdab.com>
 
     Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -12,13 +12,13 @@
     Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
     This work is also licensed under the Creative Commons Attribution-ShareAlike 4.0
-    International License. See <http://creativecommons.org/licenses/by-sa/4.0/>.
+    International License. See <https://creativecommons.org/licenses/by-sa/4.0/>.
 */
 
 /*!
-    \contentspage {Styles}
-    \nextpage {State Machine Debugger}
-    \previouspage {Graphics Scene Inspector}
+    \contentspage {Tools}
+    \nextpage {Web Inspector}
+    \previouspage {Qt3D Inspector}
     \page gammaray-styles.html
 
     \title Styles
@@ -29,14 +29,15 @@
 
     \image gammaray-style-controls.png
 
-    This tool allows you to:
+    This tool allows you to look at:
 
     \list
-        \li Look at all style primitives in all states.
-        \li Look at all controls in all states.
-        \li Look at all complex controls and their sub-element areas.
-        \li Look at built-in standard pixmaps.
-        \li View and edit style pixel metrics.
-        \li Look at the style-defined QPalette.
+        \li style primitives in all states,
+        \li controls in all states,
+        \li complex controls and their sub-element areas,
+        \li built-in standard pixmaps,
+        \li and the style-defined QPalette.
     \endlist
+    
+    It also lets you view and edit style pixel metrics.
 */

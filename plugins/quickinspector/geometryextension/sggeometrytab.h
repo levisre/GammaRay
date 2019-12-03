@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,35 +31,32 @@
 
 #include <QWidget>
 #include <QModelIndex>
+#include <memory>
 
 QT_BEGIN_NAMESPACE
 class QAbstractItemModel;
 QT_END_NAMESPACE
 
 namespace GammaRay {
-
-class SGGeometryExtensionInterface;
-
 class Ui_SGGeometryTab;
 class PropertyWidget;
 
 class SGGeometryTab : public QWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
+public:
     explicit SGGeometryTab(PropertyWidget *parent);
-    virtual ~SGGeometryTab();
+    ~SGGeometryTab() override;
 
-  private:
+private:
     void setObjectBaseName(const QString &baseName);
 
-  private:
-    Ui_SGGeometryTab *m_ui;
-    SGGeometryExtensionInterface *m_interface;
-    QAbstractItemModel *m_model;
+private:
+    std::unique_ptr<Ui_SGGeometryTab> m_ui;
+    QAbstractItemModel *m_vertexModel;
+    QAbstractItemModel *m_adjacencyModel;
 };
-
 }
 
 #endif // SGGEOMETRYTAB_H

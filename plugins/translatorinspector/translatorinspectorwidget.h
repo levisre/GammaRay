@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Jan Dalheimer <jan.dalheimer@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,51 +36,51 @@
 #include "translatorinspectorinterface.h"
 
 namespace GammaRay {
-
-namespace Ui
-{
+namespace Ui {
 class TranslatorInspectorWidget;
 }
 
 class TranslatorInspectorClient : public TranslatorInspectorInterface
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::TranslatorInspectorInterface)
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::TranslatorInspectorInterface)
 
-  public:
-    explicit TranslatorInspectorClient(const QString &name, QObject *parent = 0);
+public:
+    explicit TranslatorInspectorClient(const QString &name, QObject *parent = nullptr);
 
-  public slots:
-    void sendLanguageChangeEvent() Q_DECL_OVERRIDE;
-    void resetTranslations() Q_DECL_OVERRIDE;
+public slots:
+    void sendLanguageChangeEvent() override;
+    void resetTranslations() override;
 };
 
 class TranslatorInspectorWidget : public QWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
+public:
     explicit TranslatorInspectorWidget(QWidget *parent);
-    ~TranslatorInspectorWidget();
+    ~TranslatorInspectorWidget() override;
 
-  private:
+private:
+    void translatorContextMenu(QPoint pos);
+    void translationsContextMenu(QPoint pos);
+    void updateActions();
+
     QScopedPointer<Ui::TranslatorInspectorWidget> ui;
     UIStateManager m_stateManager;
     TranslatorInspectorInterface *m_inspector;
 };
 
-class TranslatorInspectorWidgetFactory
-    : public QObject,
-      public StandardToolUiFactory<TranslatorInspectorWidget>
+class TranslatorInspectorWidgetFactory : public QObject,
+    public StandardToolUiFactory<TranslatorInspectorWidget>
 {
-  Q_OBJECT
-  Q_INTERFACES(GammaRay::ToolUiFactory)
-  Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_translatorinspector.json")
+    Q_OBJECT
+    Q_INTERFACES(GammaRay::ToolUiFactory)
+    Q_PLUGIN_METADATA(IID "com.kdab.GammaRay.ToolUiFactory" FILE "gammaray_translatorinspector.json")
 
-  public:
-    void initUi() Q_DECL_OVERRIDE;
+public:
+    void initUi() override;
 };
-
 }
 
 #endif

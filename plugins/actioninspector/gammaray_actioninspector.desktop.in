@@ -1,6 +1,0 @@
-[Desktop Entry]
-Name=Action Inspector
-X-GammaRay-Id=${plugin_id}
-X-GammaRay-Types=QAction;
-X-GammaRay-ServiceTypes=com.kdab.GammaRay.ToolFactory
-Exec=${plugin_exec}

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,25 +35,24 @@
 
 using namespace GammaRay;
 
-ApplicationAttributeExtension::ApplicationAttributeExtension(GammaRay::PropertyController* controller) :
-    PropertyControllerExtension(controller->objectBaseName() + ".applicationAttributes"),
-    m_attributeModel(new AttributeModel<QCoreApplication, Qt::ApplicationAttribute>(controller))
+ApplicationAttributeExtension::ApplicationAttributeExtension(
+    GammaRay::PropertyController *controller)
+    : PropertyControllerExtension(controller->objectBaseName() + ".applicationAttributes")
+    , m_attributeModel(new AttributeModel<QCoreApplication, Qt::ApplicationAttribute>(controller))
 {
     m_attributeModel->setAttributeType("ApplicationAttribute");
     controller->registerModel(m_attributeModel, QStringLiteral("applicationAttributeModel"));
 }
 
-ApplicationAttributeExtension::~ApplicationAttributeExtension()
-{
-}
+ApplicationAttributeExtension::~ApplicationAttributeExtension() = default;
 
-bool ApplicationAttributeExtension::setQObject(QObject* object)
+bool ApplicationAttributeExtension::setQObject(QObject *object)
 {
-    if (auto app = qobject_cast<QCoreApplication*>(object)) {
+    if (auto app = qobject_cast<QCoreApplication *>(object)) {
         m_attributeModel->setObject(app);
         return true;
     }
 
-    m_attributeModel->setObject(Q_NULLPTR);
+    m_attributeModel->setObject(nullptr);
     return false;
 }

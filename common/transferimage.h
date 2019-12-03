@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,29 +34,31 @@
 #include <QVariant>
 
 namespace GammaRay {
-
 /** Wrapper class for a QImage to allow raw data transfer over a QDataStream, bypassing the usuale PNG encoding. */
 class TransferImage
 {
 public:
-    TransferImage();
+    TransferImage() = default;
     explicit TransferImage(const QImage &image);
 
     const QImage &image() const;
     void setImage(const QImage &image);
 
+    QTransform transform() const;
+    void setTransform(const QTransform &transform);
+
     enum Format {
-      QImageFormat,
-      RawFormat
+        QImageFormat,
+        RawFormat
     };
 
 private:
     QImage m_image;
+    QTransform m_transform;
 };
 
-QDataStream& operator<<(QDataStream &stream, const GammaRay::TransferImage &image);
-QDataStream& operator>>(QDataStream &stream, GammaRay::TransferImage &image);
-
+QDataStream &operator<<(QDataStream &stream, const GammaRay::TransferImage &image);
+QDataStream &operator>>(QDataStream &stream, GammaRay::TransferImage &image);
 }
 
 Q_DECLARE_METATYPE(GammaRay::TransferImage)

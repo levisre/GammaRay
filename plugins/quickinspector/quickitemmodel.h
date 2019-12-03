@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,49 +33,62 @@
 
 #include <QHash>
 #include <QPointer>
+#include <QTimer>
 #include <QVector>
 
+#include <array>
+#include <unordered_map>
+#include <vector>
+
 QT_BEGIN_NAMESPACE
-class QSignalMapper;
 class QQuickItem;
 class QQuickWindow;
 QT_END_NAMESPACE
 
 namespace GammaRay {
 
+//forward
+class QuickEventMonitor;
+
 /** QQ2 item tree model. */
 class QuickItemModel : public ObjectModelBase<QAbstractItemModel>
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  public:
-    explicit QuickItemModel(QObject *parent = 0);
-    ~QuickItemModel();
+public:
+    explicit QuickItemModel(QObject *parent = nullptr);
+    ~QuickItemModel() override;
 
     void setWindow(QQuickWindow *window);
 
-    QVariant data(const QModelIndex &index, int role) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QModelIndex parent(const QModelIndex &child) const Q_DECL_OVERRIDE;
-    QModelIndex index(int row, int column, const QModelIndex &parent) const Q_DECL_OVERRIDE;
-    QMap< int, QVariant > itemData(const QModelIndex &index) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QModelIndex parent(const QModelIndex &child) const override;
+    QModelIndex index(int row, int column, const QModelIndex &parent) const override;
+    QMap< int, QVariant > itemData(const QModelIndex &index) const override;
 
-  public slots:
+public slots:
     void objectAdded(QObject *obj);
     void objectRemoved(QObject *obj);
 
-  private slots:
-    void itemReparented();
-    void itemWindowChanged();
-    void itemUpdated();
+private slots:
+    void itemReparented(QQuickItem *item);
+    void itemWindowChanged(QQuickItem *item);
+    void itemUpdated(QQuickItem *item);
 
-  private:
+private:
     friend class QuickEventMonitor;
     void updateItem(QQuickItem *item, int role);
     void recursivelyUpdateItem(QQuickItem *item);
     void updateItemFlags(QQuickItem *item);
     void clear();
     void populateFromItem(QQuickItem *item);
+
+    /**
+     * Reports problems (e.g. visible but out of view) about all items of this
+     * model. Uses the item flags from the model.
+     */
+    void reportProblems();
 
     /// Track all changes to item @p item in this model (parentChanged, windowChanged, ...)
     void connectItem(QQuickItem *item);
@@ -100,24 +113,39 @@ class QuickItemModel : public ObjectModelBase<QAbstractItemModel>
 
     QPointer<QQuickWindow> m_window;
 
-    QHash<QQuickItem*, QQuickItem*> m_childParentMap;
-    QHash<QQuickItem*, QVector<QQuickItem*> > m_parentChildMap;
-    QHash<QQuickItem*, int> m_itemFlags;
+    QHash<QQuickItem *, QQuickItem *> m_childParentMap;
+    QHash<QQuickItem *, QVector<QQuickItem *> > m_parentChildMap;
+
+    // TODO: Merge these two?
+    QHash<QQuickItem *, int> m_itemFlags;
+    std::unordered_map<QQuickItem *, std::array<QMetaObject::Connection, 8>> m_itemConnections;
+
+    // dataChange signal compression
+    struct PendingDataChange {
+        QQuickItem *item = nullptr;
+        bool eventChange = false;
+        bool flagChange = false;
+        inline bool operator<(QQuickItem *rhs) const { return item < rhs; }
+    };
+    std::vector<PendingDataChange> m_pendingDataChanges;
+    QTimer *m_dataChangeTimer = nullptr;
+    void emitPendingDataChanges();
+
+    QuickEventMonitor *m_clickEventFilter;
 };
 
 class QuickEventMonitor : public QObject
 {
-  Q_OBJECT
-  public:
+    Q_OBJECT
+public:
     explicit QuickEventMonitor(QuickItemModel *parent);
 
-  protected:
-    bool eventFilter(QObject *obj, QEvent *event) Q_DECL_OVERRIDE;
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
-  private:
+private:
     QuickItemModel *m_model;
 };
-
 }
 
 #endif // GAMMARAY_QUICKITEMMODEL_H

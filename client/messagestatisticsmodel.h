@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -36,40 +36,39 @@
 #include <QVector>
 
 namespace GammaRay {
-
 /** Diagnostics for GammaRay-internal communication. */
 class MessageStatisticsModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    explicit MessageStatisticsModel(QObject *parent = Q_NULLPTR);
-    ~MessageStatisticsModel();
+    explicit MessageStatisticsModel(QObject *parent = nullptr);
+    ~MessageStatisticsModel() override;
 
     void clear();
     void addObject(Protocol::ObjectAddress addr, const QString &name);
     void addMessage(Protocol::ObjectAddress addr, Protocol::MessageType msgType, int size);
 
-    int columnCount(const QModelIndex & parent) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex & parent) const Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex & index, int role) const Q_DECL_OVERRIDE;
-    QVariant headerData(int section, Qt::Orientation orientation, int role) const Q_DECL_OVERRIDE;
+    int columnCount(const QModelIndex &parent) const override;
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
 private:
     int countPerType(int msgType) const;
-    int sizePerType(int msgType) const;
+    quint64 sizePerType(int msgType) const;
 
     struct Info {
         Info();
         int totalCount() const;
-        int totalSize() const;
+        quint64 totalSize() const;
 
         QString name;
         QVector<int> messageCount;
-        QVector<int> messageSize;
+        QVector<quint64> messageSize;
     };
     QVector<Info> m_data;
     int m_totalCount;
-    int m_totalSize;
+    quint64 m_totalSize;
 };
 }
 

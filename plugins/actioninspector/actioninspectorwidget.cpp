@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -25,60 +25,86 @@
 */
 
 #include "actioninspectorwidget.h"
+#include "ui_actioninspectorwidget.h"
 #include "actionmodel.h" // for column enum only
+#include "clientactionmodel.h"
 
-#include <ui/deferredtreeview.h>
+#include <ui/contextmenuextension.h>
 #include <ui/searchlinecontroller.h>
+
 #include <common/objectbroker.h>
+#include <common/objectid.h>
 #include <common/endpoint.h>
 
 #include <QDebug>
-#include <QHBoxLayout>
-#include <QHeaderView>
-#include <QLineEdit>
+#include <QMenu>
 
 using namespace GammaRay;
 
 ActionInspectorWidget::ActionInspectorWidget(QWidget *parent)
-  : QWidget(parent)
-  , m_stateManager(this)
+    : QWidget(parent)
+    , ui(new Ui::ActionInspectorWidget)
+    , m_stateManager(this)
 {
-  setObjectName("ActionInspectorWidget");
-  QAbstractItemModel *actionModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ActionModel"));
+    setObjectName("ActionInspectorWidget");
+    ui->setupUi(this);
 
-  QVBoxLayout *vbox = new QVBoxLayout(this);
-  auto actionSearchLine = new QLineEdit(this);
-  new SearchLineController(actionSearchLine, actionModel);
-  vbox->addWidget(actionSearchLine);
+    auto sourceModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.ActionModel"));
+    auto actionModel = new ClientActionModel(this);
+    actionModel->setSourceModel(sourceModel);
 
-  DeferredTreeView *objectTreeView = new DeferredTreeView(this);
-  objectTreeView->header()->setObjectName("objectTreeViewHeader");
-  objectTreeView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
-  objectTreeView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
-  objectTreeView->setDeferredResizeMode(3, QHeaderView::ResizeToContents);
-  objectTreeView->setDeferredResizeMode(4, QHeaderView::ResizeToContents);
-  objectTreeView->setModel(actionModel);
-  objectTreeView->sortByColumn(ActionModel::ShortcutsPropColumn);
-  vbox->addWidget(objectTreeView);
+    new SearchLineController(ui->actionSearchLine, actionModel);
 
-  m_stateManager.setDefaultSizes(objectTreeView->header(), UISizeVector() << -1 << 200 << -1 << -1 << -1 << 200);
-  connect(objectTreeView, SIGNAL(doubleClicked(QModelIndex)), SLOT(triggerAction(QModelIndex)));
+    ui->actionView->header()->setObjectName("objectTreeViewHeader");
+    ui->actionView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+    ui->actionView->setDeferredResizeMode(2, QHeaderView::ResizeToContents);
+    ui->actionView->setDeferredResizeMode(3, QHeaderView::ResizeToContents);
+    ui->actionView->setDeferredResizeMode(4, QHeaderView::ResizeToContents);
+    ui->actionView->setModel(actionModel);
+    ui->actionView->sortByColumn(ActionModel::ShortcutsPropColumn);
+    connect(ui->actionView, &QWidget::customContextMenuRequested, this, &ActionInspectorWidget::contextMenu);
+
+    auto selectionModel = ObjectBroker::selectionModel(actionModel);
+    ui->actionView->setSelectionModel(selectionModel);
+    connect(selectionModel, &QItemSelectionModel::selectionChanged, this, &ActionInspectorWidget::selectionChanged);
+
+    m_stateManager.setDefaultSizes(ui->actionView->header(), UISizeVector() << -1 << 200 << -1 << -1 << -1 << 200);
+    connect(ui->actionView, &QAbstractItemView::doubleClicked, this, &ActionInspectorWidget::triggerAction);
 }
 
-ActionInspectorWidget::~ActionInspectorWidget()
-{
-}
+ActionInspectorWidget::~ActionInspectorWidget() = default;
 
 void ActionInspectorWidget::triggerAction(const QModelIndex &index)
 {
-  if (!index.isValid()) {
-    return;
-  }
+    if (!index.isValid())
+        return;
 
-  Endpoint::instance()->invokeObject(QStringLiteral("com.kdab.GammaRay.ActionInspector"), "triggerAction",
-                                     QVariantList() << index.row());
+    Endpoint::instance()->invokeObject(QStringLiteral(
+                                           "com.kdab.GammaRay.ActionInspector"), "triggerAction",
+                                       QVariantList() << index.row());
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(ActionInspectorUiFactory)
-#endif
+void ActionInspectorWidget::contextMenu(QPoint pos)
+{
+    auto index = ui->actionView->indexAt(pos);
+    if (!index.isValid())
+        return;
+    index = index.sibling(index.row(), 0);
+
+    const auto objectId = index.data(ActionModel::ObjectIdRole).value<ObjectId>();
+    if (objectId.isNull())
+        return;
+
+    QMenu menu;
+    ContextMenuExtension ext(objectId);
+    ext.populateMenu(&menu);
+    menu.exec(ui->actionView->viewport()->mapToGlobal(pos));
+}
+
+void ActionInspectorWidget::selectionChanged(const QItemSelection& selection)
+{
+    if (selection.isEmpty())
+        return;
+    const auto idx = selection.at(0).topLeft();
+    ui->actionView->scrollTo(idx);
+}

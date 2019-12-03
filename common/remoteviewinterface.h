@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,11 +31,13 @@
 
 #include "gammaray_common_export.h"
 
+#include "objectid.h"
+
 #include <QObject>
 #include <QPoint>
+#include <QTouchEvent>
 
 namespace GammaRay {
-
 class RemoteViewFrame;
 
 /** Communication interface for the remote view widget. */
@@ -43,30 +45,45 @@ class GAMMARAY_COMMON_EXPORT RemoteViewInterface : public QObject
 {
     Q_OBJECT
 public:
-    explicit RemoteViewInterface(const QString &name, QObject* parent = Q_NULLPTR);
+    enum RequestMode {
+        RequestBest,
+        RequestAll
+    };
+
+    explicit RemoteViewInterface(const QString &name, QObject *parent = nullptr);
 
     QString name() const;
 
 public slots:
-    virtual void pickElementAt(const QPoint &pos) = 0;
+    virtual void requestElementsAt(const QPoint &pos, GammaRay::RemoteViewInterface::RequestMode mode) = 0;
+    virtual void pickElementId(const GammaRay::ObjectId &id) = 0;
 
     virtual void sendKeyEvent(int type, int key, int modifiers,
-                              const QString &text = QString(),
-                              bool autorep = false, ushort count = 1) = 0;
+                              const QString &text = QString(), bool autorep = false,
+                              ushort count = 1) = 0;
 
-    virtual void sendMouseEvent(int type, const QPoint &localPos,
-                                int button, int buttons, int modifiers) = 0;
+    virtual void sendMouseEvent(int type, const QPoint &localPos, int button, int buttons,
+                                int modifiers) = 0;
 
-    virtual void sendWheelEvent(const QPoint &localPos, QPoint pixelDelta,
-                                QPoint angleDelta, int buttons, int modifiers) = 0;
+    virtual void sendWheelEvent(const QPoint &localPos, QPoint pixelDelta, QPoint angleDelta,
+                                int buttons, int modifiers) = 0;
+
+    virtual void sendTouchEvent(int type, int touchDeviceType, int deviceCaps, int touchDeviceMaxTouchPoints, int modifiers,
+                                Qt::TouchPointStates touchPointStates,
+                                const QList<QTouchEvent::TouchPoint> &touchPoints) = 0;
+
+    virtual void sendUserViewport(const QRectF &userViewport) = 0;
 
     virtual void setViewActive(bool active) = 0;
 
     /// Tell the server we are ready for the next frame.
     virtual void clientViewUpdated() = 0;
 
+    virtual void requestCompleteFrame() = 0;
+
 signals:
     void reset();
+    void elementsAtReceived(const GammaRay::ObjectIds &ids, int bestCandidate);
     void frameUpdated(const GammaRay::RemoteViewFrame &frame);
 
 private:
@@ -75,6 +92,11 @@ private:
 
 }
 
+Q_DECLARE_METATYPE(QTouchEvent::TouchPoint)
+Q_DECLARE_METATYPE(Qt::TouchPointStates)
+Q_DECLARE_METATYPE(QTouchEvent::TouchPoint::InfoFlags)
+Q_DECLARE_METATYPE(QList<QTouchEvent::TouchPoint>)
+Q_DECLARE_METATYPE(GammaRay::RemoteViewInterface::RequestMode)
 QT_BEGIN_NAMESPACE
 Q_DECLARE_INTERFACE(GammaRay::RemoteViewInterface, "com.kdab.GammaRay.RemoteViewInterface/1.0")
 QT_END_NAMESPACE

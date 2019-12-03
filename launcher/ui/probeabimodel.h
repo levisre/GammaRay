@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,31 +29,28 @@
 #ifndef GAMMARAY_PROBEABIMODEL_H
 #define GAMMARAY_PROBEABIMODEL_H
 
-#include <launcher/probeabi.h>
+#include <launcher/core/probeabi.h>
 
 #include <QAbstractListModel>
 #include <QVector>
 
 namespace GammaRay {
-
 /** Model for selecting a probe ABI in the launcher UI. */
 class ProbeABIModel : public QAbstractListModel
 {
     Q_OBJECT
 public:
-    explicit ProbeABIModel(QObject *parent = 0);
-    ~ProbeABIModel();
+    explicit ProbeABIModel(QObject *parent = nullptr);
+    ~ProbeABIModel() override;
 
-    QVariant data(const QModelIndex& index, int role) const Q_DECL_OVERRIDE;
-    int rowCount(const QModelIndex& parent) const Q_DECL_OVERRIDE;
+    QVariant data(const QModelIndex &index, int role) const override;
+    int rowCount(const QModelIndex &parent) const override;
 
     int indexOfBestMatchingABI(const ProbeABI &targetABI) const;
 
 private:
     QVector<ProbeABI> m_abis;
-
 };
-
 }
 
 // not in its own header to not pollute the metatype space in the target

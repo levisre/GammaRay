@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,20 +33,19 @@
 #include <QMetaClassInfo>
 
 namespace GammaRay {
-
 class ObjectClassInfoModel : public MetaObjectModel<QMetaClassInfo,
                                                     &QMetaObject::classInfo,
                                                     &QMetaObject::classInfoCount,
                                                     &QMetaObject::classInfoOffset>
 {
-  Q_OBJECT
-  public:
-    explicit ObjectClassInfoModel(QObject *parent = 0);
-    int columnCount(const QModelIndex &parent = QModelIndex()) const Q_DECL_OVERRIDE;
-    QVariant metaData(const QModelIndex &index, const QMetaClassInfo &classInfo, int role) const Q_DECL_OVERRIDE;
-    QString columnHeader(int index) const Q_DECL_OVERRIDE;
+    Q_OBJECT
+public:
+    explicit ObjectClassInfoModel(QObject *parent = nullptr);
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant metaData(const QModelIndex &index, const QMetaClassInfo &classInfo,
+                      int role) const override;
+    QString columnHeader(int index) const override;
 };
-
 }
 
 #endif // GAMMARAY_OBJECTCLASSINFOMODEL_H

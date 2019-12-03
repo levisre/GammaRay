@@ -3,7 +3,7 @@
 
     This file is part of the GammaRay documentation.
 
-    Copyright (C) 2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+    Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
     Author: Volker Krause <volker.krause@kdab.com>
 
     Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -12,12 +12,12 @@
     Contact info@kdab.com if any conditions of this licensing are not clear to you.
 
     This work is also licensed under the Creative Commons Attribution-ShareAlike 4.0
-    International License. See <http://creativecommons.org/licenses/by-sa/4.0/>.
+    International License. See <https://creativecommons.org/licenses/by-sa/4.0/>.
 */
 
 /*!
-    \contentspage {Signal Plotter}
-    \nextpage {Object Inspector}
+    \contentspage {Tools}
+    \nextpage {Timers}
     \previouspage {Messages}
     \page gammaray-signal-plotter.html
 
@@ -25,10 +25,18 @@
 
     \section1 Overview
 
-    The signal plotter visualizes the lifetime of all QObject instances in the target (gray horizontal bars), and shows the emission
-    of every signal in the target (vertical black bar on the emitting sender QObject).
+    The signal plotter visualizes the lifetime of all QObject instances on the target (gray horizontal bars), and shows the emission
+    of every signal on the target (vertical black bar on the emitting sender QObject).
 
     \image gammaray-signal-plotter.png
 
-    Tooltips on each signal emission show information about the emission, including the signal name and the time of the emission.
+    Tooltips on each signal emission show information about the signal, including the signal name and the time of the emission.
+
+    \section1 Examples
+
+    The following examples make use of the signal plotter:
+    \list
+        \li \l{signal-slot}
+        \li \l{timer}
+    \endlist
 */

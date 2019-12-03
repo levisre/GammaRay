@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2016 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Stephen Kelly <stephen.kelly@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -33,76 +33,84 @@
 #include "fontbrowserclient.h"
 
 #include <common/objectbroker.h>
+#include <ui/searchlinecontroller.h>
 
 #include <QAbstractItemModel>
+#include <QSortFilterProxyModel>
 #include <QDebug>
 
 using namespace GammaRay;
 
-static QObject* fontBrowserClientFactory(const QString &/*name*/, QObject *parent)
+static QObject *fontBrowserClientFactory(const QString & /*name*/, QObject *parent)
 {
-  return new FontBrowserClient(parent);
+    return new FontBrowserClient(parent);
 }
 
 FontBrowserWidget::FontBrowserWidget(QWidget *parent)
-  : QWidget(parent)
-  , ui(new Ui::FontBrowserWidget)
-  , m_stateManager(this)
-  , m_selectedFontModel(0)
-  , m_fontBrowser(0)
+    : QWidget(parent)
+    , ui(new Ui::FontBrowserWidget)
+    , m_stateManager(this)
+    , m_selectedFontModel(nullptr)
+    , m_fontBrowser(nullptr)
 {
-  ObjectBroker::registerClientObjectFactoryCallback<FontBrowserInterface*>(fontBrowserClientFactory);
-  m_fontBrowser = ObjectBroker::object<FontBrowserInterface*>();
+    ObjectBroker::registerClientObjectFactoryCallback<FontBrowserInterface *>(
+        fontBrowserClientFactory);
+    m_fontBrowser = ObjectBroker::object<FontBrowserInterface *>();
 
-  ui->setupUi(this);
+    ui->setupUi(this);
 
-  m_selectedFontModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SelectedFontModel"));
+    m_selectedFontModel
+        = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.SelectedFontModel"));
 
-  ui->selectedFontsView->header()->setObjectName("selectedFontsViewHeader");
-  ui->selectedFontsView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
-  ui->selectedFontsView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
-  ui->selectedFontsView->setModel(m_selectedFontModel);
+    ui->selectedFontsView->header()->setObjectName("selectedFontsViewHeader");
+    ui->selectedFontsView->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+    ui->selectedFontsView->setDeferredResizeMode(1, QHeaderView::ResizeToContents);
+    ui->selectedFontsView->setModel(m_selectedFontModel);
 
-  connect(ui->fontText, SIGNAL(textChanged(QString)),
-          m_fontBrowser, SLOT(updateText(QString)));
-  connect(ui->boldBox, SIGNAL(toggled(bool)),
-          m_fontBrowser, SLOT(toggleBoldFont(bool)));
-  connect(ui->italicBox, SIGNAL(toggled(bool)),
-          m_fontBrowser, SLOT(toggleItalicFont(bool)));
-  connect(ui->underlineBox, SIGNAL(toggled(bool)),
-          m_fontBrowser, SLOT(toggleUnderlineFont(bool)));
-  connect(ui->pointSize, SIGNAL(valueChanged(int)),
-          m_fontBrowser, SLOT(setPointSize(int)));
+    connect(ui->fontText, &QLineEdit::textChanged,
+            m_fontBrowser, &FontBrowserInterface::updateText);
+    connect(ui->boldBox, &QAbstractButton::toggled,
+            m_fontBrowser, &FontBrowserInterface::toggleBoldFont);
+    connect(ui->italicBox, &QAbstractButton::toggled,
+            m_fontBrowser, &FontBrowserInterface::toggleItalicFont);
+    connect(ui->underlineBox, &QAbstractButton::toggled,
+            m_fontBrowser, &FontBrowserInterface::toggleUnderlineFont);
+    connect(ui->pointSize, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),
+            m_fontBrowser, &FontBrowserInterface::setPointSize);
 
-  QAbstractItemModel *fontModel = ObjectBroker::model(QStringLiteral("com.kdab.GammaRay.FontModel"));
-  ui->fontTree->header()->setObjectName("fontTreeHeader");
-  ui->fontTree->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
-  ui->fontTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
-  ui->fontTree->setModel(fontModel);
-  ui->fontTree->setSelectionModel(ObjectBroker::selectionModel(fontModel));
+    QAbstractItemModel *fontModel = ObjectBroker::model(QStringLiteral(
+                                                            "com.kdab.GammaRay.FontModel"));
+    auto proxy = new QSortFilterProxyModel(this);
+    proxy->setSourceModel(fontModel);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+    proxy->setRecursiveFilteringEnabled(true);
+#endif
+    proxy->setFilterRole(FontBrowserInterface::FontSearchRole);
+    proxy->setSortRole(FontBrowserInterface::SortRole);
+    new SearchLineController(ui->fontSearchLine, proxy);
+    ui->fontTree->header()->setObjectName("fontTreeHeader");
+    ui->fontTree->setDeferredResizeMode(0, QHeaderView::ResizeToContents);
+    ui->fontTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    ui->fontTree->setModel(proxy);
+    ui->fontTree->setSelectionModel(ObjectBroker::selectionModel(proxy));
 
-  ui->pointSize->setValue(font().pointSize());
+    ui->pointSize->setValue(font().pointSize());
 
-  // init
-  m_fontBrowser->updateText(ui->fontText->text());
-  m_fontBrowser->toggleBoldFont(ui->boldBox->isChecked());
-  m_fontBrowser->toggleItalicFont(ui->italicBox->isChecked());
-  m_fontBrowser->toggleUnderlineFont(ui->underlineBox->isChecked());
-  m_fontBrowser->setPointSize(ui->pointSize->value());
+    // init
+    m_fontBrowser->updateText(ui->fontText->text());
+    m_fontBrowser->toggleBoldFont(ui->boldBox->isChecked());
+    m_fontBrowser->toggleItalicFont(ui->italicBox->isChecked());
+    m_fontBrowser->toggleUnderlineFont(ui->underlineBox->isChecked());
+    m_fontBrowser->setPointSize(ui->pointSize->value());
 
-  m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "50%" << "50%");
-  QMetaObject::invokeMethod(this, "delayedInit", Qt::QueuedConnection);
+    m_stateManager.setDefaultSizes(ui->mainSplitter, UISizeVector() << "50%" << "50%");
+    QMetaObject::invokeMethod(this, "delayedInit", Qt::QueuedConnection);
 }
 
-FontBrowserWidget::~FontBrowserWidget()
-{
-}
+FontBrowserWidget::~FontBrowserWidget() = default;
 
 void FontBrowserWidget::delayedInit()
 {
-  m_fontBrowser->setColors(palette().color(QPalette::Foreground), palette().color(QPalette::Base));
+    m_fontBrowser->setColors(palette().color(QPalette::Foreground),
+                             palette().color(QPalette::Base));
 }
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN(FontBrowserUiFactory)
-#endif
