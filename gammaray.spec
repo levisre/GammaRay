@@ -1,11 +1,12 @@
 Name:           gammaray
-Version:        2.11.0
+Version:        2.11.2
 Release:        1
 Summary:        An introspection tool for Qt applications
-Source:         %{name}-%{version}.tar.gz
+Source0:        %{name}-%{version}.tar.gz
+Source1:        %{name}-%{version}.tar.gz.asc
 Url:            https://github.com/KDAB/GammaRay
 Group:          Development/Tools
-License:        GPL-2.0+
+License:        GPL-2.0-or-later
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Vendor:         Klaralvdalens Datakonsult AB (KDAB)
 Packager:       Klaralvdalens Datakonsult AB (KDAB) <info@kdab.com>
@@ -52,7 +53,7 @@ state machines and more.
 
 Authors:
 --------
-     The GammaRay Team <gammaray-interest@kdab.com>
+     Klaralvdalens Datakonsult AB (KDAB) <info@kdab.com>
 
 %define debug_package %{nil}
 %global __debug_install_post %{nil}
@@ -76,7 +77,7 @@ The %{name}-devel package contains libraries and header files for
 developing GammaRay plug-ins.
 
 %prep
-%setup -q
+%autosetup
 
 %build
 cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE_QT_SYS_PATHS=ON
@@ -98,8 +99,8 @@ cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE
 %files
 %defattr(-,root,root)
 %{_prefix}/share/applications/GammaRay.desktop
-%dir %{_prefix}/share/appdata/
-%{_prefix}/share/appdata/GammaRay.appdata.xml
+%dir %{_prefix}/share/metainfo/
+%{_prefix}/share/metainfo/com.kdab.GammaRay.metainfo.xml
 %{_prefix}/share/icons/hicolor
 %{_prefix}/share/doc/gammaray
 %dir %{_prefix}/share/gammaray/
@@ -175,6 +176,10 @@ cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DKDE_INSTALL_USE
 %{_prefix}/mkspecs/modules/*.pri
 
 %changelog
+* Fri Sep 18 2020 Allen Winter <allen.winter@kdab.com> 2.11.2
+  2.11.2 patchlevel release
+* Tue Mar 03 2020 Allen Winter <allen.winter@kdab.com> 2.11.1
+  2.11.1 patchlevel release
 * Wed Jul 03 2019 Allen Winter <allen.winter@kdab.com> 2.11.0
   2.11.0 final
 * Sun Dec 16 2018 Allen Winter <allen.winter@kdab.com> 2.10.0

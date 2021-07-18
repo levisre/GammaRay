@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,7 +34,9 @@
 
 #include <QApplication>
 #include <QDebug>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QMatrix>
+#endif
 #include <QMatrix4x4>
 #include <QPainter>
 #include <QQuaternion>
@@ -46,6 +48,7 @@ using namespace GammaRay;
 
 namespace {
 template<typename T> struct matrix_trait {};
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 template<> struct matrix_trait<QMatrix> {
     static const int rows = 3;
     static const int columns = 2;
@@ -69,6 +72,7 @@ template<> struct matrix_trait<QMatrix> {
         return 0.0;
     }
 };
+#endif
 
 template<> struct matrix_trait<QMatrix4x4> {
     static const int rows = 4;
@@ -166,8 +170,10 @@ void PropertyEditorDelegate::paint(QPainter *painter, const QStyleOptionViewItem
     const QVariant value = index.data(Qt::EditRole);
     if (value.canConvert<QMatrix4x4>()) {
         paint(painter, option, index, value.value<QMatrix4x4>());
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     } else if (value.canConvert<QMatrix>()) {
         paint(painter, option, index, value.value<QMatrix>());
+#endif
     } else if (value.type() == QVariant::Transform) {
         paint(painter, option, index, value.value<QTransform>());
     } else if (value.canConvert<QVector2D>()) {
@@ -189,8 +195,10 @@ QSize PropertyEditorDelegate::sizeHint(const QStyleOptionViewItem &option,
     const QVariant value = index.data(Qt::EditRole);
     if (value.canConvert<QMatrix4x4>()) {
         return sizeHint(option, index, value.value<QMatrix4x4>());
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     } else if (value.canConvert<QMatrix>()) {
         return sizeHint(option, index, value.value<QMatrix>());
+#endif
     } else if (value.type() == QVariant::Transform) {
         return sizeHint(option, index, value.value<QTransform>());
     } else if (value.canConvert<QVector2D>()) {
@@ -233,7 +241,11 @@ void PropertyEditorDelegate::paint(QPainter *painter, const QStyleOptionViewItem
     textRect = textRect.adjusted(textHMargin, textVMargin, -textHMargin, -textVMargin);
 
     static const int parenthesisLineWidth = 1;
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
     const int matrixSpacing = opt.fontMetrics.width(QStringLiteral("x"));
+#else
+    const int matrixSpacing = opt.fontMetrics.horizontalAdvance(QStringLiteral("x"));
+#endif
     const int matrixHMargin = matrixSpacing / 2;
     const int parenthesisWidth = qMax(matrixHMargin, 3);
 
@@ -284,8 +296,12 @@ QSize PropertyEditorDelegate::sizeHint(const QStyleOptionViewItem &option, const
     for (int col = 0; col < matrix_trait<Matrix>::columns; ++col) {
         width += columnWidth(opt, matrix, col);
     }
-    width += opt.fontMetrics.width(QStringLiteral("x")) * matrix_trait<Matrix>::columns + 2
-             * parenthesisLineWidth + 2 * textHMargin;
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
+    width += opt.fontMetrics.width(QStringLiteral("x"))
+#else
+    width += opt.fontMetrics.horizontalAdvance(QStringLiteral("x"))
+#endif
+             * matrix_trait<Matrix>::columns + 2 * parenthesisLineWidth + 2 * textHMargin;
 
     const int height = opt.fontMetrics.lineSpacing() * matrix_trait<Matrix>::rows + 2* textVMargin;
 
@@ -298,9 +314,11 @@ int PropertyEditorDelegate::columnWidth(const QStyleOptionViewItem &option, cons
 {
     int width = 0;
     for (int row = 0; row < matrix_trait<Matrix>::rows; ++row) {
-        width = qMax(width,
-                     option.fontMetrics.width(
-                         QString::number(matrix_trait<Matrix>::value(matrix, row, column))));
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
+        width = qMax(width, option.fontMetrics.width(QString::number(matrix_trait<Matrix>::value(matrix, row, column))));
+#else
+        width = qMax(width, option.fontMetrics.horizontalAdvance(QString::number(matrix_trait<Matrix>::value(matrix, row, column))));
+#endif
     }
     return width;
 }

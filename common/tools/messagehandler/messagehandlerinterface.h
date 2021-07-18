@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,6 +40,7 @@ class MessageHandlerInterface : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool stackTraceAvailable READ stackTraceAvailable WRITE setStackTraceAvailable NOTIFY stackTraceAvailableChanged)
+    Q_PROPERTY(QStringList fullTrace READ fullTrace WRITE setFullTrace NOTIFY fullTraceChanged)
 public:
     explicit MessageHandlerInterface(QObject *parent = nullptr);
     ~MessageHandlerInterface() override;
@@ -47,13 +48,21 @@ public:
     bool stackTraceAvailable() const;
     void setStackTraceAvailable(bool available);
 
+    QStringList fullTrace() const;
+    void setFullTrace(const QStringList &newFullTrace);
+
+public slots:
+    virtual void generateFullTrace() = 0;
+
 signals:
     void fatalMessageReceived(const QString &app, const QString &message, const QTime &time,
                               const QStringList &backtrace);
     void stackTraceAvailableChanged(bool available);
+    void fullTraceChanged();
 
 private:
     bool m_stackTraceAvailable;
+    QStringList m_fullTrace;
 };
 }
 

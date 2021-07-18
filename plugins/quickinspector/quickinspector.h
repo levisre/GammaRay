@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -152,7 +152,8 @@ private:
     static void scanForProblems();
 
     GammaRay::ObjectIds recursiveItemsAt(QQuickItem *parent, const QPointF &pos,
-                                         GammaRay::RemoteViewInterface::RequestMode mode, int& bestCandidate) const;
+                                         GammaRay::RemoteViewInterface::RequestMode mode,
+                                         int& bestCandidate, bool parentIsGoodCandidate = true) const;
 
     Probe *m_probe;
     std::unique_ptr<AbstractScreenGrabber> m_overlay;

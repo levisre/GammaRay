@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,8 +35,12 @@ LocalClientDevice::LocalClientDevice(QObject *parent)
 {
     m_socket = new QLocalSocket(this);
     connect(m_socket, &QLocalSocket::connected, this, &ClientDevice::connected);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     connect(m_socket, static_cast<void(QLocalSocket::*)(QLocalSocket::LocalSocketError)>(&QLocalSocket::error),
             this, &LocalClientDevice::socketError);
+#else
+    connect(m_socket, &QLocalSocket::errorOccurred, this, &LocalClientDevice::socketError);
+#endif
 }
 
 void LocalClientDevice::connectToHost()

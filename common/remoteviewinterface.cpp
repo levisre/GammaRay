@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -138,12 +138,11 @@ RemoteViewInterface::RemoteViewInterface(const QString &name, QObject *parent)
     qRegisterMetaType<QTouchEvent::TouchPoint>();
     qRegisterMetaType<QList<QTouchEvent::TouchPoint >>();
 
-    qRegisterMetaType<RequestMode>();
-    qRegisterMetaTypeStreamOperators<RequestMode>();
-    qRegisterMetaTypeStreamOperators<GammaRay::RemoteViewFrame>();
-    qRegisterMetaTypeStreamOperators<Qt::TouchPointStates>();
-    qRegisterMetaTypeStreamOperators<QList<QTouchEvent::TouchPoint>>();
-    qRegisterMetaTypeStreamOperators<QTouchEvent::TouchPoint::InfoFlags>();
+    StreamOperators::registerOperators<RequestMode>();
+    StreamOperators::registerOperators<GammaRay::RemoteViewFrame>();
+    StreamOperators::registerOperators<Qt::TouchPointStates>();
+    StreamOperators::registerOperators<QList<QTouchEvent::TouchPoint>>();
+    StreamOperators::registerOperators<QTouchEvent::TouchPoint::InfoFlags>();
 }
 
 QString RemoteViewInterface::name() const

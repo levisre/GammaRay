@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,6 +32,8 @@
 #include <core/metaobject.h>
 #include <core/metaobjectrepository.h>
 #include <core/varianthandler.h>
+
+#include <common/streamoperators.h>
 
 #include <QDataStream>
 #include <QGeoPositionInfoSource>
@@ -68,7 +70,7 @@ static QString positioningMethodsToString(QGeoPositionInfoSource::PositioningMet
 Positioning::Positioning(Probe *probe, QObject *parent)
     : PositioningInterface(parent)
 {
-    qRegisterMetaTypeStreamOperators<QGeoPositionInfo>("QGeoPositionInfo");
+    StreamOperators::registerOperators<QGeoPositionInfo>();
     registerMetaTypes();
     connect(probe, &Probe::objectCreated, this, &Positioning::objectAdded);
 }
@@ -76,7 +78,7 @@ Positioning::Positioning(Probe *probe, QObject *parent)
 void Positioning::objectAdded(QObject* obj)
 {
     if (auto geoInfoSource = qobject_cast<QGeoPositionInfoSource*>(obj)) {
-        if (geoInfoSource->sourceName() != QLatin1Literal("gammaray")) {
+        if (geoInfoSource->sourceName() != QLatin1String("gammaray")) {
             if (positioningOverrideAvailable()) // we already have a proxy source taking care of things
                 return;
             // until we have a proxy, just forward the position from the real source

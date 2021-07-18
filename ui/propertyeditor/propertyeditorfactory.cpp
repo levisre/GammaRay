@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -59,7 +59,9 @@ PropertyEditorFactory::PropertyEditorFactory()
     addEditor(QVariant::SizeF, new QStandardItemEditorCreator<PropertySizeFEditor>());
     addEditor(QVariant::String, new QStandardItemEditorCreator<PropertyTextEditor>(), true);
     addEditor(QVariant::Transform, new QStandardItemEditorCreator<PropertyMatrixEditor>());
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     addEditor(QVariant::Matrix, new QStandardItemEditorCreator<PropertyMatrixEditor>());
+#endif
     addEditor(QVariant::Matrix4x4, new QStandardItemEditorCreator<PropertyMatrixEditor>());
     addEditor(QVariant::Vector2D, new QStandardItemEditorCreator<PropertyMatrixEditor>());
     addEditor(QVariant::Vector3D, new QStandardItemEditorCreator<PropertyMatrixEditor>());

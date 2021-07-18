@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -100,17 +100,33 @@ PropertyData QuickAnchorsPropertyAdaptor::propertyData(int index) const
     PropertyModel::PropertyFlags f(PropertyModel::None);
     if (prop.isConstant())
         f |= PropertyModel::Constant;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (prop.isDesignable(object().qtObject()))
+#else
+    if (prop.isDesignable())
+#endif
         f |= PropertyModel::Designable;
     if (prop.isFinal())
         f |= PropertyModel::Final;
     if (prop.isResettable())
         f |= PropertyModel::Resetable;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (prop.isScriptable(object().qtObject()))
+#else
+    if (prop.isScriptable())
+#endif
         f |= PropertyModel::Scriptable;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (prop.isStored(object().qtObject()))
+#else
+    if (prop.isStored())
+#endif
         f |= PropertyModel::Stored;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (prop.isUser(object().qtObject()))
+#else
+    if (prop.isUser())
+#endif
         f |= PropertyModel::User;
     if (prop.isWritable())
         f |= PropertyModel::Writable;

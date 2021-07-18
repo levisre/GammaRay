@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -178,7 +178,11 @@ void SGWireframeWidget::paintEvent(QPaintEvent *)
                           : m_drawingMode
                           == GL_TRIANGLE_FAN ? QStringLiteral("GL_TRIANGLE_FAN") : tr("Unknown");
     QString text = tr("Drawing mode: %1").arg(drawingMode);
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
     painter.drawText(contentsRect().width() - painter.fontMetrics().width(text),
+#else
+    painter.drawText(contentsRect().width() - painter.fontMetrics().horizontalAdvance(text),
+#endif
                      contentsRect().height() - painter.fontMetrics().height(), text);
 }
 

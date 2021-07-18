@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2017-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2017-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -54,7 +54,7 @@ static void drawArrow(QPainter *p, QPointF first, QPointF second)
 {
     p->drawLine(first, second);
     QPointF vector(second - first);
-    QMatrix m;
+    QTransform m;
     m.rotate(30);
     QVector2D v1 = QVector2D(m.map(vector)).normalized() * 10;
     m.rotate(-60);
@@ -87,7 +87,11 @@ void WidgetRemoteView::drawDecoration(QPainter* p)
         QLineF l(r1.center(), r2.center());
         for (const auto &prevLine : qAsConst(lines)) {
             QPointF pnt;
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
             if (l.intersect(prevLine, &pnt) == QLineF::BoundedIntersection && pnt != l.p1() && pnt != l.p2()) {
+#else
+            if (l.intersects(prevLine, &pnt) == QLineF::BoundedIntersection && pnt != l.p1() && pnt != l.p2()) {
+#endif
                 p->setPen(Qt::red);
                 break;
             }

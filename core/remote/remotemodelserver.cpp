@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,11 +37,13 @@
 #include <compat/qasconst.h>
 
 #include <QAbstractItemModel>
-#include <QSortFilterProxyModel>
+#include <QAssociativeIterable>
+#include <QBuffer>
 #include <QDataStream>
 #include <QDebug>
-#include <QBuffer>
 #include <QIcon>
+#include <QSequentialIterable>
+#include <QSortFilterProxyModel>
 
 #include <iostream>
 
@@ -524,15 +526,23 @@ void RemoteModelServer::setProxyFilterKeyColumn(int column)
         proxy->setFilterKeyColumn(column);
 }
 
-QRegExp RemoteModelServer::proxyFilterRegExp() const
+RemoteModelServer::RegExpT RemoteModelServer::proxyFilterRegExp() const
 {
     if (auto proxy = qobject_cast<QSortFilterProxyModel *>(m_model))
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        return proxy->filterRegularExpression();
+#else
         return proxy->filterRegExp();
-    return QRegExp();
+#endif
+    return {};
 }
 
-void RemoteModelServer::setProxyFilterRegExp(const QRegExp &regExp)
+void RemoteModelServer::setProxyFilterRegExp(const RegExpT &regExp)
 {
     if (auto proxy = qobject_cast<QSortFilterProxyModel *>(m_model))
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        proxy->setFilterRegularExpression(regExp);
+#else
         proxy->setFilterRegExp(regExp);
+#endif
 }

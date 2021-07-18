@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -28,7 +28,7 @@
 
 #include "lldbinjector.h"
 
-#include <QRegExp>
+#include <QRegularExpression>
 
 using namespace GammaRay;
 
@@ -53,14 +53,15 @@ bool LldbInjector::selfTest()
             const QString output = QString::fromLocal8Bit(process.readAll()).trimmed();
             const auto targetMajor = 3;
             const auto targetMinor = 6;
-            QRegExp rx(QStringLiteral("\\b([\\d]\\.[\\d]+\\.[\\d]+)\\b")); // lldb version 3.7.0 ( revision )
+            const QRegularExpression rx(QStringLiteral("\\b([\\d]+\\.[\\d]+\\.[\\d]+)\\b")); // lldb version 3.7.0 ( revision )
+            const auto match = rx.match(output);
 
-            if (rx.indexIn(output) == -1) {
+            if (!match.hasMatch()) {
                 mErrorString = tr("The debugger version can't be read (%1)").arg(output);
                 return false;
             }
 
-            const QString version = rx.cap(1);
+            const auto version = match.captured(1);
             const QStringList parts = version.split(QLatin1Char('.'));
 
             if (parts.count() >= 2) {

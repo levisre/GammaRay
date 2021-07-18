@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -99,11 +99,11 @@ private slots:
         }
         QVERIFY(hasBasicTools);
         QVERIFY(actionInspector);
-        QCOMPARE(actionInspector->enabled, false);
-        QCOMPARE(actionInspector->hasUi, true);
+        QCOMPARE(actionInspector->enabled, false); /* coverity[UNINIT_CTOR] */
+        QCOMPARE(actionInspector->hasUi, true); /* coverity[UNINIT_CTOR] */
         QVERIFY(guiSupport);
-        QCOMPARE(guiSupport->enabled, true);
-        QCOMPARE(guiSupport->hasUi, false);
+        QCOMPARE(guiSupport->enabled, true); /* coverity[UNINIT_CTOR] */
+        QCOMPARE(guiSupport->hasUi, false); /* coverity[UNINIT_CTOR] */
         // Create QAction to enable action inspector
         QAction action("Test Action", this);
         toolEnabledSpy.wait(1000);

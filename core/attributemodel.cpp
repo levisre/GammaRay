@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,9 +40,15 @@ AbstractAttributeModel::~AbstractAttributeModel() = default;
 void AbstractAttributeModel::setAttributeType(const char *name)
 {
     beginResetModel();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    const auto idx = Qt::staticMetaObject.indexOfEnumerator(name);
+    Q_ASSERT(idx >= 0);
+    m_attrs = Qt::staticMetaObject.enumerator(idx);
+#else
     const auto idx = staticQtMetaObject.indexOfEnumerator(name);
     Q_ASSERT(idx >= 0);
     m_attrs = staticQtMetaObject.enumerator(idx);
+#endif
     endResetModel();
 }
 

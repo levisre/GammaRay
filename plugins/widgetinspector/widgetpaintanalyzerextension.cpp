@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -73,6 +73,6 @@ void WidgetPaintAnalyzerExtension::analyze()
         return;
     m_paintAnalyzer->beginAnalyzePainting();
     m_paintAnalyzer->setBoundingRect(m_widget->rect());
-    m_widget->render(m_paintAnalyzer->paintDevice(), QPoint(), QRegion(), nullptr);
+    m_widget->render(m_paintAnalyzer->paintDevice(), QPoint(), QRegion(), {});
     m_paintAnalyzer->endAnalyzePainting();
 }

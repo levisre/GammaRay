@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,6 +29,7 @@
 #include "transferimage.h"
 
 #include <QDebug>
+#include <QIODevice>
 
 namespace GammaRay {
 TransferImage::TransferImage(const QImage &image)
@@ -69,7 +70,11 @@ QDataStream &operator<<(QDataStream &stream, const GammaRay::TransferImage &imag
     case TransferImage::RawFormat:
         stream << (double)img.devicePixelRatio();
         stream << (quint32)img.format() << (quint32)img.width() << (quint32)img.height() << image.transform();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+        stream.device()->write((const char*)img.constBits(), img.sizeInBytes());
+#else
         stream.device()->write((const char*)img.constBits(), img.byteCount());
+#endif
         break;
     }
 

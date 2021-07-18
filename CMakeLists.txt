@@ -106,7 +106,7 @@ set(KDE_INSTALL_USE_QT_SYS_PATHS OFF)
 include(ECMGeneratePriFile)
 include(ECMEnableSanitizers)
 include(GenerateExportHeader)
-include("3rdparty/backward-cpp/BackwardMacros.cmake")
+include("3rdparty/backward-cpp/BackwardConfig.cmake")
 
 # Exit for blacklisted compilers (those that don't support C++11 very well)
 #  MSVC++ < 2013 aka 1800
@@ -267,41 +267,6 @@ macro(add_flag_if_supported flag name)
   append_if("CXX_SUPPORTS_${name}" "${flag}" CMAKE_CXX_FLAGS)
 endmacro()
 
-function(check_private_headers_exist module)
-  message(STATUS "Checking whether private include directories for module ${module} exist")
-  # backward compatibility with Qt < 5.9
-  if(TARGET Qt5::${module}Private)
-    get_target_property(private_includes Qt5::${module}Private INTERFACE_INCLUDE_DIRECTORIES)
-    set(Qt5${module}_PRIVATE_INCLUDE_DIRS "${private_includes}" PARENT_SCOPE)
-  endif()
-
-  # HACK to work around broken Qt cmake configurations in older Qt version (up to 5.7 at least)
-  if(NOT "${Qt5${module}_PRIVATE_INCLUDE_DIRS}" MATCHES "/Qt${module}/")
-    string(REPLACE "/QtCore" "/Qt${module}" replaceme "${Qt5Core_PRIVATE_INCLUDE_DIRS}")
-    list(APPEND Qt5${module}_PRIVATE_INCLUDE_DIRS ${replaceme})
-    list(REMOVE_DUPLICATES Qt5${module}_PRIVATE_INCLUDE_DIRS)
-    set(Qt5${module}_PRIVATE_INCLUDE_DIRS ${Qt5${module}_PRIVATE_INCLUDE_DIRS} PARENT_SCOPE)
-  endif()
-
-  foreach(dir ${Qt5${module}_PRIVATE_INCLUDE_DIRS})
-    if(NOT EXISTS "${dir}")
-      message(FATAL_ERROR "The private include directory ${dir} for module ${module} do not exist! Please make sure your Qt5 installation contains private headers.\nThe required directories:\n  ${Qt5${module}_PRIVATE_INCLUDE_DIRS}")
-    endif()
-  endforeach()
-endfunction()
-
-function(check_private_header_exists module file)
-  set(found FALSE)
-  foreach(dir ${Qt5${module}_PRIVATE_INCLUDE_DIRS})
-    if(EXISTS "${dir}/${file}")
-      set(found TRUE)
-    endif()
-  endforeach()
-  if(NOT found)
-    message(FATAL_ERROR "The private include file ${file} was not found in directory ${Qt5${module}_PRIVATE_INCLUDE_DIRS}! Please make sure your Qt5 installation contains private headers.")
-  endif()
-endfunction()
-
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
@@ -379,11 +344,11 @@ endif()
 #
 # Finding Qt
 #
-find_package(Qt5Core 5.5 NO_MODULE REQUIRED)
+find_package(Qt 5.5 NAMES Qt6 Qt5 COMPONENTS Core NO_MODULE REQUIRED)
 
-set_package_properties(Qt5Core PROPERTIES TYPE REQUIRED)
-find_package(Qt5 NO_MODULE REQUIRED COMPONENTS Gui Network)
-find_package(Qt5 NO_MODULE QUIET OPTIONAL_COMPONENTS
+set_package_properties(Qt${Qt_VERSION_MAJOR}Core PROPERTIES TYPE REQUIRED)
+find_package(Qt${Qt_VERSION_MAJOR} NO_MODULE REQUIRED COMPONENTS Gui Network)
+find_package(Qt${Qt_VERSION_MAJOR} NO_MODULE QUIET OPTIONAL_COMPONENTS
   3DAnimation
   3DExtras
   3DInput
@@ -395,8 +360,8 @@ find_package(Qt5 NO_MODULE QUIET OPTIONAL_COMPONENTS
   Concurrent
   Designer
   Location
+  OpenGL
   Positioning
-  PrintSupport
   Qml
   Quick
   QuickWidgets
@@ -408,33 +373,57 @@ find_package(Qt5 NO_MODULE QUIET OPTIONAL_COMPONENTS
   Widgets
   WaylandCompositor
 )
+if (TARGET Qt6::Core)
+  set(CMAKE_CXX_STANDARD 17)
+endif ()
+
 # Find these 'exotic' Qt modules without using find_package(... COMPONENTS)
 # so we can retrieve those packages even when installed into a different prefix
-find_package(Qt5IviCore 1.1 NO_MODULE QUIET) # 1.1 is based on 5.8
-find_package(Qt5IviVehicleFunctions 1.1 NO_MODULE QUIET)
-find_package(Qt5IviMedia 1.1 NO_MODULE QUIET)
-find_package(Qt5Scxml 5.8 NO_MODULE QUIET)
+find_package(Qt${Qt_VERSION_MAJOR}IviCore 1.1 NO_MODULE QUIET) # 1.1 is based on 5.8
+find_package(Qt${Qt_VERSION_MAJOR}IviVehicleFunctions 1.1 NO_MODULE QUIET)
+find_package(Qt${Qt_VERSION_MAJOR}IviMedia 1.1 NO_MODULE QUIET)
+find_package(Qt${Qt_VERSION_MAJOR}Scxml 5.8 NO_MODULE QUIET)
+
+# if translation/doc host tools are missing, the Qt5 cmake config files throw errors...
+if(GAMMARAY_BUILD_DOCS)
+  find_package(Qt${Qt_VERSION_MAJOR} NO_MODULE QUIET OPTIONAL_COMPONENTS Help LinguistTools)
+endif()
+
+# these need to included after the last Qt-related find_package() call
+include (Qt5LegacySupport)
+include (ECMQt5ToQt6Porting)
+
+set(MACOS_DISABLE_UNSUPPORTED_TESTS FALSE)
+if(APPLE)
+  cmake_host_system_information(RESULT MACOS_RELEASE QUERY OS_RELEASE)
+  message(STATUS "MACOS_RELEASE: ${MACOS_RELEASE}")
+  message(STATUS "QtQuick_VERSION: ${QtQuick_VERSION}")
+  if(MACOS_RELEASE VERSION_GREATER_EQUAL 10.15.0 AND QtQuick_VERSION VERSION_LESS 5.12.0)
+    # Qt Quick is only supported on macOS Catalina using Qt 5.12 and above
+    set(MACOS_DISABLE_UNSUPPORTED_TESTS TRUE)
+    message(STATUS "WARNING: Your version of MacOS is too old (less then 10.15) to use with QtQuick 5.12 or higher.  You can solve this by upgrading your MacOS or using older Qt versions.  Disabling QtQuick capabilities.")
+  endif()
+endif()
+
+if(MACOS_DISABLE_UNSUPPORTED_TESTS)
+  set(Qt5Quick_FOUND FALSE)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND Qt5Core_VERSION VERSION_EQUAL 5.9.1)
   # hide -Wc++1z-extensions warnings in this Qt version -- see: https://bugreports.qt.io/browse/QTBUG-61840
   add_flag_if_supported(-Wno-c++1z-extensions NO_CPP1Z_EXTENSIONS)
 endif()
-if(Qt5Core_VERSION VERSION_GREATER 5.7)
+if(QtCore_VERSION VERSION_GREATER 5.7)
   # Qt 5.8 is the first minor version to use nullptr more broadly
   # With versions below Qt might lots of warnings for -Wzero-as-null-pointer-constant, e.g.:
   #   .../examples/widget-layouting/ui_contactform.h:606:85: warning: zero as null pointer constant [-Wzero-as-null-pointer-constant]
   add_flag_if_supported(-Wzero-as-null-pointer-constant ZERO_AS_NULL_POINTER_CONSTANT)
 endif()
 
-# if translation/doc host tools are missing, the Qt5 cmake config files throw errors...
-if(GAMMARAY_BUILD_DOCS)
-  find_package(Qt5 NO_MODULE QUIET OPTIONAL_COMPONENTS Help LinguistTools)
-endif()
-
 if(GAMMARAY_BUILD_UI) # widgets are required for the UI
-  find_package(Qt5 NO_MODULE REQUIRED COMPONENTS Widgets)
+  find_package(Qt${QtCore_VERSION_MAJOR} NO_MODULE REQUIRED COMPONENTS Widgets)
   # 3D Widget inspector requires Qt3D 5.7
-  if(Qt5Core_VERSION VERSION_EQUAL 5.7 OR Qt5Core_VERSION VERSION_GREATER 5.7)
+  if(QtCore_VERSION VERSION_EQUAL 5.7 OR QtCore_VERSION VERSION_GREATER 5.7)
     if(${Qt53DRender_FOUND} AND ${Qt53DInput_FOUND} AND ${Qt53DLogic_FOUND} AND ${Qt53DQuick_FOUND})
       set(GAMMARAY_WITH_WIDGET3D TRUE)
     else()
@@ -443,60 +432,26 @@ if(GAMMARAY_BUILD_UI) # widgets are required for the UI
   endif()
 endif()
 
-# Sanity checking, we need private includes for the following modules, and < Qt 5.9 backward compatibility
-check_private_headers_exist(Core)
-check_private_header_exists(Core "private/qobject_p.h")
-check_private_headers_exist(Gui)
-list(APPEND Qt5Gui_PRIVATE_INCLUDE_DIRS ${Qt5Core_PRIVATE_INCLUDE_DIRS})
-if(Qt5Widgets_FOUND)
-  check_private_headers_exist(Widgets)
-  list(APPEND Qt5Widgets_PRIVATE_INCLUDE_DIRS ${Qt5Gui_PRIVATE_INCLUDE_DIRS})
-endif()
-if(Qt5Qml_FOUND)
-  check_private_headers_exist(Qml)
-  check_private_header_exists(Qml "private/qqmlabstractbinding_p.h")
-  list(APPEND Qt5Qml_PRIVATE_INCLUDE_DIRS ${Qt5Gui_PRIVATE_INCLUDE_DIRS})
-endif()
-if(Qt5Quick_FOUND)
-  check_private_headers_exist(Quick)
-  check_private_header_exists(Quick "private/qquickitem_p.h")
-  list(APPEND Qt5Quick_PRIVATE_INCLUDE_DIRS ${Qt5Qml_PRIVATE_INCLUDE_DIRS})
-endif()
-if(Qt5Scxml_FOUND)
-  check_private_headers_exist(Scxml)
-endif()
+set(HAVE_QT_CONCURRENT ${QtConcurrent_FOUND})
+set(HAVE_QT_WIDGETS ${QtWidgets_FOUND})
+set(HAVE_QT_SVG ${QtSvg_FOUND})
+set(HAVE_QT_SCXML ${QtScxml_FOUND})
+set(HAVE_QT_DESIGNER ${QtDesigner_FOUND})
 
-set(HAVE_QT_CONCURRENT ${Qt5Concurrent_FOUND})
-set(HAVE_QT_WIDGETS ${Qt5Widgets_FOUND})
-set(HAVE_QT_SVG ${Qt5Svg_FOUND})
-set(HAVE_QT_SCXML ${Qt5Scxml_FOUND})
-set(HAVE_QT_DESIGNER ${Qt5Designer_FOUND})
-
-if(Qt5Gui_FOUND)
+if(TARGET Qt::Gui)
   cmake_push_check_state()
-  set(CMAKE_REQUIRED_LIBRARIES Qt5::Gui)
+  set(CMAKE_REQUIRED_LIBRARIES Qt::Gui)
   check_cxx_symbol_exists(QT_NO_OPENGL "QOpenGLContext" QT_NO_OPENGL)
   cmake_pop_check_state()
-endif()
-
-if(Qt5PrintSupport_FOUND)
-  cmake_push_check_state()
-  set(CMAKE_REQUIRED_LIBRARIES Qt5::PrintSupport)
-  check_cxx_symbol_exists(QT_NO_PRINTER "QPrinter" QT_NO_PRINTER)
-  cmake_pop_check_state()
-  if(NOT QT_NO_PRINTER)
-    set(HAVE_QT_PRINTSUPPORT ON)
-  endif()
 endif()
 
 add_definitions(-DQT_DISABLE_DEPRECATED_BEFORE=0x050500)
 #add_definitions(-DQT_DEPRECATED_WARNINGS)
 
-set_package_properties(Qt5 PROPERTIES URL "https://qt.io/")
-set_package_properties(Qt5Concurrent PROPERTIES TYPE RECOMMENDED PURPOSE "Required for the GammaRay launcher process list.")
-set_package_properties(Qt5Widget PROPERTIES TYPE RECOMMENDED PURPOSE "Required for the GammaRay client UI and widget-related tools.")
-set_package_properties(Qt5Svg PROPERTIES TYPE OPTIONAL PURPOSE "Required for widget SVG export.")
-set_package_properties(Qt5PrintSupport PROPERTIES TYPE OPTIONAL PURPOSE "Required for widget PDF export.")
+set_package_properties(Qt${Qt_VERSION_MAJOR} PROPERTIES URL "https://qt.io/")
+set_package_properties(Qt${Qt_VERSION_MAJOR}Concurrent PROPERTIES TYPE RECOMMENDED PURPOSE "Required for the GammaRay launcher process list.")
+set_package_properties(Qt${Qt_VERSION_MAJOR}Widget PROPERTIES TYPE RECOMMENDED PURPOSE "Required for the GammaRay client UI and widget-related tools.")
+set_package_properties(Qt${Qt_VERSION_MAJOR}Svg PROPERTIES TYPE OPTIONAL PURPOSE "Required for widget SVG export.")
 
 # debug suffixes for qmake compatibility
 if(WIN32)
@@ -559,9 +514,9 @@ set_package_properties(Glslang PROPERTIES URL "https://github.com/KhronosGroup/g
 find_package(QmlLint)
 set_package_properties(QmlLint PROPERTIES URL "https://qt.io" PURPOSE "Validate QML code.")
 
-find_package(KF5SyntaxHighlighting 5.28 NO_MODULE QUIET)
-set_package_properties(KF5SyntaxHighlighting PROPERTIES TYPE RECOMMENDED URL "https://www.kde.org/" PURPOSE "Syntax highlighting for code editor.")
-if(TARGET KF5::SyntaxHighlighting)
+find_package(KF${QtCore_VERSION_MAJOR}SyntaxHighlighting 5.28 NO_MODULE QUIET)
+set_package_properties(KF${QtCore_VERSION_MAJOR}SyntaxHighlighting PROPERTIES TYPE RECOMMENDED URL "https://www.kde.org/" PURPOSE "Syntax highlighting for code editor.")
+if(TARGET KF${QtCore_VERSION_MAJOR}::SyntaxHighlighting)
   set(HAVE_SYNTAX_HIGHLIGHTING TRUE)
 endif()
 
@@ -633,7 +588,7 @@ else()
   set(DATAROOTDIR "${CMAKE_INSTALL_DATAROOTDIR}" CACHE PATH "Define install directory for read-only architecture-independent data")
   gammaray_convert_to_relative_path(DATAROOTDIR)
   set(XDG_APPS_INSTALL_DIR "${DATAROOTDIR}/applications")
-  set(APPDATA_INSTALL_DIR "${DATAROOTDIR}/appdata")
+  set(APPDATA_INSTALL_DIR "${DATAROOTDIR}/metainfo")
   set(ICON_INSTALL_DIR "${DATAROOTDIR}/icons")
   set(MAN_INSTALL_DIR "${DATAROOTDIR}/man/man1")
   set(QCH_INSTALL_DIR "${CMAKE_INSTALL_DOCDIR}" CACHE PATH "Install location of Qt Assistant help files.")
@@ -716,7 +671,7 @@ add_subdirectory(common)
 add_subdirectory(core)
 add_subdirectory(probe)
 add_subdirectory(launcher)
-if(GAMMARAY_BUILD_UI AND Qt5Widgets_FOUND)
+if(GAMMARAY_BUILD_UI AND TARGET Qt::Widgets)
   if(NOT GAMMARAY_DISABLE_FEEDBACK)
     add_subdirectory(3rdparty/kuserfeedback)
   endif()
@@ -729,11 +684,11 @@ if(GAMMARAY_BUILD_UI AND Qt5Widgets_FOUND)
     add_subdirectory(app)
   endif()
 endif()
-if(BUILD_TESTING AND Qt5Test_FOUND AND NOT CMAKE_CROSSCOMPILING)
+if(BUILD_TESTING AND TARGET Qt::Test AND NOT CMAKE_CROSSCOMPILING)
   add_subdirectory(tests)
 endif()
 add_subdirectory(plugins)
-if(Qt5LinguistTools_FOUND)
+if(QtLinguistTools_FOUND)
   add_subdirectory(translations)
 endif()
 if(GAMMARAY_MULTI_BUILD)
@@ -750,7 +705,7 @@ list(APPEND DOCS ${LICENSE_FILE} ${README_FILE} "LICENSE.txt")
 if(NOT APPLE AND NOT GAMMARAY_PROBE_ONLY_BUILD)
   if(UNIX AND GAMMARAY_BUILD_UI)
     install(FILES GammaRay.desktop DESTINATION ${XDG_APPS_INSTALL_DIR})
-    install(FILES GammaRay.appdata.xml DESTINATION ${APPDATA_INSTALL_DIR})
+    install(FILES com.kdab.GammaRay.metainfo.xml DESTINATION ${APPDATA_INSTALL_DIR})
   endif()
   install(FILES ${DOCS} DESTINATION ${DOC_INSTALL_DIR})
 endif()

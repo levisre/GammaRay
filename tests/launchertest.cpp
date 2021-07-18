@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2017-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2017-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,7 +41,7 @@
 #include <QDebug>
 #include <QObject>
 #include <QSignalSpy>
-#include <QtTest/qtest.h>
+#include <QTest>
 
 #include <memory>
 
@@ -152,11 +152,7 @@ private slots:
         LaunchOptions options;
         options.setUiMode(LaunchOptions::NoUi);
         options.setProbeSetting(QStringLiteral("ServerAddress"), GAMMARAY_DEFAULT_LOCAL_TCP_URL);
-#ifdef Q_OS_WIN
-        options.setPid(target.pid()->dwProcessId);
-#else
-        options.setPid(target.pid());
-#endif
+        options.setPid(target.processId());
         QTest::qWait(5000); // give the target some time to actually load the QtCore DLL, otherwise ABI detection fails
         ProbeABIDetector detector;
         options.setProbeABI(ProbeFinder::findBestMatchingABI(detector.abiForProcess(options.pid())));

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,21 +33,21 @@
 
 using namespace GammaRay;
 
-QT_BEGIN_NAMESPACE
+namespace GammaRay {
 GAMMARAY_ENUM_STREAM_OPERATORS(Qt::ItemFlags)
 
-static QDataStream &operator<<(QDataStream &out, const ModelCellData &data)
+QDataStream &operator<<(QDataStream &out, const ModelCellData &data)
 {
     out << data.row << data.column << data.internalId << data.internalPtr << data.flags;
     return out;
 }
 
-static QDataStream &operator>>(QDataStream &in, ModelCellData &data)
+QDataStream &operator>>(QDataStream &in, ModelCellData &data)
 {
     in >> data.row >> data.column >> data.internalId >> data.internalPtr >> data.flags;
     return in;
 }
-QT_END_NAMESPACE
+}
 
 bool ModelCellData::operator==(const ModelCellData& other) const
 {
@@ -62,8 +62,7 @@ bool ModelCellData::operator==(const ModelCellData& other) const
 ModelInspectorInterface::ModelInspectorInterface(QObject *parent)
     : QObject(parent)
 {
-    qRegisterMetaType<ModelCellData>();
-    qRegisterMetaTypeStreamOperators<ModelCellData>();
+    StreamOperators::registerOperators<ModelCellData>();
     ObjectBroker::registerObject<ModelInspectorInterface *>(this);
 }
 

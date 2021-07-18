@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,6 +29,7 @@
 #include "paintanalyzerinterface.h"
 
 #include <common/objectbroker.h>
+#include <common/streamoperators.h>
 
 using namespace GammaRay;
 
@@ -39,7 +40,7 @@ PaintAnalyzerInterface::PaintAnalyzerInterface(const QString &name, QObject *par
     , m_hasStackTrace(false)
 {
     ObjectBroker::registerObject(name, this);
-    qRegisterMetaTypeStreamOperators<PaintAnalyzerFrameData>();
+    StreamOperators::registerOperators<PaintAnalyzerFrameData>();
 }
 
 QString PaintAnalyzerInterface::name() const

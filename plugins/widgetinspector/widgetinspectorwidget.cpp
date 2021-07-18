@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -50,6 +50,7 @@
 #include <ui/searchlinecontroller.h>
 #include <ui/uiresources.h>
 
+#include <QActionGroup>
 #include <QComboBox>
 #include <QDebug>
 #include <QFileDialog>
@@ -104,7 +105,7 @@ WidgetInspectorWidget::WidgetInspectorWidget(QWidget *parent)
     m_remoteView->setInvisibleMask(WidgetModelRoles::Invisible);
 
     auto layout = new QVBoxLayout;
-    layout->setMargin(0);
+    layout->setContentsMargins(0, 0, 0, 0);
     auto toolbar = new QToolBar(this);
     // Our icons are 16x16 and support hidpi, so let force iconSize on every styles
     toolbar->setIconSize(QSize(16, 16));
@@ -137,7 +138,6 @@ WidgetInspectorWidget::WidgetInspectorWidget(QWidget *parent)
 
     connect(ui->actionSaveAsImage, &QAction::triggered, this, &WidgetInspectorWidget::saveAsImage);
     connect(ui->actionSaveAsSvg, &QAction::triggered, this, &WidgetInspectorWidget::saveAsSvg);
-    connect(ui->actionSaveAsPdf, &QAction::triggered, this, &WidgetInspectorWidget::saveAsPdf);
     connect(ui->actionSaveAsUiFile, &QAction::triggered, this, &WidgetInspectorWidget::saveAsUiFile);
     connect(ui->actionAnalyzePainting, &QAction::triggered, this, &WidgetInspectorWidget::analyzePainting);
 
@@ -145,7 +145,6 @@ WidgetInspectorWidget::WidgetInspectorWidget(QWidget *parent)
 
     addAction(ui->actionSaveAsImage);
     addAction(ui->actionSaveAsSvg);
-    addAction(ui->actionSaveAsPdf);
     addAction(ui->actionSaveAsUiFile);
     addAction(ui->actionAnalyzePainting);
 
@@ -207,8 +206,6 @@ void WidgetInspectorWidget::updateActions()
     ui->actionSaveAsImage->setEnabled(selection);
     ui->actionSaveAsSvg->setEnabled(
         selection && m_inspector->features() & WidgetInspectorInterface::SvgExport);
-    ui->actionSaveAsPdf->setEnabled(
-        selection && m_inspector->features() & WidgetInspectorInterface::PdfExport);
     ui->actionSaveAsUiFile->setEnabled(
         selection && m_inspector->features() & WidgetInspectorInterface::UiExport);
     ui->actionAnalyzePainting->setEnabled(
@@ -284,21 +281,6 @@ void WidgetInspectorWidget::saveAsSvg()
         return;
 
     m_inspector->saveAsSvg(fileName);
-}
-
-void WidgetInspectorWidget::saveAsPdf()
-{
-    const QString fileName
-        = QFileDialog::getSaveFileName(
-        this,
-        tr("Save As PDF"),
-        QString(),
-        tr("PDF (*.pdf)"));
-
-    if (fileName.isEmpty())
-        return;
-
-    m_inspector->saveAsPdf(fileName);
 }
 
 void WidgetInspectorWidget::saveAsUiFile()

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -260,6 +260,13 @@ namespace MetaPropertyFactory
     {
         return new MetaPropertyImpl<Class, GetterReturnType>(name, getter, nullptr);
     }
+#if defined(__cpp_noexcept_function_type) && __cpp_noexcept_function_type >= 201510
+    template <typename Class, typename GetterReturnType>
+    inline MetaProperty* makeProperty(const char *name, GetterReturnType(Class::*getter)() const noexcept)
+    {
+        return new MetaPropertyImpl<Class, GetterReturnType>(name, getter, nullptr);
+    }
+#endif
 
     // non-const getters...
     template <typename Class, typename GetterReturnType>

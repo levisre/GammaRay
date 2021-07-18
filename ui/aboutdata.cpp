@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -47,7 +47,11 @@ QStringList AboutData::authors()
 {
     QFile f(QStringLiteral(":/gammaray/authors"));
     if (f.open(QFile::ReadOnly)) {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
         return QString::fromUtf8(f.readAll()).split('\n', QString::SkipEmptyParts);
+#else
+        return QString::fromUtf8(f.readAll()).split('\n', Qt::SkipEmptyParts);
+#endif
     } else {
         Q_ASSERT_X(false, "AboutData::authors()", "cannot open the authors resource file");
         qWarning() << "Failed to open the authors resource file";
@@ -73,26 +77,34 @@ QString AboutData::aboutTitle()
 
 QString AboutData::aboutHeader()
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     return AboutDataContext::trUtf8(
+#else
+    return AboutDataContext::tr(
+#endif
                 "<p>The Qt application inspection and manipulation tool."
                 "Learn more at <a href=\"https://www.kdab.com/gammaray\">https://www.kdab.com/gammaray/</a>.</p>"
-                "<p>Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, "
+                "<p>Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, "
                 "a KDAB Group company, <a href=\"mailto:info@kdab.com\">info@kdab.com</a></p>"
-                "<p>StackWalker code Copyright (c) 2005-2009, Jochen Kalmbach, All rights reserved<br>"
+                "<p>StackWalker code Copyright (c) 2005-2019, Jochen Kalmbach, All rights reserved<br>"
                 "lz4 fast LZ compression code Copyright (C) 2011-2015, Yann Collet, All rights reserved<br>"
-                "Backward-cpp code Copyright 2013 Google Inc. All rights reserved.</p>");
+                "backward-cpp code Copyright 2013-2017 Google Inc. All rights reserved.</p>");
 }
 
 QString AboutData::aboutAuthors()
 {
-    return AboutDataContext::trUtf8(
+    return AboutDataContext::tr(
                 "<p><u>Authors:</u><br>%1</p>"
                 ).arg(authorsAsHtml().join(QStringLiteral("<br>")));
 }
 
 QString AboutData::aboutFooter()
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     return AboutDataContext::trUtf8(
+#else
+    return AboutDataContext::tr(
+#endif
                 "<p>GammaRay and the GammaRay logo are registered trademarks of Klarälvdalens Datakonsult AB "
                 "in the European Union, the United States and/or other countries.  Other product and "
                 "company names and logos may be trademarks or registered trademarks of their respective companies.</p>"

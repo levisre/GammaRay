@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,7 +32,11 @@
 #include <QSplashScreen>
 #include <QBitmap>
 #include <QApplication>
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
 #include <QDesktopWidget>
+#else
+#include <QScreen>
+#endif
 
 QSplashScreen *splash = nullptr;
 
@@ -50,7 +54,11 @@ void showSplashScreen()
     if (window && window != splash) {
         splash->ensurePolished();
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
         const QRect windowRect = qApp->desktop()->availableGeometry(window);
+#else
+        const QRect windowRect = splash->screen()->availableGeometry();
+#endif
         QRect splashRect = QRect(QPoint(), splash->size());
 
         splashRect.moveCenter(windowRect.center());

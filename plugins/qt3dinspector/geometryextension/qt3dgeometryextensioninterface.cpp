@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -110,8 +110,7 @@ bool Qt3DGeometryData::operator==(const Qt3DGeometryData &rhs) const
 Qt3DGeometryExtensionInterface::Qt3DGeometryExtensionInterface(const QString &name, QObject *parent)
     : QObject(parent)
 {
-    qRegisterMetaType<Qt3DGeometryData>();
-    qRegisterMetaTypeStreamOperators<Qt3DGeometryData>();
+    StreamOperators::registerOperators<Qt3DGeometryData>();
     ObjectBroker::registerObject(name, this);
 }
 

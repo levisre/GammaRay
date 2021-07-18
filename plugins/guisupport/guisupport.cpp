@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -40,8 +40,6 @@
 
 #include <QGuiApplication>
 #include <QOpenGLContext>
-#include <QOpenGLShader>
-#include <QOpenGLShaderProgram>
 #include <QScreen>
 #include <QWindow>
 
@@ -59,6 +57,7 @@
 #include <QPalette>
 #include <QPen>
 #include <QTextFormat>
+#include <QTimer>
 
 using namespace GammaRay;
 
@@ -89,10 +88,12 @@ Q_DECLARE_METATYPE(QFlags<Qt::MouseEventFlag>)
 Q_DECLARE_METATYPE(QTouchEvent::TouchPoint)
 Q_DECLARE_METATYPE(QList<QTouchEvent::TouchPoint>)
 Q_DECLARE_METATYPE(Qt::TouchPointState)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 Q_DECLARE_METATYPE(QFlags<QTouchEvent::TouchPoint::InfoFlag>)
 Q_DECLARE_METATYPE(QFlags<QTouchDevice::CapabilityFlag>)
 Q_DECLARE_METATYPE(QTouchDevice*)
 Q_DECLARE_METATYPE(const QTouchDevice*)
+#endif
 Q_DECLARE_METATYPE(QScrollEvent::ScrollState)
 Q_DECLARE_METATYPE(QList<QInputMethodEvent::Attribute>)
 Q_DECLARE_METATYPE(QContextMenuEvent::Reason)
@@ -138,7 +139,9 @@ GuiSupport::GuiSupport(Probe *probe, QObject *parent)
     connect(m_probe, &Probe::objectCreated, this, &GuiSupport::objectCreated);
 
     if (auto guiApp = qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
-        updateWindowIcon();
+        QTimer::singleShot(0, this, [this]() {
+            updateWindowIcon();
+        });
 
         m_probe->installGlobalEventFilter(this);
         foreach (auto w, guiApp->topLevelWindows()) {
@@ -220,7 +223,11 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_METAOBJECT1(QImage, QPaintDevice);
     MO_ADD_PROPERTY_RO(QImage, allGray);
     MO_ADD_PROPERTY_RO(QImage, bitPlaneCount);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+    MO_ADD_PROPERTY_RO(QImage, sizeInBytes)
+#else
     MO_ADD_PROPERTY_RO(QImage, byteCount);
+#endif
     MO_ADD_PROPERTY_RO(QImage, bytesPerLine);
     MO_ADD_PROPERTY_RO(QImage, cacheKey);
     MO_ADD_PROPERTY   (QImage, dotsPerMeterX, setDotsPerMeterX);
@@ -303,21 +310,6 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_PROPERTY_RO(QWindow, type);
 
 #ifndef QT_NO_OPENGL
-    MO_ADD_METAOBJECT1(QOpenGLShader, QObject);
-    MO_ADD_PROPERTY_RO(QOpenGLShader, isCompiled);
-    MO_ADD_PROPERTY_RO(QOpenGLShader, log);
-    MO_ADD_PROPERTY_RO(QOpenGLShader, shaderId);
-    MO_ADD_PROPERTY_RO(QOpenGLShader, shaderType);
-    MO_ADD_PROPERTY_RO(QOpenGLShader, sourceCode);
-
-    MO_ADD_METAOBJECT1(QOpenGLShaderProgram, QObject);
-    MO_ADD_PROPERTY_RO(QOpenGLShaderProgram, isLinked);
-    MO_ADD_PROPERTY_RO(QOpenGLShaderProgram, log);
-// FIXME calling this asserts in debug builds of some newer Qt versions
-// MO_ADD_PROPERTY_RO(QOpenGLShaderProgram, maxGeometryOutputVertices);
-    MO_ADD_PROPERTY(QOpenGLShaderProgram, patchVertexCount, setPatchVertexCount);
-    MO_ADD_PROPERTY_RO(QOpenGLShaderProgram, programId);
-
     MO_ADD_METAOBJECT1(QOpenGLContext, QObject);
     MO_ADD_PROPERTY_RO(QOpenGLContext, defaultFramebufferObject);
     // crashes if context isn't current
@@ -355,7 +347,9 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_PROPERTY_O2(QBrush, color, setColor);
     MO_ADD_PROPERTY_RO(QBrush, gradient);
     MO_ADD_PROPERTY_RO(QBrush, isOpaque);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_PROPERTY(QBrush, matrix, setMatrix);
+#endif
     MO_ADD_PROPERTY(QBrush, style, setStyle);
     MO_ADD_PROPERTY(QBrush, texture, setTexture);
     MO_ADD_PROPERTY(QBrush, transform, setTransform);
@@ -371,7 +365,9 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_PROPERTY(QFont, italic, setItalic);
     MO_ADD_PROPERTY(QFont, kerning, setKerning);
     MO_ADD_PROPERTY_RO(QFont, key);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_PROPERTY_RO(QFont, lastResortFamily);
+#endif
 //     MO_ADD_PROPERTY_RO(QFont, lastResortFont); asserts at runtime!?
     MO_ADD_PROPERTY_RO(QFont, letterSpacing);
     MO_ADD_PROPERTY_RO(QFont, letterSpacingType);
@@ -452,6 +448,10 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_PROPERTY_RO(QDragMoveEvent, answerRect);
 
     MO_ADD_METAOBJECT1(QInputEvent, QEvent);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    MO_ADD_PROPERTY_RO(QInputEvent, device);
+    MO_ADD_PROPERTY_RO(QInputEvent, deviceType);
+#endif
     MO_ADD_PROPERTY_RO(QInputEvent, modifiers);
     MO_ADD_PROPERTY_RO(QInputEvent, timestamp);
 
@@ -460,40 +460,76 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_PROPERTY_RO(QContextMenuEvent, pos);
     MO_ADD_PROPERTY_RO(QContextMenuEvent, reason);
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    MO_ADD_METAOBJECT1(QPointerEvent, QInputEvent);
+    MO_ADD_PROPERTY_RO(QPointerEvent, allPointsAccepted);
+    MO_ADD_PROPERTY_RO(QPointerEvent, allPointsGrabbed);
+    MO_ADD_PROPERTY_RO(QPointerEvent, pointCount);
+    MO_ADD_PROPERTY_RO(QPointerEvent, pointerType);
+    MO_ADD_PROPERTY_RO(QPointerEvent, pointingDevice);
+
+    MO_ADD_METAOBJECT1(QSinglePointEvent, QPointerEvent);
+    MO_ADD_PROPERTY_RO(QSinglePointEvent, button);
+    MO_ADD_PROPERTY_RO(QSinglePointEvent, buttons);
+    MO_ADD_PROPERTY_RO(QSinglePointEvent, exclusivePointGrabber);
+    MO_ADD_PROPERTY_RO(QSinglePointEvent, globalPosition)
+    MO_ADD_PROPERTY_RO(QSinglePointEvent, isBeginEvent);
+    MO_ADD_PROPERTY_RO(QSinglePointEvent, isEndEvent);
+    MO_ADD_PROPERTY_RO(QSinglePointEvent, isUpdateEvent);
+    MO_ADD_PROPERTY_RO(QSinglePointEvent, position);
+    MO_ADD_PROPERTY_RO(QSinglePointEvent, scenePosition);
+#endif
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_METAOBJECT1(QMouseEvent, QInputEvent);
     MO_ADD_PROPERTY_RO(QMouseEvent, button);
     MO_ADD_PROPERTY_RO(QMouseEvent, buttons);
-    MO_ADD_PROPERTY_RO(QMouseEvent, flags);
     MO_ADD_PROPERTY_RO(QMouseEvent, globalPos);
-    MO_ADD_PROPERTY_RO(QMouseEvent, localPos);
     MO_ADD_PROPERTY_RO(QMouseEvent, pos);
+#else
+    MO_ADD_METAOBJECT1(QMouseEvent, QSinglePointEvent);
+#endif
+    MO_ADD_PROPERTY_RO(QMouseEvent, flags);
+    MO_ADD_PROPERTY_RO(QMouseEvent, localPos);
     MO_ADD_PROPERTY_RO(QMouseEvent, screenPos);
     MO_ADD_PROPERTY_RO(QMouseEvent, source);
     MO_ADD_PROPERTY_RO(QMouseEvent, windowPos);
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_METAOBJECT1(QHoverEvent, QInputEvent);
     MO_ADD_PROPERTY_RO(QHoverEvent, posF);
+#else
+    MO_ADD_METAOBJECT1(QHoverEvent, QSinglePointEvent);
+#endif
     MO_ADD_PROPERTY_RO(QHoverEvent, oldPosF);
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_METAOBJECT1(QWheelEvent, QInputEvent);
-    MO_ADD_PROPERTY_RO(QWheelEvent, pixelDelta);
-    MO_ADD_PROPERTY_RO(QWheelEvent, angleDelta);
+    MO_ADD_PROPERTY_RO(QWheelEvent, buttons);
     MO_ADD_PROPERTY_RO(QWheelEvent, delta);
     MO_ADD_PROPERTY_RO(QWheelEvent, orientation);
     MO_ADD_PROPERTY_RO(QWheelEvent, posF);
     MO_ADD_PROPERTY_RO(QWheelEvent, globalPosF);
-    MO_ADD_PROPERTY_RO(QWheelEvent, buttons);
+#else
+    MO_ADD_METAOBJECT1(QWheelEvent, QSinglePointEvent);
+#endif
+    MO_ADD_PROPERTY_RO(QWheelEvent, pixelDelta);
+    MO_ADD_PROPERTY_RO(QWheelEvent, angleDelta);
     MO_ADD_PROPERTY_RO(QWheelEvent, phase);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
     MO_ADD_PROPERTY_RO(QWheelEvent, inverted);
 #endif
     MO_ADD_PROPERTY_RO(QWheelEvent, source);
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_METAOBJECT1(QTabletEvent, QInputEvent);
-    MO_ADD_PROPERTY_RO(QTabletEvent, posF);
-    MO_ADD_PROPERTY_RO(QTabletEvent, globalPosF);
     MO_ADD_PROPERTY_RO(QTabletEvent, device);
     MO_ADD_PROPERTY_RO(QTabletEvent, pointerType);
+    MO_ADD_PROPERTY_RO(QTabletEvent, posF);
+    MO_ADD_PROPERTY_RO(QTabletEvent, globalPosF);
+#else
+    MO_ADD_METAOBJECT1(QTabletEvent, QSinglePointEvent);
+#endif
     MO_ADD_PROPERTY_RO(QTabletEvent, uniqueId);
     MO_ADD_PROPERTY_RO(QTabletEvent, pressure);
     MO_ADD_PROPERTY_RO(QTabletEvent, z);
@@ -504,7 +540,11 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_PROPERTY_RO(QTabletEvent, button);
     MO_ADD_PROPERTY_RO(QTabletEvent, buttons);
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_METAOBJECT1(QNativeGestureEvent, QInputEvent);
+#else
+    MO_ADD_METAOBJECT1(QNativeGestureEvent, QSinglePointEvent);
+#endif
     MO_ADD_PROPERTY_RO(QNativeGestureEvent, gestureType);
     MO_ADD_PROPERTY_RO(QNativeGestureEvent, value);
     MO_ADD_PROPERTY_RO(QNativeGestureEvent, localPos);
@@ -562,12 +602,17 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_PROPERTY_RO(QWindowStateChangeEvent, oldState);
     MO_ADD_PROPERTY_RO(QWindowStateChangeEvent, isOverride);
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_METAOBJECT1(QTouchEvent, QInputEvent);
     MO_ADD_PROPERTY_RO(QTouchEvent, device);
+    MO_ADD_PROPERTY_RO(QTouchEvent, window);
+#else
+    MO_ADD_METAOBJECT1(QTouchEvent, QPointerEvent);
+#endif
     MO_ADD_PROPERTY_RO(QTouchEvent, target);
     MO_ADD_PROPERTY_RO(QTouchEvent, touchPoints);
-    MO_ADD_PROPERTY_RO(QTouchEvent, window);
 
+#ifndef QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_METAOBJECT0(QTouchEvent::TouchPoint);
     MO_ADD_PROPERTY_RO(QTouchEvent::TouchPoint, id);
     MO_ADD_PROPERTY_RO(QTouchEvent::TouchPoint, state);
@@ -595,6 +640,7 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_PROPERTY_RO(QTouchDevice, maximumTouchPoints);
     MO_ADD_PROPERTY_RO(QTouchDevice, name);
     MO_ADD_PROPERTY_RO(QTouchDevice, type);
+#endif
 
     MO_ADD_METAOBJECT1(QScrollPrepareEvent, QEvent);
     MO_ADD_PROPERTY_RO(QScrollPrepareEvent, startPos);
@@ -622,10 +668,14 @@ void GuiSupport::registerMetaTypes()
     MO_ADD_METAOBJECT1(QApplicationStateChangeEvent, QEvent);
     MO_ADD_PROPERTY_RO(QApplicationStateChangeEvent, applicationState);
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_METAOBJECT1(QEnterEvent, QEvent);
     MO_ADD_PROPERTY_RO(QEnterEvent, globalPos);
-    MO_ADD_PROPERTY_RO(QEnterEvent, localPos);
     MO_ADD_PROPERTY_RO(QEnterEvent, pos);
+#else
+    MO_ADD_METAOBJECT1(QEnterEvent, QSinglePointEvent);
+#endif
+    MO_ADD_PROPERTY_RO(QEnterEvent, localPos);
     MO_ADD_PROPERTY_RO(QEnterEvent, screenPos);
     MO_ADD_PROPERTY_RO(QEnterEvent, windowPos);
 }
@@ -688,25 +738,6 @@ static const MetaEnum::Value<QSurface::SurfaceType> surface_type_table[] = {
 #endif
 };
 #undef E
-
-#ifndef QT_NO_OPENGL
-static QString shaderTypeToString(const QOpenGLShader::ShaderType type)
-{
-    QStringList types;
-#define ST(t) if (type & QOpenGLShader::t) types.push_back(QStringLiteral(#t));
-    ST(Vertex)
-    ST(Fragment)
-    ST(Geometry)
-    ST(TessellationControl)
-    ST(TessellationEvaluation)
-    ST(Compute)
-#undef ST
-
-    if (types.isEmpty())
-        return QStringLiteral("<none>");
-    return types.join(QStringLiteral(" | "));
-}
-#endif // QT_NO_OPENGL
 
 static QString textLengthToString(const QTextLength &l)
 {
@@ -846,9 +877,14 @@ static const MetaEnum::Value<QPainter::RenderHint> painter_render_hint_table[] =
     E(Antialiasing),
     E(TextAntialiasing),
     E(SmoothPixmapTransform),
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     E(HighQualityAntialiasing),
     E(NonCosmeticDefaultPen),
-    E(Qt4CompatiblePainting)
+    E(Qt4CompatiblePainting),
+#endif
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
+    E(LosslessImageRendering),
+#endif
 };
 #undef E
 
@@ -962,6 +998,7 @@ static const MetaEnum::Value<QPixelFormat::YUVLayout> pixelformat_yuvlayout_tabl
 };
 #undef E
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #define E(x) { QTouchEvent::TouchPoint:: x, #x }
 static const MetaEnum::Value<QTouchEvent::TouchPoint::InfoFlags> touch_point_info_flag_table[] = {
     E(Pen),
@@ -982,6 +1019,7 @@ static const MetaEnum::Value<QTouchDevice::Capabilities> touch_device_capabiliti
     E(MouseEmulation)
 };
 #undef E
+#endif
 
 static QString brushToString(const QBrush &b)
 {
@@ -1017,18 +1055,22 @@ static QString regionToString(const QRegion &region)
         return QStringLiteral("<null>");
     if (region.isEmpty())
         return QStringLiteral("<empty>");
+#if QT_VERSION > QT_VERSION_CHECK(5, 8, 0)
     if (region.rectCount() == 1)
-        return VariantHandler::displayString(region.rects().at(0));
+        return VariantHandler::displayString(*region.begin());
 
     QStringList rects;
     rects.reserve(region.rectCount());
-    foreach (const auto &r, region.rects())
+    for (const auto &r :  region)
         rects.push_back(VariantHandler::displayString(r));
 
     return GuiSupport::tr("[%1]: %2").arg(
         VariantHandler::displayString(region.boundingRect()),
         rects.join(QLatin1String("; "))
     );
+#else
+    return GuiSupport::tr("<%1 elements>").arg(region.rectCount());
+#endif
 }
 
 static QString imageToString(const QImage &image)
@@ -1051,9 +1093,6 @@ void GuiSupport::registerVariantHandler()
     ER_REGISTER_ENUM(QSurface, SurfaceClass, surface_class_table);
     ER_REGISTER_ENUM(QSurface, SurfaceType, surface_type_table);
     ER_REGISTER_FLAGS(QSurfaceFormat, FormatOptions, surface_format_option_table);
-#ifndef QT_NO_OPENGL
-    VariantHandler::registerStringConverter<QOpenGLShader::ShaderType>(shaderTypeToString);
-#endif
 
     ER_REGISTER_ENUM(QFont, Capitalization, font_capitalization_table);
     ER_REGISTER_ENUM(QFont, HintingPreference, font_hinting_pref_table);
@@ -1091,8 +1130,10 @@ void GuiSupport::registerVariantHandler()
     ER_REGISTER_ENUM(QPixelFormat, TypeInterpretation, pixelformat_typeinterpretation_table);
     ER_REGISTER_ENUM(QPixelFormat, YUVLayout, pixelformat_yuvlayout_table);
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     ER_REGISTER_FLAGS(QTouchEvent::TouchPoint, InfoFlags, touch_point_info_flag_table);
     ER_REGISTER_FLAGS(QTouchDevice, Capabilities, touch_device_capabilitites_flag_table);
+#endif
 }
 
 QObject *GuiSupport::targetObject(QObject *object) const

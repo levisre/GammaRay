@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -72,7 +72,7 @@ PropertyData JsonPropertyAdaptor::propertyData(int index) const
         auto it = m_object.begin();
         it += index;
         data.setName(VariantHandler::displayString(it.key()));
-        data.setValue(it.value());
+        data.setValue(it.value().toVariant());
         data.setClassName(QStringLiteral("QJsonObject"));
     } else {
         data.setName(VariantHandler::displayString(index));

@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -37,7 +37,7 @@
 #include <QDebug>
 #include <QObject>
 #include <QSignalSpy>
-#include <QtTest/qtest.h>
+#include <QTest>
 
 using namespace GammaRay;
 using namespace TestHelpers;
@@ -135,7 +135,7 @@ private slots:
         auto idx = searchFixedIndex(&model, "gadgetReadOnly");
         QVERIFY(idx.isValid());
         QCOMPARE(model.rowCount(idx), 1);
-        idx = idx.child(0, 1);
+        idx = model.index(0, 1, idx);
         QVERIFY((idx.flags() & Qt::ItemIsEditable) == 0);
     }
 
@@ -149,7 +149,7 @@ private slots:
         auto idx = searchFixedIndex(&model, "gadget");
         QVERIFY(idx.isValid());
         QCOMPARE(model.rowCount(idx), 1);
-        idx = idx.child(0, 1);
+        idx = model.index(0, 1, idx);
         QVERIFY(idx.flags() & Qt::ItemIsEditable);
         QVERIFY(model.setData(idx, 1554));
         QCOMPARE(obj.gadgetPointer()->prop1(), 1554);
@@ -157,7 +157,7 @@ private slots:
         idx = searchFixedIndex(&model, "gadgetPointer");
         QVERIFY(idx.isValid());
         QCOMPARE(model.rowCount(idx), 1);
-        idx = idx.child(0, 1);
+        idx = model.index(0, 1, idx);
         QVERIFY(idx.flags() & Qt::ItemIsEditable);
         QVERIFY(model.setData(idx, 1559));
         QCOMPARE(obj.gadgetPointer()->prop1(), 1559);

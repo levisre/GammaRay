@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -68,6 +68,9 @@ QString LauncherFinder::findLauncher(LauncherFinder::Type type)
         appPaths.append(appPath);
     }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    using Qt::endl;
+#endif
     qWarning() << fileName << "not found in the expected location(s):";
     qWarning() << appPaths.join(QStringLiteral(", ")) << endl
                << "continuing anyway, hoping for it to be in PATH.";

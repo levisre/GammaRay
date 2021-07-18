@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -31,6 +31,7 @@
 #include "quickdecorationsdrawer.h"
 
 #include <common/objectbroker.h>
+#include <common/streamoperators.h>
 
 #include <QDataStream>
 
@@ -71,11 +72,11 @@ QuickInspectorInterface::QuickInspectorInterface(QObject *parent)
     , m_serverSideDecoration(false)
 {
     ObjectBroker::registerObject<QuickInspectorInterface *>(this);
-    qRegisterMetaTypeStreamOperators<Features>();
-    qRegisterMetaTypeStreamOperators<RenderMode>();
-    qRegisterMetaTypeStreamOperators<QuickItemGeometry>();
-    qRegisterMetaTypeStreamOperators<QVector<QuickItemGeometry>>();
-    qRegisterMetaTypeStreamOperators<QuickDecorationsSettings>();
+    StreamOperators::registerOperators<Features>();
+    StreamOperators::registerOperators<RenderMode>();
+    StreamOperators::registerOperators<QuickItemGeometry>();
+    StreamOperators::registerOperators<QVector<QuickItemGeometry>>();
+    StreamOperators::registerOperators<QuickDecorationsSettings>();
 }
 
 QuickInspectorInterface::~QuickInspectorInterface() = default;

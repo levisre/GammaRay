@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -156,8 +156,12 @@ bool DebuggerInjector::startDebugger(const QStringList &args, const QProcessEnvi
             this, &DebuggerInjector::readyReadStandardOutput);
     connect(m_process.data(), &QProcess::started,
             this, &AbstractInjector::started);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    connect(m_process.data(), &QProcess::finished, this, &DebuggerInjector::processFinished);
+#else
     connect(m_process.data(), static_cast<void(QProcess::*)(int)>(&QProcess::finished),
             this, &DebuggerInjector::processFinished);
+#endif
     m_process->setProcessChannelMode(QProcess::SeparateChannels);
     m_process->start(filePath(), args);
     bool status = m_process->waitForStarted(-1);
@@ -197,12 +201,15 @@ bool DebuggerInjector::selfTest()
     return false;
 }
 
+#define STR(x) STR_IMPL(x)
+#define STR_IMPL(x) #x
+
 void DebuggerInjector::waitForMain()
 {
     addFunctionBreakpoint("main");
     execCmd("run");
 
-    loadSymbols("Qt5Core");
+    loadSymbols("Qt" STR(QT_VERSION_MAJOR) "Core");
     addMethodBreakpoint("QCoreApplication::exec");
     execCmd("continue");
 }

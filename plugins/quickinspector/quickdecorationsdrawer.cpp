@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Filipe Azevedo <filipe.azevedo@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -306,7 +306,11 @@ void QuickDecorationsDrawer::drawTraces()
         m_painter->setPen(QColor(60, 60, 60, 70));
         m_painter->setBrush(m_painter->pen().color());
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
         const int margin = m_painter->fontMetrics().width(QLatin1Char('X')) / 2;
+#else
+        const int margin = m_painter->fontMetrics().horizontalAdvance(QLatin1Char('X')) / 2;
+#endif
         const QRectF classRect =
             itemGeometry.boundingRect.adjusted(
                 0, 0, 0,
@@ -403,7 +407,7 @@ void QuickDecorationsDrawer::drawArrow(const QPointF &first, const QPointF &seco
 {
     m_painter->drawLine(first, second);
     QPointF vector(second - first);
-    QMatrix m;
+    QTransform m;
     m.rotate(30);
     QVector2D v1 = QVector2D(m.map(vector)).normalized() * 10;
     m.rotate(-60);

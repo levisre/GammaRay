@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -41,10 +41,15 @@ ProcessInjector::ProcessInjector()
     , mExitStatus(QProcess::NormalExit)
 {
     m_proc.setInputChannelMode(QProcess::ForwardedInputChannel);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    connect(&m_proc, &QProcess::errorOccurred, this, &ProcessInjector::processFailed);
+    connect(&m_proc, &QProcess::finished, this, &ProcessInjector::processFinished);
+#else
     connect(&m_proc, static_cast<void(QProcess::*)(QProcess::ProcessError)>(&QProcess::error),
                this, &ProcessInjector::processFailed);
     connect(&m_proc, static_cast<void(QProcess::*)(int)>(&QProcess::finished),
             this, &ProcessInjector::processFinished);
+#endif
     connect(&m_proc, &QProcess::readyReadStandardError, this, &ProcessInjector::readStdErr);
     connect(&m_proc, &QProcess::readyReadStandardOutput, this, &ProcessInjector::readStdOut);
 }
@@ -56,8 +61,12 @@ ProcessInjector::~ProcessInjector()
 
 void ProcessInjector::stop()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    disconnect(&m_proc, &QProcess::errorOccurred, this, &ProcessInjector::processFailed);
+#else
     disconnect(&m_proc, static_cast<void(QProcess::*)(QProcess::ProcessError)>(&QProcess::error),
                this, &ProcessInjector::processFailed);
+#endif
     if (m_proc.state() != QProcess::Running)
         return;
     m_proc.terminate();

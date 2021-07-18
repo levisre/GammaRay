@@ -5,7 +5,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Thomas McGuire <thomas.mcguire@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -236,12 +236,12 @@ bool TimerModel::canHandleCaller(QObject *caller, int methodIndex) const
 void TimerModel::checkDispatcherStatus(QObject *object)
 {
     // m_mutex have to be locked!!
-    static QHash<QAbstractEventDispatcher *, QTime> dispatcherChecks;
+    static QHash<QAbstractEventDispatcher *, QElapsedTimer> dispatcherChecks;
     QAbstractEventDispatcher *dispatcher = QAbstractEventDispatcher::instance(object->thread());
     auto it = dispatcherChecks.find(dispatcher);
 
     if (it == dispatcherChecks.end()) {
-        it = dispatcherChecks.insert(dispatcher, QTime());
+        it = dispatcherChecks.insert(dispatcher, QElapsedTimer());
         it.value().start();
     }
 

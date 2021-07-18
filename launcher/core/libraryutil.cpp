@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,7 +33,6 @@ using namespace GammaRay;
 #include <QByteArray>
 #include <QDebug>
 #include <QProcess>
-#include <QVector>
 
 static QVector<QByteArray> dependenciesInternal(const QString &fileName, bool fallback = false)
 {
@@ -48,7 +47,7 @@ static QVector<QByteArray> dependenciesInternal(const QString &fileName, bool fa
         if (!proc.waitForStarted()) // if that is not available, run the fallback
             return dependenciesInternal(fileName, true);
     } else {
-        // see http://man7.org/linux/man-pages/man8/ld.so.8.html
+        // see https://man7.org/linux/man-pages/man8/ld.so.8.html
         // by setting LD_TRACE_LOADED_OBJECTS=1 we make ld.so behave like ldd
         // this works even on embedded systems where ldd is not available
         QProcessEnvironment env = proc.processEnvironment();

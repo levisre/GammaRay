@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -65,6 +65,7 @@
 #include <private/qguiapplication_p.h>
 
 #include <QAction>
+#include <QActionGroup>
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDesktopServices>
@@ -108,7 +109,7 @@ static const IdeSettings ideSettings[] = {
       nullptr     },
     { "gvim", "%f +%l", QT_TRANSLATE_NOOP("GammaRay::MainWindow", "gvim"),
       nullptr     },
-    { "qtcreator", "%f:%l:%c", QT_TRANSLATE_NOOP("GammaRay::MainWindow", "Qt Creator"), nullptr     }
+    { "qtcreator", "-client %f:%l:%c", QT_TRANSLATE_NOOP("GammaRay::MainWindow", "Qt Creator"), nullptr     }
 #endif
 };
 #if defined(Q_OS_WIN) || defined(Q_OS_OSX) // Remove this #if branch when adding real data to ideSettings for Windows/OSX.
@@ -396,7 +397,11 @@ void MainWindow::aboutKDAB()
     dialog.setWindowTitle(tr("About KDAB"));
     dialog.setWindowIcon(UIResources::themedPixmap(QStringLiteral("kdab-logo.png"), this));
     dialog.setThemeLogo(QStringLiteral("kdab-logo.png"));
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     dialog.setTitle(trUtf8("Klarälvdalens Datakonsult AB (KDAB)"));
+#else
+    dialog.setTitle(tr("Klarälvdalens Datakonsult AB (KDAB)"));
+#endif
     dialog.setText(
         tr("<qt><p>GammaRay is supported and maintained by KDAB</p>"
            "<p>The KDAB Group is the global No.1 software consultancy for Qt, C++ and "
@@ -545,7 +550,13 @@ void MainWindow::navigateToCode(const QUrl &url, int lineNumber, int columnNumbe
 
         if (!command.isEmpty()) {
             std::cout << "Detaching: " << qPrintable(command) << std::endl;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             QProcess::startDetached(command);
+#else
+            // TODO refactor this to avoid the command splitting altogether, so we don't fail with e.g. spaces in paths
+            const auto s = command.split(QLatin1Char(' '));
+            QProcess::startDetached(s.at(0), s.sliced(1));
+#endif
         }
     }
 }

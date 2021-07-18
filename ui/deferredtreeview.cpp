@@ -2,7 +2,7 @@
  * This file is part of GammaRay, the Qt application inspection and
  * manipulation tool.
  *
- * Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+ * Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
  * Author: Filipe Azevedo <filipe.azevedo@kdab.com>
  *
  * Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -53,6 +53,10 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget *parent)
 {
 }
 
+#if defined(Q_CC_CLANG) || defined(Q_CC_GNU)
+// keep it working in UBSAN
+__attribute__((no_sanitize("vptr")))
+#endif
 bool HeaderView::isState(State state) const
 {
     QHeaderViewPrivate *d = reinterpret_cast<QHeaderViewPrivate *>(d_ptr.data());

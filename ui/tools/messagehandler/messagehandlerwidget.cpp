@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -190,6 +190,23 @@ void MessageHandlerWidget::messageContextMenu(const QPoint &pos)
     ContextMenuExtension cme;
     cme.setLocation(ContextMenuExtension::ShowSource, SourceLocation::fromOneBased(QUrl(fileName), line));
     cme.populateMenu(&contextMenu);
+
+    MessageHandlerInterface *handler = ObjectBroker::object<MessageHandlerInterface *>();
+    auto copyAction = contextMenu.addAction(QIcon::fromTheme(QStringLiteral("edit-copy")), tr("Copy Backtrace"));
+    copyAction->setVisible(handler->stackTraceAvailable());
+    connect(handler, &MessageHandlerInterface::stackTraceAvailableChanged, copyAction, &QAction::setVisible);
+
+    connect(copyAction, &QAction::triggered, this, [this, handler] {
+        delete m_backtraceFetchContext;
+        m_backtraceFetchContext = new QObject(handler);
+
+        connect(handler, &MessageHandlerInterface::fullTraceChanged, m_backtraceFetchContext, [handler] {
+            qApp->clipboard()->setText(handler->fullTrace().join("\n"));
+        });
+
+        handler->generateFullTrace();
+    });
+
     contextMenu.exec(ui->messageView->viewport()->mapToGlobal(pos));
 }
 

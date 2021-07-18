@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -87,8 +87,11 @@ void PropertyAggregator::writeProperty(int index, const QVariant &value)
     int offset = 0;
     for (const auto adaptor : qAsConst(m_propertyAdaptors)) {
         if (index < offset + adaptor->count()) {
+            QPointer<PropertyAggregator> guard(this);
             adaptor->writeProperty(index - offset, value);
-            m_oi = adaptor->object(); // propagate changes back to us, particularly matters for value types
+            if (guard) {
+                m_oi = adaptor->object(); // propagate changes back to us, particularly matters for value types
+            }
             return;
         }
         offset += adaptor->count();

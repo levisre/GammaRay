@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Giulio Camuffo <giulio.camuffo@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -77,8 +77,13 @@ public:
   void drawLinePartialSelected(QPainter &painter, const QRect &rect, const QStaticText &line, int startSelectChar, int endSelectChar)
   {
     const QString &text = line.text();
-    int startX = m_metrics.width(text.left(startSelectChar));
-    int endX = m_metrics.width(text.left(endSelectChar));
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
+    const int startX = m_metrics.width(text.left(startSelectChar));
+    const int endX = m_metrics.width(text.left(endSelectChar));
+#else
+    const int startX = m_metrics.horizontalAdvance(text.left(startSelectChar));
+    const int endX = m_metrics.horizontalAdvance(text.left(endSelectChar));
+#endif
 
     if (startSelectChar > 0) {
       painter.drawText(QRect(rect.x(), rect.y(), startX,  rect.height()), Qt::TextDontClip, text.left(startSelectChar));
@@ -91,7 +96,11 @@ public:
 
     if (endSelectChar < text.count()) {
       painter.setPen(palette().color(QPalette::Text));
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
       painter.drawText(QRect(rect.x() + endX, rect.y(), m_metrics.width(text) - endX, rect.height()), text.mid(endSelectChar));
+#else
+      painter.drawText(QRect(rect.x() + endX, rect.y(), m_metrics.horizontalAdvance(text) - endX, rect.height()), text.mid(endSelectChar));
+#endif
     }
   }
 
@@ -209,7 +218,11 @@ public:
       if (p.x() >= x) {
         lineX = i;
       }
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
       x += m_metrics.width(c);
+#else
+      x += m_metrics.horizontalAdvance(c);
+#endif
     }
 
     return {lineX, line};

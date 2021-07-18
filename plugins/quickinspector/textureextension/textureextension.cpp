@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2017-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2017-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -103,7 +103,7 @@ bool TextureExtension::setQObject(QObject* obj)
     if (obj->inherits("QQuickShaderEffectSource")) {
         auto d = QObjectPrivate::get(obj);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-        QObjectPrivate::ConnectionData *cd = d->connections.load();
+        QObjectPrivate::ConnectionData *cd = d->connections.loadRelaxed();
         if (cd && cd->senders) {
             auto *senders = cd->senders;
 #else

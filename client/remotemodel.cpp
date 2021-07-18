@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -1055,12 +1055,12 @@ void RemoteModel::setProxyFilterKeyColumn(int column)
     emit proxyFilterKeyColumnChanged();
 }
 
-QRegExp RemoteModel::proxyFilterRegExp() const
+RemoteModel::RegExpT RemoteModel::proxyFilterRegExp() const
 {
     return m_proxyFilterRegExp;
 }
 
-void RemoteModel::setProxyFilterRegExp(const QRegExp &regExp)
+void RemoteModel::setProxyFilterRegExp(const RegExpT &regExp)
 {
     if (m_proxyFilterRegExp == regExp)
         return;

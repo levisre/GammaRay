@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Tobias Koenig <tobias.koenig@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -54,9 +54,11 @@ void PropertyMatrixDialog::setMatrix(const QVariant &matrix)
 
     QString windowTitle = tr("Edit Matrix");
     switch (matrix.type()) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     case QVariant::Matrix:
         windowTitle = tr("Edit Matrix");
         break;
+#endif
     case QVariant::Matrix4x4:
         windowTitle = tr("Edit 4x4 Matrix");
         break;

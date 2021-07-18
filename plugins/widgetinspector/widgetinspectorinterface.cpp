@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -29,6 +29,7 @@
 #include "widgetinspectorinterface.h"
 
 #include <common/objectbroker.h>
+#include <common/streamoperators.h>
 
 #include <QDataStream>
 #include <QMetaType>
@@ -51,8 +52,9 @@ QDataStream &operator>>(QDataStream &in, WidgetInspectorInterface::Features &val
 WidgetInspectorInterface::WidgetInspectorInterface(QObject *parent)
     : QObject(parent)
 {
-    qRegisterMetaTypeStreamOperators<Features>();
-    qRegisterMetaTypeStreamOperators<WidgetFrameData>();
+    StreamOperators::registerOperators<Features>();
+    StreamOperators::registerOperators<WidgetFrameData>();
+
     ObjectBroker::registerObject<WidgetInspectorInterface *>(this);
 }
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Tim Henning <tim.henning@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -248,14 +248,22 @@ EventData createEventData(QObject* receiver, QEvent* event) {
                     if (argv) { // nullptr e.g. for QDBusCallDeliveryEvent
                         if (method.returnType() != QMetaType::Void) {
                             void* returnValueCopy = QMetaType::create(method.returnType(), argv[0]);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                             eventData.attributes << QPair<const char*, QVariant>{"[return value]", QVariant(method.returnType(), returnValueCopy)};
+#else
+                            eventData.attributes << QPair<const char*, QVariant>{"[return value]", QVariant(QMetaType(method.returnType()), returnValueCopy)};
+#endif
                         }
                         int argc = method.parameterCount();
                         QVariantMap vargs;
                         for (int i = 0; i < argc; ++i) {
                             int type = method.parameterType(i);
                             void* argumentDataCopy = QMetaType::create(type, argv[i+1]);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0 , 0)
                             vargs.insert(method.parameterNames().at(i), QVariant(type, argumentDataCopy));
+#else
+                            vargs.insert(method.parameterNames().at(i), QVariant(QMetaType(type), argumentDataCopy));
+#endif
                         }
                         if (argc > 0)
                             eventData.attributes << QPair<const char*, QVariant>{"[arguments]", vargs};

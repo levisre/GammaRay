@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -51,7 +51,6 @@ public:
         InputRedirection = 1,
         AnalyzePainting = 2,
         SvgExport = 4,
-        PdfExport = 8,
         UiExport = 16
     };
     Q_DECLARE_FLAGS(Features, Feature)
@@ -65,7 +64,6 @@ public:
 public slots:
     virtual void saveAsImage(const QString &fileName) = 0;
     virtual void saveAsSvg(const QString &fileName) = 0;
-    virtual void saveAsPdf(const QString &fileName) = 0;
     virtual void saveAsUiFile(const QString &fileName) = 0;
 
     virtual void analyzePainting() = 0;

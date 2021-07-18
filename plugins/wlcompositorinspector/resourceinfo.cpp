@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Giulio Camuffo <giulio.camuffo@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -62,7 +62,11 @@ public:
   {
     QWaylandSurface *surface = QWaylandSurface::fromResource(res);
     lines << tr("Role: %1").arg(surface->role() ? QString(surface->role()->name()) : QStringLiteral("none"));
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
     lines << tr("Buffer size: (%1x%2)").arg(QString::number(surface->size().width()), QString::number(surface->size().height()));
+#else
+    lines << tr("Buffer size: (%1x%2)").arg(QString::number(surface->bufferSize().width()), QString::number(surface->bufferSize().height()));
+#endif
 #if QT_VERSION < QT_VERSION_CHECK(5, 8, 0)
     lines << tr("Is mapped: %1").arg(surface->isMapped() ? QStringLiteral("true") : QStringLiteral("false"));
 #else

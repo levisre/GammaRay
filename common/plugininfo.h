@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -64,19 +64,18 @@ public:
     QObject* staticInstance() const;
 
 private:
-    void init();
     void initFromJSON(const QString &path);
     void initFromJSON(const QJsonObject& metaData);
 
     QString m_path;
-    QStaticPlugin m_staticPlugin;
+    QtPluginInstanceFunction m_staticInstanceFunc = nullptr;
     QString m_id;
     QString m_interface;
     QStringList m_supportedTypes;
     QString m_name;
     QVector<QByteArray> m_selectableTypes;
-    bool m_remoteSupport;
-    bool m_hidden;
+    bool m_remoteSupport = true;
+    bool m_hidden = false;
 };
 }
 

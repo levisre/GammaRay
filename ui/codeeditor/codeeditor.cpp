@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -97,7 +97,11 @@ int CodeEditor::sidebarWidth() const
         ++digits;
         count /= 10;
     }
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
     return 4 + fontMetrics().width(QLatin1Char('9')) * digits + foldingBarWidth();
+#else
+    return 4 + fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits + foldingBarWidth();
+#endif
 }
 
 int CodeEditor::foldingBarWidth() const
@@ -126,7 +130,7 @@ void CodeEditor::contextMenuEvent(QContextMenuEvent *event)
     QMenu *hlSubMenu = nullptr;
     QString currentGroup;
     foreach (const auto &def, s_repository->definitions()) {
-        if (def.isHidden())
+        if (def.isHidden() || def.section().isEmpty())
             continue;
 
         if (currentGroup != def.section()) {

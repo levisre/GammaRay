@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -134,7 +134,7 @@ private:
     void checkFinished();
     QList<TestThread *> m_threads;
     QList<TestConnections *> m_tester;
-    QEventLoop *m_loop;
+    QEventLoop *m_loop = nullptr;
 };
 
 #endif // TEST_CONNECTIONS_H

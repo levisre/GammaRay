@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,7 +33,11 @@
 
 #include <QObject>
 #include <QPointer>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QRegExp>
+#else
+#include <QRegularExpression>
+#endif
 
 QT_BEGIN_NAMESPACE
 class QBuffer;
@@ -54,7 +58,13 @@ class RemoteModelServer : public QObject
     Q_PROPERTY(
         Qt::CaseSensitivity filterCaseSensitivity READ proxyFilterCaseSensitivity WRITE setProxyFilterCaseSensitivity)
     Q_PROPERTY(int filterKeyColumn READ proxyFilterKeyColumn WRITE setProxyFilterKeyColumn)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     Q_PROPERTY(QRegExp filterRegExp READ proxyFilterRegExp WRITE setProxyFilterRegExp)
+    using RegExpT = QRegExp;
+#else
+    Q_PROPERTY(QRegularExpression filterRegularExpression READ proxyFilterRegExp WRITE setProxyFilterRegExp)
+    using RegExpT = QRegularExpression;
+#endif
 
 public:
     /** Registers a new model server object with name @p objectName (must be unique). */
@@ -94,8 +104,8 @@ private:
     void setProxyFilterCaseSensitivity(Qt::CaseSensitivity caseSensitivity);
     int proxyFilterKeyColumn() const;
     void setProxyFilterKeyColumn(int column);
-    QRegExp proxyFilterRegExp() const;
-    void setProxyFilterRegExp(const QRegExp &regExp);
+    RegExpT proxyFilterRegExp() const;
+    void setProxyFilterRegExp(const RegExpT &regExp);
 
     // unit test hooks
     static void (*s_registerServerCallback)();

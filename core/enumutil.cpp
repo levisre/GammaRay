@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2016-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2016-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -34,6 +34,7 @@
 
 using namespace GammaRay;
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 namespace GammaRay {
 class ProtectedExposer : public QObject
 {
@@ -41,6 +42,7 @@ public:
     using QObject::staticQtMetaObject;
 };
 }
+#endif
 
 static const QMetaObject *metaObjectForClass(const QByteArray &name)
 {
@@ -68,7 +70,11 @@ QMetaEnum EnumUtil::metaEnum(const QVariant &value, const char *typeName, const 
         enumTypeName = enumTypeName.mid(pos + 2);
     }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    const QMetaObject *mo = &Qt::staticMetaObject;
+#else
     const QMetaObject *mo = &ProtectedExposer::staticQtMetaObject;
+#endif
     int enumIndex = mo->indexOfEnumerator(enumTypeName);
     if (enumIndex < 0 && metaObject) {
         mo = metaObject;

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,6 +30,7 @@
 #define GAMMARAY_STREAMOPERATORS_H
 
 #include <QDataStream>
+#include <QMetaType>
 
 namespace GammaRay {
 /** Custom QDataStream streaming operators. */
@@ -52,6 +53,17 @@ template<typename T> QDataStream &readEnum(QDataStream &in, T &value)
     return in;
 }
 }
+
+/** Abstract away stream operator registration across Qt versions. */
+template <typename T>
+void registerOperators()
+{
+    qRegisterMetaType<T>();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    qRegisterMetaTypeStreamOperators<T>();
+#endif
+}
+
 }
 
 #define GAMMARAY_ENUM_STREAM_OPERATORS(enumType) \

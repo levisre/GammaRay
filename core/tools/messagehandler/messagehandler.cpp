@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -56,7 +56,11 @@ static MessageHandlerCallback(*const installMessageHandler)(MessageHandlerCallba
 static MessageModel *s_model = nullptr;
 static MessageHandlerCallback s_handler = nullptr;
 static bool s_handlerDisabled = false;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+static QRecursiveMutex s_mutex;
+#else
 static QMutex s_mutex(QMutex::Recursive);
+#endif
 
 static void handleMessage(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
@@ -165,6 +169,11 @@ MessageHandler::~MessageHandler()
         installMessageHandler(oldHandler);
     }
     s_handler = nullptr;
+}
+
+void MessageHandler::generateFullTrace()
+{
+    setFullTrace(m_stackTraceModel->fullTrace());
 }
 
 void MessageHandler::ensureHandlerInstalled()

@@ -46,29 +46,37 @@ Among other things GammaRay can:
 
 Contact
 =======
-* Feel free to visit us on IRC: Channel is #gammaray on Freenode (irc://irc.freenode.net/gammaray)
-* Or send mail to our mailing list: https://mail.kdab.com/mailman/listinfo/gammaray-interest
+* See our official home page: https://www.kdab.com/gammaray
+* Visit us on GitHub: https://github.com/KDAB/GammaRay
+* Email info@kdab.com for questions about copyright, licensing or commercial support.
+
+Stay up-to-date with KDAB product announcements:
+
+* [KDAB Newsletter](https://news.kdab.com)
+* [KDAB Blogs](https://www.kdab.com/category/blogs)
+* [KDAB on Twitter](https://twitter.com/KDABQt)
 
 Get Involved
 ============
 If you want to contribute, please check out: https://github.com/KDAB/GammaRay/wiki/Get-Involved
 
-KDAB will happily accept external contributions, but substantial
-contributions will require a signed Copyright Assignment Agreement
-(see docs/GammaRay-CopyrightAssignmentForm.docx).
+KDAB will happily accept external contributions, but substantial contributions require
+a signed [Copyright Assignment Agreement](docs/GammaRay-CopyrightAssignmentForm.pdf).
 
-Contact info@kdab.com for more information.
+Contact info@kdab.com for more information about the Copyright Assignment Agreement.
 
 Please submit your contributions or issue reports from our GitHub space at
 https://github.com/KDAB/GammaRay
 
+Thanks to our [contributors](CONTRIBUTORS.txt).
+
 License
 =======
-The GammaRay Software is (C) 2010-2019 Klarälvdalens Datakonsult AB (KDAB),
+The GammaRay Software is (C) 2010-2021 Klarälvdalens Datakonsult AB (KDAB),
 and is available under the terms of the GPL version 2 (or any later version,
-at your option).  See LICENSE.GPL.txt for license details.
+at your option).  See [LICENSE.GPL.txt](LICENSE.GPL.txt) for license details.
 
-Commercial licensing terms are available in the included file LICENSE.txt.
+Commercial licensing terms are available in the included file [LICENSE.txt](LICENSE.txt).
 
 For terms of redistribution, refer to the corresponding license agreement.
 

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -33,9 +33,9 @@
 
 #include <QHash>
 #include <QSharedDataPointer>
+#include <QStringList>
 
 QT_BEGIN_NAMESPACE
-class QStringList;
 class QVariant;
 class QProcessEnvironment;
 QT_END_NAMESPACE
@@ -81,8 +81,8 @@ public:
     QString absoluteExecutablePath() const;
 
     /** Process id for the process to attach to. */
-    void setPid(int pid);
-    int pid() const;
+    void setPid(qint64 pid);
+    qint64 pid() const;
 
     /** UI mode. */
     UiMode uiMode() const;

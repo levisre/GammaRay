@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -44,33 +44,37 @@ QT_BEGIN_NAMESPACE
 GAMMARAY_ENUM_STREAM_OPERATORS(QMetaMethod::Access)
 GAMMARAY_ENUM_STREAM_OPERATORS(QMetaMethod::MethodType)
 GAMMARAY_ENUM_STREAM_OPERATORS(Qt::ConnectionType)
+GAMMARAY_ENUM_STREAM_OPERATORS(Qt::CaseSensitivity)
 GAMMARAY_ENUM_STREAM_OPERATORS(GammaRay::QMetaObjectValidatorResult::Results)
 GAMMARAY_ENUM_STREAM_OPERATORS(GammaRay::PropertyModel::PropertyFlags)
 QT_END_NAMESPACE
 
 void StreamOperators::registerOperators()
 {
-    qRegisterMetaTypeStreamOperators<QMetaMethod::Access>();
-    qRegisterMetaTypeStreamOperators<QMetaMethod::MethodType>();
-    qRegisterMetaTypeStreamOperators<Qt::ConnectionType>();
-    qRegisterMetaTypeStreamOperators<QHash<int, QByteArray> >();
+    StreamOperators::registerOperators<QMetaMethod::Access>();
+    StreamOperators::registerOperators<QMetaMethod::MethodType>();
+    StreamOperators::registerOperators<Qt::ConnectionType>();
+    StreamOperators::registerOperators<Qt::CaseSensitivity>();
+    StreamOperators::registerOperators<QHash<int, QByteArray> >();
 
-    qRegisterMetaType<ObjectId>();
-    qRegisterMetaTypeStreamOperators<ObjectId>();
+    StreamOperators::registerOperators<ObjectId>();
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     // This is needed so QVariant based comparison works (ie: QAIM::match)
     QMetaType::registerComparators<ObjectId>();
+#endif
 
-    qRegisterMetaType<ObjectIds>();
-    qRegisterMetaTypeStreamOperators<ObjectIds>();
+    StreamOperators::registerOperators<ObjectIds>();
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     // This is needed so QVariant based comparison works (ie: QAIM::match)
     QMetaType::registerComparators<ObjectIds>();
+#endif
 
-    qRegisterMetaTypeStreamOperators<GammaRay::VariantWrapper>();
-    qRegisterMetaTypeStreamOperators<GammaRay::SourceLocation>();
-    qRegisterMetaTypeStreamOperators<QVector<SourceLocation>>();
-    qRegisterMetaTypeStreamOperators<GammaRay::QMetaObjectValidatorResult::Results>();
-    qRegisterMetaTypeStreamOperators<GammaRay::PropertyModel::PropertyFlags>();
+    StreamOperators::registerOperators<GammaRay::VariantWrapper>();
+    StreamOperators::registerOperators<GammaRay::SourceLocation>();
+    StreamOperators::registerOperators<QVector<SourceLocation>>();
+    StreamOperators::registerOperators<GammaRay::QMetaObjectValidatorResult::Results>();
+    StreamOperators::registerOperators<GammaRay::PropertyModel::PropertyFlags>();
 
-    qRegisterMetaTypeStreamOperators<EnumDefinition>();
-    qRegisterMetaTypeStreamOperators<EnumValue>();
+    StreamOperators::registerOperators<EnumDefinition>();
+    StreamOperators::registerOperators<EnumValue>();
 }

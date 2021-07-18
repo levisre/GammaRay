@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -61,7 +61,7 @@ ActionInspectorWidget::ActionInspectorWidget(QWidget *parent)
     ui->actionView->setDeferredResizeMode(3, QHeaderView::ResizeToContents);
     ui->actionView->setDeferredResizeMode(4, QHeaderView::ResizeToContents);
     ui->actionView->setModel(actionModel);
-    ui->actionView->sortByColumn(ActionModel::ShortcutsPropColumn);
+    ui->actionView->sortByColumn(ActionModel::ShortcutsPropColumn, Qt::AscendingOrder);
     connect(ui->actionView, &QWidget::customContextMenuRequested, this, &ActionInspectorWidget::contextMenu);
 
     auto selectionModel = ObjectBroker::selectionModel(actionModel);

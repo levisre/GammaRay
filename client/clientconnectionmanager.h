@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -32,7 +32,7 @@
 #include "gammaray_client_export.h"
 
 #include <QObject>
-#include <QTime>
+#include <QElapsedTimer>
 #include <QUrl>
 #include <QPointer>
 
@@ -137,7 +137,7 @@ private:
     GammaRay::ProcessTracker *m_processTracker;
     ClientToolManager *m_toolManager;
     QPointer<MainWindow> m_mainWindow;
-    QTime m_connectionTimeout;
+    QElapsedTimer m_connectionTimeout;
     bool m_ignorePersistentError;
     int m_tries;
 };

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -66,7 +66,9 @@
 #include <QButtonGroup>
 #include <QComboBox>
 #include <QCompleter>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QDesktopWidget>
+#endif
 #include <QDialog>
 #include <QGraphicsEffect>
 #include <QGraphicsProxyWidget>
@@ -108,7 +110,6 @@ static bool isGoodCandidateWidget(QWidget *widget)
 
 WidgetInspectorServer::WidgetInspectorServer(Probe *probe, QObject *parent)
     : WidgetInspectorInterface(parent)
-    , m_externalExportActions(new QLibrary(this))
     , m_propertyController(new PropertyController(objectName(), this))
     , m_paintAnalyzer(new PaintAnalyzer(QStringLiteral("com.kdab.GammaRay.WidgetPaintAnalyzer"),
                                         this))
@@ -196,12 +197,14 @@ void WidgetInspectorServer::widgetSelectionChanged(const QItemSelection &selecti
     m_selectedWidget = widget;
     m_remoteView->setEventReceiver(m_selectedWidget ? m_selectedWidget->window()->windowHandle() : nullptr);
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (m_selectedWidget
         && (qobject_cast<QDesktopWidget *>(m_selectedWidget)
             || m_selectedWidget->inherits("QDesktopScreenWidget"))) {
         m_overlayWidget->placeOn(WidgetOrLayoutFacade());
         return;
     }
+#endif
     if (m_selectedWidget == m_overlayWidget) {
         // this should not happen, but apparently our object recovery is slightly too good sometimes ;)
         return;
@@ -394,16 +397,6 @@ void WidgetInspectorServer::saveAsSvg(const QString &fileName)
     m_overlayWidget->show();
 }
 
-void WidgetInspectorServer::saveAsPdf(const QString &fileName)
-{
-    if (fileName.isEmpty() || !m_selectedWidget)
-        return;
-
-    m_overlayWidget->hide();
-    callExternalExportAction("gammaray_save_widget_to_pdf", m_selectedWidget, fileName);
-    m_overlayWidget->show();
-}
-
 void WidgetInspectorServer::saveAsUiFile(const QString &fileName)
 {
     if (fileName.isEmpty() || !m_selectedWidget)
@@ -471,15 +464,22 @@ GammaRay::ObjectIds WidgetInspectorServer::recursiveWidgetsAt(QWidget *parent, c
 void WidgetInspectorServer::callExternalExportAction(const char *name, QWidget *widget,
                                                      const QString &fileName)
 {
-    if (!m_externalExportActions->isLoaded()) {
+    if (!m_externalExportActions) {
+        std::unique_ptr<QLibrary> lib;
         foreach (const auto &path, Paths::pluginPaths(GAMMARAY_PROBE_ABI)) {
             const QString baseName = path + QLatin1String("/libgammaray_widget_export_actions");
-            m_externalExportActions->setFileName(baseName + QLatin1Char('-') + QStringLiteral(GAMMARAY_PROBE_ABI));
-            if (m_externalExportActions->load())
+            lib.reset(new QLibrary);
+            lib->setFileName(baseName + QLatin1Char('-') + QStringLiteral(GAMMARAY_PROBE_ABI));
+            if (lib->load()) {
+                m_externalExportActions = std::move(lib);
                 break;
-            m_externalExportActions->setFileName(baseName + QStringLiteral(GAMMARAY_DEBUG_POSTFIX));
-            if (m_externalExportActions->load())
+            }
+            lib.reset(new QLibrary);
+            lib->setFileName(baseName + QStringLiteral(GAMMARAY_DEBUG_POSTFIX));
+            if (lib->load()) {
+                m_externalExportActions = std::move(lib);
                 break;
+            }
         }
     }
 
@@ -512,9 +512,6 @@ void WidgetInspectorServer::checkFeatures()
     Features f = NoFeature;
 #ifdef HAVE_QT_SVG
     f |= SvgExport;
-#endif
-#ifdef HAVE_QT_PRINTSUPPORT
-    f |= PdfExport;
 #endif
 #ifdef HAVE_QT_DESIGNER
     f |= UiExport;
@@ -587,8 +584,10 @@ void WidgetInspectorServer::registerWidgetMetaTypes()
     MO_ADD_PROPERTY_ST(QApplication, activeModalWidget);
     MO_ADD_PROPERTY_ST(QApplication, activePopupWidget);
     MO_ADD_PROPERTY_ST(QApplication, activeWindow);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_PROPERTY_ST(QApplication, colorSpec);
     MO_ADD_PROPERTY_ST(QApplication, desktop);
+#endif
     MO_ADD_PROPERTY_ST(QApplication, focusWidget);
     MO_ADD_PROPERTY_ST(QApplication, style);
     MO_ADD_PROPERTY_ST(QApplication, topLevelWidgets);

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -123,7 +123,11 @@ void ModelModel::objectAdded(QObject *obj)
 
 void ModelModel::objectRemoved(QObject *obj)
 {
-    int index = m_models.indexOf(static_cast<QAbstractItemModel *>(obj));
+    // do not dereference!
+    QAbstractItemModel *unsafeModelPtr = nullptr;
+    memcpy(&unsafeModelPtr, &obj, sizeof(unsafeModelPtr));
+
+    int index = m_models.indexOf(unsafeModelPtr);
     if (index >= 0 && index < m_models.size()) {
         beginRemoveRows(QModelIndex(), index, index);
         m_models.remove(index);

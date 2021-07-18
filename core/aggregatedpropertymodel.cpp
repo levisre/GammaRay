@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -263,6 +263,7 @@ bool AggregatedPropertyModel::setData(const QModelIndex &index, const QVariant &
     switch (role) {
     case Qt::EditRole:
     {
+        QPointer<GammaRay::PropertyAdaptor> guard(adaptor);
         if (value.userType() == qMetaTypeId<EnumValue>()) {
             const auto d = adaptor->propertyData(index.row());
             if (d.value().type() == QVariant::Int) {
@@ -275,7 +276,9 @@ bool AggregatedPropertyModel::setData(const QModelIndex &index, const QVariant &
         } else {
             adaptor->writeProperty(index.row(), value);
         }
-        propagateWrite(adaptor);
+        if (guard) {
+            propagateWrite(adaptor);
+        }
         return true;
     }
     case Qt::CheckStateRole:

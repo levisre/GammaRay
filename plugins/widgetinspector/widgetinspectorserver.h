@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
   Author: Milian Wolff <milian.wolff@kdab.com>
 
@@ -34,6 +34,8 @@
 #include <common/remoteviewinterface.h>
 
 #include <QPointer>
+
+#include <memory>
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
@@ -87,7 +89,6 @@ private slots:
 
     void saveAsImage(const QString &fileName) override;
     void saveAsSvg(const QString &fileName) override;
-    void saveAsPdf(const QString &fileName) override;
     void saveAsUiFile(const QString &fileName) override;
 
     void analyzePainting() override;
@@ -99,7 +100,7 @@ private slots:
 
 private:
     QPointer<OverlayWidget> m_overlayWidget;
-    QLibrary *m_externalExportActions;
+    std::unique_ptr<QLibrary> m_externalExportActions;
     PropertyController *m_propertyController;
     QItemSelectionModel *m_widgetSelectionModel;
     QPointer<QWidget> m_selectedWidget;

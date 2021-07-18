@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2015-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2015-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -740,9 +740,15 @@ void RemoteViewWidget::drawFPS(QPainter *p)
     const int barWidth = 20;
 
     QString fps = QString::number(m_fps, 'g', 3) + " fps";
-    const QRect textrect(width()  - vRulerWidth  - metrics.width(fps) - 5,
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
+    const auto fpsWidth = metrics.width(fps);
+#else
+    const auto fpsWidth = metrics.horizontalAdvance(fps);
+#endif
+    const QRect textrect(width()  - vRulerWidth  - fpsWidth - 5,
                          height() - hRulerHeight - metrics.height()   - 5,
-                         metrics.width(fps) + 2,
+                         fpsWidth + 2,
                          metrics.height()   + 2);
     p->drawText(textrect, Qt::AlignRight, fps);
 
@@ -759,7 +765,11 @@ void RemoteViewWidget::drawFPS(QPainter *p)
 int RemoteViewWidget::viewTickLabelDistance() const
 {
     const auto maxLabel = std::max(m_frame.viewRect().width(), m_frame.viewRect().height());
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
     return 2 * fontMetrics().width(QString::number(maxLabel));
+#else
+    return 2 * fontMetrics().horizontalAdvance(QString::number(maxLabel));
+#endif
 }
 
 int RemoteViewWidget::sourceTickLabelDistance(int viewDistance)
@@ -854,14 +864,18 @@ void RemoteViewWidget::drawMeasurementLabel(QPainter *p, QPoint pos, QPoint dir,
     p->save();
     static const auto margin = 2;
     const auto height = fontMetrics().height() + (2 * margin);
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
     const auto width = fontMetrics().width(text) + (2 * margin);
+#else
+    const auto width = fontMetrics().horizontalAdvance(text) + (2 * margin);
+#endif
 
     QRect r(pos.x(), pos.y(), width * dir.x(), height * dir.y());
     r = r.normalized();
     r = r.translated(dir * 5);
 
     p->setPen(palette().color(QPalette::Text));
-    p->setBrush(palette().background());
+    p->setBrush(palette().window());
     p->drawRect(r);
     p->drawText(r, Qt::AlignCenter, text);
     p->restore();
@@ -1244,7 +1258,11 @@ void RemoteViewWidget::contextMenuEvent(QContextMenuEvent *event)
     }
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+void RemoteViewWidget::enterEvent(QEnterEvent *event)
+#else
 void RemoteViewWidget::enterEvent(QEvent *event)
+#endif
 {
     Q_UNUSED(event);
     switch (m_interactionMode) {
@@ -1321,7 +1339,11 @@ int RemoteViewWidget::contentHeight() const
 
 int RemoteViewWidget::verticalRulerWidth() const
 {
+#if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
     return fontMetrics().width(QString::number(m_frame.sceneRect().height())) + 24; // 2* tick length + some margin
+#else
+    return fontMetrics().horizontalAdvance(QString::number(m_frame.sceneRect().height())) + 24; // 2* tick length + some margin
+#endif
 }
 
 int RemoteViewWidget::horizontalRulerHeight() const

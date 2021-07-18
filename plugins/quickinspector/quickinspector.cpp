@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2014-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2014-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -239,11 +239,16 @@ static const MetaEnum::Value<QSGTexture::WrapMode> qsg_texture_wrapmode_table[] 
 
 #undef E
 
-static bool isGoodCandidateItem(QQuickItem *item)
+static bool itemHasContents(QQuickItem *item)
+{
+    return item->flags().testFlag(QQuickItem::ItemHasContents);
+}
+
+static bool isGoodCandidateItem(QQuickItem *item, bool ignoreItemHasContents = false)
 {
 
     if (!item->isVisible() || qFuzzyCompare(item->opacity() + qreal(1.0), qreal(1.0)) ||
-            !item->flags().testFlag(QQuickItem::ItemHasContents)) {
+            (!ignoreItemHasContents && !itemHasContents(item))) {
         return false;
     }
 
@@ -316,6 +321,11 @@ void RenderModeRequest::apply()
     if (connection)
         disconnect(connection);
 
+#if QT_VERSION == QT_VERSION_CHECK(5, 14, 0) || QT_VERSION == QT_VERSION_CHECK(5, 14, 1)
+    // there's a regression in Qt 5.14...
+    return;
+#endif
+
 #if QT_VERSION >= QT_VERSION_CHECK(5, 8, 0)
     if (window && window->rendererInterface()->graphicsApi() != QSGRendererInterface::OpenGL)
         return;
@@ -326,7 +336,11 @@ void RenderModeRequest::apply()
         const QByteArray mode = renderModeToString(RenderModeRequest::mode);
         QQuickWindowPrivate *winPriv = QQuickWindowPrivate::get(window);
         QMetaObject::invokeMethod(window, "cleanupSceneGraph", Qt::DirectConnection);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        winPriv->visualizationMode = mode;
+#else
         winPriv->customRenderMode = mode;
+#endif
         emit sceneGraphCleanedUp();
     }
 
@@ -444,7 +458,11 @@ void QuickInspector::selectWindow(QQuickWindow *window)
     }
 
     if (m_window) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        const QByteArray mode = QQuickWindowPrivate::get(m_window)->visualizationMode;
+#else
         const QByteArray mode = QQuickWindowPrivate::get(m_window)->customRenderMode;
+#endif
 
         if (!mode.isEmpty()) {
             auto reset = new RenderModeRequest(m_window);
@@ -556,6 +574,8 @@ void QuickInspector::recreateOverlay()
         disconnect(m_overlay.get(), &QObject::destroyed, this, &QuickInspector::recreateOverlay);
 
     m_overlay = AbstractScreenGrabber::get(m_window);
+    if (!m_overlay)
+        return;
 
     connect(m_overlay.get(), &AbstractScreenGrabber::grabberReadyChanged, m_remoteView, &RemoteViewServer::setGrabberReady);
     connect(m_overlay.get(), &AbstractScreenGrabber::sceneChanged, m_remoteView, &RemoteViewServer::sourceChanged);
@@ -610,6 +630,11 @@ void QuickInspector::slotGrabWindow()
 void QuickInspector::setCustomRenderMode(
     GammaRay::QuickInspectorInterface::RenderMode customRenderMode)
 {
+#if QT_VERSION == QT_VERSION_CHECK(5, 14, 0) || QT_VERSION == QT_VERSION_CHECK(5, 14, 1)
+    // there's a regression in Qt 5.14...
+    return;
+#endif
+
     m_renderMode = customRenderMode;
 
     m_pendingRenderMode->applyOrDelay(m_window, customRenderMode);
@@ -631,9 +656,12 @@ void QuickInspector::checkFeatures()
     }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 8, 0)
+#if QT_VERSION != QT_VERSION_CHECK(5, 14, 0) && QT_VERSION != QT_VERSION_CHECK(5, 14, 1)
     if (m_window->rendererInterface()->graphicsApi() == QSGRendererInterface::OpenGL)
         f = AllCustomRenderModes;
-    else if (m_window->rendererInterface()->graphicsApi() == QSGRendererInterface::Software)
+    else
+#endif
+    if (m_window->rendererInterface()->graphicsApi() == QSGRendererInterface::Software)
         f = AnalyzePainting;
 #else
     f = AllCustomRenderModes;
@@ -671,6 +699,10 @@ public:
 };
 #endif
 
+#if defined(Q_CC_CLANG) || defined(Q_CC_GNU)
+// keep it working in UBSAN
+__attribute__((no_sanitize("vptr")))
+#endif
 void QuickInspector::analyzePainting()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 9, 3)
@@ -816,12 +848,21 @@ void QuickInspector::pickElementId(const GammaRay::ObjectId &id)
 }
 
 ObjectIds QuickInspector::recursiveItemsAt(QQuickItem *parent, const QPointF &pos,
-                                           GammaRay::RemoteViewInterface::RequestMode mode, int &bestCandidate) const
+                                           GammaRay::RemoteViewInterface::RequestMode mode,
+                                           int &bestCandidate, bool parentIsGoodCandidate) const
 {
     Q_ASSERT(parent);
     ObjectIds objects;
 
     bestCandidate = -1;
+    if (parentIsGoodCandidate) {
+        // inherit the parent item opacity when looking for a good candidate item
+        // i.e. QQuickItem::isVisible is taking the parent into account already, but
+        // the opacity doesn't - we have to do this manually
+        // Yet we have to ignore ItemHasContents apparently, as the QQuickRootItem
+        // at least seems to not have this flag set.
+        parentIsGoodCandidate = isGoodCandidateItem(parent, true);
+    }
 
     auto childItems = parent->childItems();
     std::stable_sort(childItems.begin(), childItems.end(),
@@ -834,15 +875,15 @@ ObjectIds QuickInspector::recursiveItemsAt(QQuickItem *parent, const QPointF &po
         if (!child->childItems().isEmpty() && (child->contains(requestedPoint) || child->childrenRect().contains(requestedPoint))) {
             const int count = objects.count();
             int bc; // possibly better candidate among subChildren
-            objects << recursiveItemsAt(child, requestedPoint, mode, bc);
+            objects << recursiveItemsAt(child, requestedPoint, mode, bc, parentIsGoodCandidate);
 
-            if (bestCandidate == -1 && bc != -1) {
+            if (bestCandidate == -1 && parentIsGoodCandidate && bc != -1) {
                 bestCandidate = count + bc;
             }
         }
 
         if (child->contains(requestedPoint)) {
-            if (bestCandidate == -1 && isGoodCandidateItem(child)) {
+            if (bestCandidate == -1 && parentIsGoodCandidate && isGoodCandidateItem(child)) {
                 bestCandidate = objects.count();
             }
             objects << ObjectId(child);
@@ -853,7 +894,7 @@ ObjectIds QuickInspector::recursiveItemsAt(QQuickItem *parent, const QPointF &po
         }
     }
 
-    if (bestCandidate == -1 && isGoodCandidateItem(parent)) {
+    if (bestCandidate == -1 && parentIsGoodCandidate && itemHasContents(parent)) {
         bestCandidate = objects.count();
     }
 

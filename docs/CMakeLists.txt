@@ -4,7 +4,7 @@
 
 # qdoc toolchain
 # TODO: some of this probably should be upstreamed to Qt's cmake files...
-# TODO replace with Qt5::qhelpgenerator for Qt >= 5.7.1
+# TODO replace with Qt::qhelpgenerator for Qt >= 5.7.1
 find_program(QHELPGEN_EXECUTABLE qhelpgenerator
   HINTS ${QT_INSTALL_BINS}
 )
@@ -44,7 +44,7 @@ find_package(Doxygen)
 set_package_properties(Doxygen PROPERTIES
   TYPE OPTIONAL
   DESCRIPTION "API Documentation system"
-  URL "http://www.doxygen.org"
+  URL "https://www.doxygen.org"
   PURPOSE "Needed to build the API documentation."
 )
 if(DOXYGEN_DOT_EXECUTABLE)

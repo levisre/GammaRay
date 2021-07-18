@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2013-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2013-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Anton Kreuzkamp <anton.kreuzkamp@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -27,18 +27,16 @@
 */
 
 #include "toolmanagerinterface.h"
+#include "streamoperators.h"
 
 using namespace GammaRay;
 
 ToolManagerInterface::ToolManagerInterface(QObject *parent)
     : QObject(parent)
 {
-    qRegisterMetaType<ToolData>();
-    qRegisterMetaTypeStreamOperators<ToolData>();
-    qRegisterMetaType<QVector<ToolData> >();
-    qRegisterMetaTypeStreamOperators<QVector<ToolData> >();
-    qRegisterMetaType<QVector<QString> >();
-    qRegisterMetaTypeStreamOperators<QVector<QString> >();
+    StreamOperators::registerOperators<ToolData>();
+    StreamOperators::registerOperators<QVector<ToolData> >();
+    StreamOperators::registerOperators<QVector<QString> >();
 }
 
 ToolManagerInterface::~ToolManagerInterface() = default;

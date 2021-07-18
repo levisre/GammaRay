@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2017-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2017-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -97,4 +97,18 @@ QVariant StackTraceModel::headerData(int section, Qt::Orientation orientation, i
         }
     }
     return QAbstractTableModel::headerData(section, orientation, role);
+}
+
+QStringList StackTraceModel::fullTrace() const
+{
+    QStringList bt;
+    bt.reserve(m_frames.size());
+    for (const auto &frame : qAsConst(m_frames)) {
+        if (frame.location.isValid())
+            bt.push_back(frame.name + QLatin1String(" (") + frame.location.displayString() + QLatin1Char(')'));
+        else
+            bt.push_back(frame.name);
+    }
+
+    return bt;
 }

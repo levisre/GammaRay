@@ -840,7 +840,11 @@ QModelIndex ResourceModel::index(const QString &path, int column) const
     }
 #endif
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     QStringList pathElements = absolutePath.split(QLatin1Char('/'), QString::SkipEmptyParts);
+#else
+    QStringList pathElements = absolutePath.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+#endif
     if ((pathElements.isEmpty() || !QFileInfo(path).exists())
 #if !defined(Q_OS_WIN) || defined(Q_OS_WINCE)
         && path != QLatin1String("/")
@@ -1314,7 +1318,7 @@ QString ResourceModelPrivate::type(const QModelIndex &index) const
 QString ResourceModelPrivate::time(const QModelIndex &index) const
 {
 #ifndef QT_NO_DATESTRING
-    return node(index)->info.lastModified().toString(Qt::LocalDate);
+    return QLocale().toString(node(index)->info.lastModified(), QLocale::ShortFormat);
 #else
     Q_UNUSED(index);
     return QString();

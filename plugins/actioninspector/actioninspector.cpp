@@ -2,7 +2,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -35,6 +35,7 @@
 #include <common/objectbroker.h>
 #include <common/objectid.h>
 
+#include <QActionGroup>
 #include <QtPlugin>
 #include <QGraphicsWidget>
 #include <QItemSelectionModel>
@@ -113,10 +114,14 @@ void ActionInspector::registerMetaTypes()
     MO_ADD_PROPERTY_RO(QAction, actionGroup);
     MO_ADD_PROPERTY(QAction, data, setData);
     MO_ADD_PROPERTY(QAction, isSeparator, setSeparator);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     MO_ADD_PROPERTY_RO(QAction, menu);
     MO_ADD_PROPERTY_RO(QAction, parentWidget);
     MO_ADD_PROPERTY_RO(QAction, associatedGraphicsWidgets);
     MO_ADD_PROPERTY_RO(QAction, associatedWidgets);
+#else
+    MO_ADD_PROPERTY_RO(QAction, associatedObjects);
+#endif
 
     MO_ADD_METAOBJECT1(QActionGroup, QObject);
     MO_ADD_PROPERTY_RO(QActionGroup, actions);

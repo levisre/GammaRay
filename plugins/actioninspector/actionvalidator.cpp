@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2012-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2012-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Kevin Funk <kevin.funk@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -30,6 +30,7 @@
 
 #include <QAction>
 #include <QMutexLocker>
+#include <QWidget>
 
 #include <core/objectdataprovider.h>
 #include <core/probe.h>
@@ -84,7 +85,7 @@ void ActionValidator::insert(QAction *action)
         if (m_shortcutActionMap.values(sequence).contains(action))
             continue;
 
-        m_shortcutActionMap.insertMulti(sequence, action);
+        m_shortcutActionMap.insert(sequence, action);
     }
 
     // also track object destruction
@@ -111,7 +112,7 @@ void ActionValidator::safeRemove(QAction *action)
         const bool success = oldValues.removeOne(action);
         Q_UNUSED(success);
         Q_ASSERT(success);
-        m_shortcutActionMap[sequence] = action;
+        m_shortcutActionMap.replace(sequence, action);
     }
 }
 

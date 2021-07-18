@@ -1,7 +1,7 @@
 # Determine probe ABI identifier
 #
 
-# Copyright (c) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
+# Copyright (c) 2011-2021 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
 # All rights reserved.
 #
 # Author: Volker Krause <volker.krause@kdab.com>
@@ -33,7 +33,7 @@
 # This contains all properties that define ABI compatibility of a probe with a target
 
 # Qt version
-set(GAMMARAY_PROBE_ABI "qt${Qt5Core_VERSION_MAJOR}_${Qt5Core_VERSION_MINOR}")
+set(GAMMARAY_PROBE_ABI "qt${QtCore_VERSION_MAJOR}_${QtCore_VERSION_MINOR}")
 
 # on Windows, the compiler also matters
 if(WIN32)
@@ -110,7 +110,7 @@ else()
       set(GAMMARAY_PROBE_ABI "${GAMMARAY_PROBE_ABI}-arm")
     endif()
   else()
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "i[3456]86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "corei")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "i[3456]86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "corei" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64")
       if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(GAMMARAY_PROBE_ABI "${GAMMARAY_PROBE_ABI}-x86_64")
       else()

@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2011-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2011-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Volker Krause <volker.krause@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -50,7 +50,6 @@
 #include <QValidator>
 
 #include <QGuiApplication>
-#include <QOpenGLShader>
 #include <QSurfaceFormat>
 #endif
 
@@ -81,9 +80,6 @@ Q_DECLARE_METATYPE(QPainter::RenderHints)
 #endif
 Q_DECLARE_METATYPE(QPaintEngine::PolygonDrawMode)
 
-#ifndef QT_NO_OPENGL
-Q_DECLARE_METATYPE(QOpenGLShader::ShaderType)
-#endif
 Q_DECLARE_METATYPE(QSurfaceFormat)
 #endif
 

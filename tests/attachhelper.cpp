@@ -4,7 +4,7 @@
   This file is part of GammaRay, the Qt application inspection and
   manipulation tool.
 
-  Copyright (C) 2010-2019 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
+  Copyright (C) 2010-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, info@kdab.com
   Author: Milian Wolff <milian.wolff@kdab.com>
 
   Licensees holding valid commercial KDAB GammaRay licenses may use this file in
@@ -44,6 +44,8 @@
 #include <QDebug>
 #include <QDateTime>
 
+#include <cstdlib>
+
 AttachHelper::AttachHelper(const QString &gammaray, const QString &injector,
                            const QString &debuggee, const QStringList &arguments, QObject *parent)
     : QObject(parent)
@@ -54,15 +56,19 @@ AttachHelper::AttachHelper(const QString &gammaray, const QString &injector,
 {
     m_proc->setProcessChannelMode(QProcess::ForwardedChannels);
     connect(m_proc, &QProcess::started, this, &AttachHelper::processStarted);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     connect(m_proc, static_cast<void(QProcess::*)(int)>(&QProcess::finished), this, &AttachHelper::processFinished);
+#else
+    connect(m_proc, &QProcess::finished, this, &AttachHelper::processFinished);
+#endif
     m_proc->start(debuggee, arguments);
 }
 
 void AttachHelper::processStarted()
 {
     // attach randomly after 1-1500 ms
-    qsrand(QDateTime::currentMSecsSinceEpoch());
-    const int timeout = qrand() % 1500 + 1;
+    std::srand(QDateTime::currentMSecsSinceEpoch());
+    const int timeout = std::rand() % 1500 + 1;
     qDebug() << "attaching gammaray in" << timeout << "ms";
     m_timer->setSingleShot(true);
     connect(m_timer, &QTimer::timeout, this, &AttachHelper::attach);
@@ -84,11 +90,7 @@ void AttachHelper::attach()
     gammaray.setProcessChannelMode(QProcess::ForwardedChannels);
     QStringList args;
     args << QStringLiteral("--inprocess") << QStringLiteral("-i") << m_injector;
-#ifdef Q_OS_WIN32
-    args << QStringLiteral("-p") << QString::number(m_proc->pid()->dwProcessId);
-#else
-    args << QStringLiteral("-p") << QString::number(m_proc->pid());
-#endif
+    args << QStringLiteral("-p") << QString::number(m_proc->processId());
     args << QStringLiteral("-nodialogs");
     args << QStringLiteral("--listen") << QStringLiteral("tcp://127.0.0.1/");
     const int ret = gammaray.execute(m_gammaray, args);
